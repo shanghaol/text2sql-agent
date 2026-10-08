@@ -1,0 +1,9 @@
+# 运行时依赖（W1）
+langchain>=1.0,<2          # Agent 编排框架（v1：create_agent）
+langchain-deepseek>=1.1,<2 # DeepSeek 官方集成（ChatDeepSeek，读 DEEPSEEK_API_KEY）
+langgraph>=1.2,<2          # create_agent 的底层状态机；InMemorySaver 所在包（代码直接导入，故显式声明）
+python-dotenv>=1.0         # 从 .env 读取环境变量
+
+# 开发依赖
+pytest>=8.0                # 单元测试
+ruff>=0.6                  # 代码检查
