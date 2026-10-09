@@ -1,19 +1,24 @@
-# 运行时依赖（W1）
-langchain>=1.0,<2          # Agent 编排框架（v1：create_agent）
-langchain-deepseek>=1.1,<2 # DeepSeek 官方集成（ChatDeepSeek，读 DEEPSEEK_API_KEY）
-langgraph>=1.2,<2          # create_agent 的底层状态机；InMemorySaver 所在包（代码直接导入，故显式声明）
-python-dotenv>=1.0         # 从 .env 读取环境变量
+# 运行时依赖（版本为 2026-10-09 venv 实测通过的下限；升级前先跑 pytest）
 
-# MySQL 连接三件套（W2 T4）
-sqlalchemy>=2.0,<3         # 连接池 + 统一异常体系（角色等同 Java 侧 HikariCP）
-pymysql>=1.1               # MySQL 纯 Python 驱动（Windows 零编译）
-cryptography>=42           # PyMySQL 处理 caching_sha2_password 认证必需
+# Agent 编排
+langchain>=1.4,<2          # create_agent（实测 1.4.3）
+langchain-deepseek>=1.1,<2 # DeepSeek 官方集成 ChatDeepSeek（实测 1.1.1）
+langgraph>=1.2,<2          # create_agent 底层状态机；InMemorySaver 所在包（实测 1.2.14）
+python-dotenv>=1.2         # 从 .env 读取环境变量（实测 1.2.4）
 
-# 检索层依赖（W2 T3）
-chromadb>=1.5.5,<2         # 嵌入式向量库（1.5.4 已被官方撤回，禁用）
-fastembed                  # 本地 ONNX Embedding（BAAI/bge-small-zh-v1.5）；无稳定下限，版本编码期锁定
-rank-bm25>=0.2.2           # BM25 关键词检索路
-jieba>=0.42.1              # 中文分词（0.42.1 为多年稳定版；配合自定义词典保证领域词整词切分）
+# MySQL 连接三件套（W2）
+sqlalchemy>=2.0,<3         # 连接池 + 统一异常体系，角色等同 Java 侧 HikariCP（实测 2.1.4）
+pymysql>=1.2               # MySQL 纯 Python 驱动，Windows 零编译（实测 1.2.3）
+cryptography>=42           # PyMySQL 处理 caching_sha2_password 认证必需（实测 50.0.2）
+
+# 检索层（W2）
+chromadb>=1.5.5,<2         # 嵌入式向量库；1.5.4 已被官方撤回禁用（实测 1.5.9）
+fastembed>=0.9             # 本地 ONNX Embedding BAAI/bge-small-zh-v1.5（实测 0.9.0）
+rank-bm25>=0.2.2           # BM25 关键词检索路（实测 0.2.2，多年稳定）
+jieba>=0.42.1              # 中文分词；必须配合 jieba_dict 自定义词典（实测 0.42.1）
+
+# 数据集生成（W2）
+Faker>=40                  # zh_CN 假数据（实测 40.41.0；生成脚本固定种子可复现）
 
 # 开发依赖
 pytest>=8.0                # 单元测试

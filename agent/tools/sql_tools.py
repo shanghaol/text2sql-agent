@@ -15,7 +15,7 @@
 
 连接层：SQLAlchemy 2.x Engine + PyMySQL 驱动，模块级懒加载单例
 （import 本模块不需要 MySQL 在跑，纯函数测试零依赖）；
-测试用 set_engine() 注入（延续 W1 的 set_db_path 注入模式）。
+测试用 set_engine() 注入（延续 W1 set_db_path 的注入模式，只是注入对象换成了 Engine）。
 
 已知局限（W1 故意的保守策略，W5 会换成 sqlglot 做 AST 级解析）：
 - 黑名单用整词匹配，写在字符串字面量里的关键字（如 WHERE status = 'update'）

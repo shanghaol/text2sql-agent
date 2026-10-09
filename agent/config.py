@@ -1,10 +1,10 @@
-"""全局配置模块：统一管理密钥、模型名、数据库路径。
+"""全局配置模块：统一管理密钥、模型名、MySQL / 检索层配置。
 
 为什么单独抽一个 config.py？
 - 代码里不应该到处硬编码路径和密钥；
 - .env 文件只在本机存在（已加入 .gitignore），密钥不会误提交到 git。
 
-使用方式：其他模块 `from agent.config import DB_PATH` 即可拿到配置好的值。
+使用方式：其他模块 `from agent.config import MYSQL_HOST` 等即可拿到配置好的值。
 """
 
 import os
@@ -30,11 +30,6 @@ DEEPSEEK_API_KEY: str = os.environ.get("DEEPSEEK_API_KEY", "")
 # 模型名：默认 deepseek-flash，允许通过环境变量 DEEPSEEK_MODEL 覆盖，
 # 方便以后换模型时不用改代码。
 DEEPSEEK_MODEL: str = os.environ.get("DEEPSEEK_MODEL", "deepseek-flash")
-
-# 演示数据库路径（W1 遗留，T5 工单统一清理；W2 起 Agent 用下面的 MySQL 配置）。
-# 允许用环境变量 DEMO_DB_PATH 覆盖——这是给测试用的钩子：
-# 测试时把库指到 pytest 的临时目录，不会污染真实数据文件。
-DB_PATH: Path = Path(os.environ.get("DEMO_DB_PATH", str(REPO_ROOT / "data" / "demo.db")))
 
 # ---------------------------------------------------------------------------
 # W2 新增：MySQL 连接配置（设计 §4.2）
