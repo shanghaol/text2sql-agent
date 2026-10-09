@@ -816,6 +816,10 @@ def load_database() -> None:
     conn = mysql_connect_or_die()
     try:
         with conn.cursor() as cur:
+            # 管理员连接不带默认数据库，必须显式选中 mart，
+            # 否则 INSERT 会报 (1046, 'No database selected')
+            db_name = os.environ.get("MYSQL_DB", "mart")
+            cur.execute(f"USE `{db_name}`")
             # 导入提速的标准组合拳：关外键检查（导完恢复）+ 手动事务
             cur.execute("SET FOREIGN_KEY_CHECKS = 0")
             for table in IMPORT_ORDER:
