@@ -2,70 +2,152 @@
 
 LangChain v1 的写法：用 create_agent 一次性组装，不再使用
 AgentExecutor / initialize_agent / ConversationBufferMemory 等废弃 API。
+
+W2 改造（设计 §3.5 / §4.3）：
+- 系统提示词从"W1 全静态内嵌三表 DDL"改为"静态骨架 + 动态参考资料"：
+  build_system_prompt(context_block) 拼装，检索层每轮注入相关表结构/口径/示例；
+- build_agent(system_prompt) 参数化，每轮对话用新 prompt 重建 agent
+  （组装成本微秒级，模型客户端连接可复用）；
+- checkpointer 提为模块级单例：多次 build_agent 共享同一个记忆存储，
+  多轮对话的记忆才能跨请求（跨轮重建）保留；
+- get_retriever() 懒加载混合检索器（fastembed 模型加载约几秒，进程内只做一次）。
 """
 
+from collections.abc import Sequence
+
 from langchain.agents import create_agent
+from langchain_core.messages import HumanMessage
 from langchain_deepseek import ChatDeepSeek
 from langgraph.checkpoint.memory import InMemorySaver
 
-from agent.config import DEEPSEEK_MODEL
+from agent.config import DEEPSEEK_MODEL, EMBEDDING_MODEL
+from agent.rag.chroma_store import get_collection
+from agent.rag.embedder import BgeEmbedder
+from agent.rag.hybrid_retriever import HybridRetriever, RetrievedChunk
 from agent.tools.sql_tools import execute_readonly_sql, list_tables
 
 # ---------------------------------------------------------------------------
-# 系统提示词：Agent 的"岗位说明书"。
-# 一份好的系统提示词 = 角色定位 + 领域知识（表结构）+ 行为规则。
+# 系统提示词：静态骨架（数据库 + 行为规则）+ 动态参考资料占位。
+# 静态部分只保留"检索失灵时的兜底"知识（6 行表一览 + 数据锚点），
+# 详细的表结构 / 业务口径 / 示例问答由检索层按当前问题动态注入。
 # ---------------------------------------------------------------------------
 
-SYSTEM_PROMPT = """你是一名电商数据分析助手，帮助用户用自然语言查询和分析电商数据。
+_SYSTEM_PROMPT_TEMPLATE = """你是一名电商数据分析助手，帮助用户用自然语言查询和分析电商数据。
 
-【表结构】
-你只可以查询以下三张表（SQLite 数据库）：
+【数据库】
+- MySQL 8.0，库名 mart，通过只读账号访问。SQL 必须使用 MySQL 方言：
+  日期格式化用 DATE_FORMAT(列, '%Y-%m')，当前日期用 CURDATE()，日期回退用
+  DATE_SUB(日期, INTERVAL n DAY)，字符串拼接用 CONCAT()；
+  禁止使用 SQLite 的 strftime() 和 date('now')。
+- 库中数据表一览（检索失灵时的兜底；写 SQL 前仍应以【参考资料】里的列说明为准）：
+  - users：用户表，约 2 万行（ID、姓名、性别、城市/省份、注册时间）
+  - products：商品表，约 2 千行（ID、名称、类目、品牌、原价元、上架日期）
+  - orders：订单主表，约 10 万行（订单号、用户、状态、金额、件数、下单时间）
+  - order_items：订单明细表，约 15 万行（一行 = 订单里的一种商品）
+  - payments：支付流水表，约 8.9 万行（一笔成功支付恰一条记录）
+  - refunds：退款记录表，约 9 千行（退款金额、原因、完成时间；一单至多一条）
+- 数据范围为 2025-10-01 至 2026-09-30 的静态快照：用户问“今天/本月/近 N 天”
+  等相对时间时，一律以 2026-09-30 为“今天”计算。
 
-CREATE TABLE users (
-    id INTEGER PRIMARY KEY,   -- 用户 ID
-    name TEXT,                -- 用户姓名
-    city TEXT,                -- 所在城市
-    registered_at TEXT        -- 注册日期（YYYY-MM-DD）
-);
-
-CREATE TABLE products (
-    id INTEGER PRIMARY KEY,   -- 商品 ID
-    name TEXT,                -- 商品名称
-    category TEXT,            -- 类目（数码/家居/服饰）
-    price REAL                -- 单价（元）
-);
-
-CREATE TABLE orders (
-    id INTEGER PRIMARY KEY,   -- 订单 ID
-    user_id INTEGER,          -- 下单用户，对应 users.id
-    product_id INTEGER,       -- 购买商品，对应 products.id
-    quantity INTEGER,         -- 购买数量
-    amount REAL,              -- 订单金额（元）
-    status TEXT,              -- 订单状态：paid=已支付 / refunded=已退款 / pending=待支付
-    created_at TEXT           -- 下单时间（YYYY-MM-DD HH:MM:SS）
-);
-
-（说明：W1 直接把表结构写死在提示词里；W2 起这段会改为 RAG 动态检索注入。）
+【参考资料】
+{context_section}
 
 【行为规则】
-1. 需要数据时，先用 list_tables 了解库结构，再写 SQL 调用 execute_readonly_sql 查询；
-   绝对不要凭空编造数据。
-2. 只生成 SQLite 方言的只读 SQL（SELECT / WITH 开头），任何写操作都会被工具拒绝。
-3. 所有金额的单位都是元。
-4. 回答必须基于工具返回的真实结果；如果查询不到数据，就如实说明查询不到，
-   不要猜测或编造。
-5. 用中文回答。回答中的关键数字要说明来源（基于哪次查询的结果）。
+1. 写 SQL 前先依据【参考资料】中的表结构和业务口径；资料未覆盖时用 list_tables 工具探查。
+2. 只生成 MySQL 方言的只读 SQL（SELECT / WITH 开头），任何写操作都会被拒绝。
+3. 所有金额单位是元。回答口径类问题时说明所用口径（如“按支付成功金额计”）。
+4. 回答必须基于工具返回的真实结果；查不到就如实说明，不要编造。
+5. 用中文回答，关键数字说明来源（基于哪次查询的结果）。
 """
 
+# 检索一条没命中时的兜底文案：提示模型走 list_tables 探查
+_NO_CONTEXT_SECTION = "（本次没有检索到相关资料。请先用 list_tables 工具了解库结构，再写 SQL 查询。）"
 
-def build_agent():
+# 检索片的 doc_type → 注入标题里的类型名（设计 §3.5 的 `--- [N] 类型 · 标题 ---`）
+_DOC_TYPE_LABELS = {
+    "schema": "表结构",
+    "glossary": "业务口径",
+    "qa_pair": "示例问答",
+}
+
+
+def format_context_block(chunks: Sequence[RetrievedChunk]) -> str:
+    """把检索结果格式化成注入 prompt 的【参考资料】文本块。
+
+    每片一个标题行 `--- [序号] 类型 · 标题 ---` + chunk 全文；
+    没有检索结果时返回空字符串（由 build_system_prompt 换成兜底文案）。
+    """
+    sections: list[str] = []
+    for i, chunk in enumerate(chunks, 1):
+        label = _DOC_TYPE_LABELS.get(chunk.doc_type, "资料")
+        sections.append(f"--- [{i}] {label} · {chunk.title} ---\n{chunk.text}")
+    return "\n\n".join(sections)
+
+
+def build_system_prompt(context_block: str) -> str:
+    """拼装系统提示词：静态骨架 + 动态【参考资料】块。
+
+    context_block 是 format_context_block 的产物；为空时用兜底文案，
+    引导模型改走 list_tables 工具探查。
+    """
+    context_section = context_block.strip() if context_block and context_block.strip() else _NO_CONTEXT_SECTION
+    return _SYSTEM_PROMPT_TEMPLATE.format(context_section=context_section)
+
+
+# ---------------------------------------------------------------------------
+# 模块级单例：checkpointer（多轮记忆）与检索器（embedding 模型）
+# 都只在进程内初始化一次，多次 build_agent / 多轮对话共享。
+# ---------------------------------------------------------------------------
+
+_checkpointer: InMemorySaver | None = None
+
+
+def get_checkpointer() -> InMemorySaver:
+    """会话记忆单例：每轮重建 agent 时传入同一个 checkpointer，多轮记忆不丢。"""
+    global _checkpointer
+    if _checkpointer is None:
+        _checkpointer = InMemorySaver()
+    return _checkpointer
+
+
+_retriever: HybridRetriever | None = None
+
+
+def get_retriever() -> HybridRetriever:
+    """混合检索器懒加载单例：Chroma collection + bge embedding（首次约几秒）。"""
+    global _retriever
+    if _retriever is None:
+        collection = get_collection()
+        embedder = BgeEmbedder(model_name=EMBEDDING_MODEL)
+        _retriever = HybridRetriever(collection, embedder)
+    return _retriever
+
+
+def previous_human_message(checkpointer: InMemorySaver, config: dict) -> str:
+    """从 checkpointer 取该 thread 的上一条用户消息（设计 §3.6）。
+
+    多轮问题的检索 query = 上一条用户消息 + 当前输入——否则“那 10 月呢？”
+    这种指代式短问在检索层什么都召不回。首轮没有历史时返回空字符串。
+    """
+    checkpoint_tuple = checkpointer.get_tuple(config)
+    if checkpoint_tuple is None:
+        return ""
+    messages = (checkpoint_tuple.checkpoint.get("channel_values") or {}).get("messages") or []
+    for message in reversed(list(messages)):
+        if isinstance(message, HumanMessage):
+            content = message.content
+            return content if isinstance(content, str) else str(content)
+    return ""
+
+
+def build_agent(system_prompt: str):
     """组装并返回一个带会话记忆的 Text-to-SQL Agent。
 
     组成部分：
     - model：ChatDeepSeek，temperature=0 让输出更稳定（适合生成 SQL）
     - tools：两个 SQL 工具（查表、执行只读查询）
-    - system_prompt：上面定义的角色与规则
-    - checkpointer：InMemorySaver 保存对话历史，让 Agent 记住上下文；
+    - system_prompt：调用方传入（静态骨架 + 本轮动态检索注入）
+    - checkpointer：模块级单例，保存对话历史让 Agent 记住上下文；
       调用时通过 config={"configurable": {"thread_id": ...}} 区分不同会话
     """
     model = ChatDeepSeek(
@@ -76,7 +158,7 @@ def build_agent():
     agent = create_agent(
         model=model,
         tools=[execute_readonly_sql, list_tables],
-        system_prompt=SYSTEM_PROMPT,
-        checkpointer=InMemorySaver(),
+        system_prompt=system_prompt,
+        checkpointer=get_checkpointer(),
     )
     return agent

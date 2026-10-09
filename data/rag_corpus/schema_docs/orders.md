@@ -33,7 +33,13 @@ CREATE TABLE orders (
 | created_at | DATETIME | 下单时间，数据期 2025-10-01 至 2026-09-30，恒晚于用户 registered_at | 2026-03-15 14:22:31 |
 
 ## 示例数据（3 行，来自库中真实数据）
-（待数据导入后填充真实查询结果——T2 收尾项）
+以下为库中真实数据（`SELECT * FROM orders LIMIT 3` 的查询结果）：
+
+| id | order_no | user_id | status | order_amount | item_count | created_at |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | SO2025100100000001 | 5724 | completed | 3306.89 | 4 | 2025-10-01 00:02:55 |
+| 2 | SO2025100100000002 | 860 | refunded | 267.88 | 1 | 2025-10-01 00:11:53 |
+| 3 | SO2025100100000003 | 11735 | completed | 297.02 | 1 | 2025-10-01 00:16:21 |
 
 ## 关联关系
 - orders.user_id → users.id（多对一：一笔订单恰属于一个用户）

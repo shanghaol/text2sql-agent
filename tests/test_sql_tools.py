@@ -1,39 +1,53 @@
 """SQL 工具的单元测试。
 
-设计原则：**完全不依赖 DEEPSEEK_API_KEY**——这里测的都是本地逻辑
-（SQL 校验、LIMIT 注入、只读执行、建库脚本），不需要真的调用模型。
-
-fixture 里的临时数据库通过 set_db_path 注入，
-teardown 时恢复原路径，避免影响其他测试。
+设计原则：**默认套件完全不依赖 MySQL 和 DEEPSEEK_API_KEY**——
+validate_readonly_sql / enforce_limit 都是纯函数，任何机器裸跑全绿；
+执行类测试依赖真实 MySQL（mart 库），用环境变量门控 + skipif 跳过：
+门控条件 = 测试文件顶部自己 load_dotenv() 后检查 MYSQL_ADMIN_PASSWORD
+已配置且 MySQL 端口可连通（见下方 _mysql_reachable）。
 """
 
-import sqlite3
+import os
+import socket
 from pathlib import Path
 
 import pytest
+from dotenv import load_dotenv
 
-from agent.db.seed import seed_demo_db
 from agent.tools import sql_tools
 
+# ---------------------------------------------------------------------------
+# MySQL 门控条件（无 MySQL 的机器：以下用例全部跳过，默认套件不受影响）
+# ---------------------------------------------------------------------------
 
-@pytest.fixture()
-def demo_db(tmp_path: Path):
-    """在 pytest 临时目录里建一个演示库，并把工具的 DB_PATH 指向它。
+REPO_ROOT = Path(__file__).resolve().parents[1]
+# pytest 不会自动加载 .env：文件顶部显式 load 一次（agent.config 导入时也会
+# load，这里不依赖导入顺序，保证门控条件自成一体、可独立读懂）。
+load_dotenv(REPO_ROOT / ".env")
 
-    - tmp_path 是 pytest 自带的临时目录 fixture，每个测试独享一份，
-      测试结束后由 pytest 自动清理；
-    - teardown（yield 之后的代码）负责恢复原来的路径，防止"测试污染全局状态"。
-    """
-    db_file = tmp_path / "test_demo.db"
-    seed_demo_db(db_file)
-    original_path = sql_tools.DB_PATH
-    sql_tools.set_db_path(db_file)
-    yield db_file
-    sql_tools.set_db_path(original_path)
+
+def _mysql_reachable() -> bool:
+    """门控条件：只读账号凭证可用（MYSQL_PASSWORD 或回退 MYSQL_RO_PASSWORD），且 MySQL 端口可连通。"""
+    if not (os.environ.get("MYSQL_PASSWORD") or os.environ.get("MYSQL_RO_PASSWORD")):
+        return False
+    host = os.environ.get("MYSQL_HOST", "127.0.0.1")
+    port = int(os.environ.get("MYSQL_PORT", "3306"))
+    try:
+        with socket.create_connection((host, port), timeout=1):
+            return True
+    except OSError:
+        return False
+
+
+MYSQL_AVAILABLE = _mysql_reachable()
+requires_mysql = pytest.mark.skipif(
+    not MYSQL_AVAILABLE,
+    reason="需要本机 MySQL：.env 配置 MYSQL_ADMIN_PASSWORD 且端口可连通",
+)
 
 
 # ---------------------------------------------------------------------------
-# validate_readonly_sql：只读校验
+# validate_readonly_sql：只读校验（纯函数）
 # ---------------------------------------------------------------------------
 
 
@@ -90,6 +104,37 @@ def test_validate_write_operations_rejected(sql: str):
     assert "拒绝执行" in reason
 
 
+@pytest.mark.parametrize(
+    ("sql", "keyword"),
+    [
+        # MySQL 锁读：SELECT ... FOR UPDATE 是合法语法，但不是只读
+        ("SELECT * FROM orders WHERE id = 1 FOR UPDATE", "FOR UPDATE"),
+        ("SELECT * FROM payments WHERE id = 1 FOR SHARE", "FOR SHARE"),
+        # MySQL 特有写文件面：SELECT 开头却能写服务器文件系统
+        ("SELECT * FROM orders INTO OUTFILE '/tmp/dump.csv'", "INTO OUTFILE"),
+        ("SELECT * FROM orders INTO DUMPFILE '/tmp/dump.bin'", "INTO DUMPFILE"),
+        ("SELECT * FROM orders LOCK IN SHARE MODE", "LOCK IN SHARE MODE"),
+    ],
+)
+def test_validate_mysql_specific_keywords_rejected(sql: str, keyword: str):
+    """W2 新增的 MySQL 特有黑名单词（锁读/写文件/共享锁）必须被拒绝。"""
+    ok, reason = sql_tools.validate_readonly_sql(sql)
+    assert not ok
+    assert "拒绝执行" in reason
+    assert keyword in reason  # 拒绝原因要点名命中的关键字，模型才知道改哪里
+
+
+def test_validate_for_update_inside_subquery_rejected():
+    """含 FOR UPDATE 的子查询也要拒：黑名单是对全文的整词匹配，不看层级。"""
+    sql = """
+    SELECT * FROM orders
+    WHERE user_id IN (SELECT user_id FROM payments WHERE id = 1 FOR UPDATE)
+    """
+    ok, reason = sql_tools.validate_readonly_sql(sql)
+    assert not ok
+    assert "FOR UPDATE" in reason
+
+
 def test_validate_multi_statement_rejected():
     """一条请求里塞两条语句（SELECT + DROP）必须整体拒绝。"""
     sql = "SELECT 1; DROP TABLE users"
@@ -103,7 +148,7 @@ def test_validate_multi_statement_rejected():
 
 
 def test_validate_trailing_semicolon_passes():
-    """结尾一个分号是合法写法（SQLite 习惯），应放行。"""
+    """结尾一个分号是合法写法（MySQL CLI 习惯），应放行。"""
     ok, _reason = sql_tools.validate_readonly_sql("SELECT 1;")
     assert ok
 
@@ -135,7 +180,7 @@ def test_validate_keyword_in_string_literal_rejected():
     """已知保守行为（W1 故意）：字符串字面量里的关键字也会被误拒。
 
     WHERE status = 'update' 里的 update 只是普通数据，不会真的写库，
-    但 W1 的黑名单是纯文本匹配，不解析字符串，所以宁可错杀。
+    但黑名单是纯文本匹配，不解析字符串，所以宁可错杀。
     W5 换 sqlglot AST 解析后会放开这个误杀。
     """
     sql = "SELECT * FROM orders WHERE status = 'update'"
@@ -151,7 +196,7 @@ def test_validate_underscore_column_not_mistaken_for_update():
 
 
 # ---------------------------------------------------------------------------
-# enforce_limit：自动补 LIMIT
+# enforce_limit：自动补 LIMIT（W2 零改动，用例原样保留）
 # ---------------------------------------------------------------------------
 
 
@@ -180,70 +225,65 @@ def test_enforce_limit_ignores_limit_inside_comment():
 
 
 # ---------------------------------------------------------------------------
-# execute_readonly_sql：用 .invoke 调用真正的工具
+# MySQL 执行类测试（门控：需要本机 MySQL 的 mart 库）
+# W1 的 SQLite demo_db 版本已按设计 §4.7 迁移到这里，行数断言 30 → 100000。
 # ---------------------------------------------------------------------------
 
 
-def test_execute_count_orders(demo_db: Path):
-    """COUNT 查询应返回列名和正确的行数 30。"""
+@requires_mysql
+def test_execute_count_orders_mysql():
+    """COUNT 查询应返回列名和订单总数 100000（W1 断言 30 的 MySQL 版）。"""
     result = sql_tools.execute_readonly_sql.invoke({"sql": "SELECT COUNT(*) FROM orders"})
     assert "COUNT(*)" in result  # 列名
-    assert "30" in result  # 行数
+    assert "100000" in result  # 行数
     assert "共 1 行" in result
 
 
-def test_execute_truncates_large_result(demo_db: Path):
-    """SELECT * 有 30 行结果，应只显示 20 行并附截断提示。"""
-    result = sql_tools.execute_readonly_sql.invoke({"sql": "SELECT * FROM orders"})
-    assert "共 20 行" in result
-    assert "结果已截断" in result
-
-
-def test_execute_bad_column_returns_readable_error(demo_db: Path):
-    """列名拼错应返回包含 'SQL 错误' 的可读中文信息（带 SQLite 原始 message）。"""
+@requires_mysql
+def test_execute_bad_column_returns_mysql_readable_error():
+    """列名拼错应返回可读中文（1054 映射提示含'列'）+ MySQL 原始 message。"""
     result = sql_tools.execute_readonly_sql.invoke({"sql": "SELECT nonexistent_col FROM orders"})
     assert "SQL 错误" in result
-    assert "no such column" in result  # SQLite 的原始提示，模型靠它自我修正
+    assert "列不存在" in result  # 1054 的中文映射
+    assert "Unknown column" in result  # MySQL 原始提示，模型靠它自我修正
 
 
-def test_execute_delete_is_rejected_and_data_unchanged(demo_db: Path):
-    """DELETE 被拒绝后，库中数据必须原封不动。"""
+@requires_mysql
+def test_execute_delete_is_rejected_and_data_unchanged():
+    """DELETE 被代码校验拒绝后，库中数据必须原封不动。"""
     result = sql_tools.execute_readonly_sql.invoke({"sql": "DELETE FROM orders"})
     assert "拒绝执行" in result
 
-    # 双重确认：真的去库里数一下，订单还是 30 条
-    conn = sqlite3.connect(demo_db)
-    try:
-        count = conn.execute("SELECT COUNT(*) FROM orders").fetchone()[0]
-    finally:
-        conn.close()
-    assert count == 30
+    # 双重确认：真的去库里数一下，订单还是 100000 条
+    count_result = sql_tools.execute_readonly_sql.invoke({"sql": "SELECT COUNT(*) FROM orders"})
+    assert "100000" in count_result
 
 
-# ---------------------------------------------------------------------------
-# seed_demo_db：建库脚本本身
-# ---------------------------------------------------------------------------
+@requires_mysql
+def test_list_tables_returns_six_tables():
+    """list_tables 应返回 mart 库的 6 张表（information_schema + 逐表 COUNT）。"""
+    result = sql_tools.list_tables.invoke({})
+    assert "共有 6 张表" in result
+    for table in ("users", "products", "orders", "order_items", "payments", "refunds"):
+        assert table in result
 
 
-def test_seed_creates_tables_with_expected_row_counts(tmp_path: Path):
-    """建库后三张表都存在，行数分别是 10 / 8 / 30。"""
-    db_file = tmp_path / "seed_check.db"
-    result_path = seed_demo_db(db_file)
+@requires_mysql
+def test_session_read_only_guard_is_active():
+    """会话只读第二道防线生效：Agent 引擎的每个连接 transaction_read_only = 1。"""
+    result = sql_tools.execute_readonly_sql.invoke({"sql": "SELECT @@transaction_read_only"})
+    lines = result.splitlines()
+    # 输出结构固定：第 1 行行数、第 2 行列名、第 3 行值
+    assert len(lines) >= 3
+    assert lines[0] == "共 1 行"
+    assert lines[2].strip() == "1"
 
-    assert result_path == db_file  # 返回值就是库路径
-    assert db_file.exists()
 
-    conn = sqlite3.connect(db_file)
-    try:
-        tables = {
-            row[0]
-            for row in conn.execute(
-                "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"
-            ).fetchall()
-        }
-        assert tables == {"users", "products", "orders"}
-        assert conn.execute("SELECT COUNT(*) FROM users").fetchone()[0] == 10
-        assert conn.execute("SELECT COUNT(*) FROM products").fetchone()[0] == 8
-        assert conn.execute("SELECT COUNT(*) FROM orders").fetchone()[0] == 30
-    finally:
-        conn.close()
+@requires_mysql
+def test_for_update_rejected_before_touching_database():
+    """SELECT ... FOR UPDATE 在代码校验阶段就被拒（不会真到 MySQL 锁表）。"""
+    result = sql_tools.execute_readonly_sql.invoke(
+        {"sql": "SELECT * FROM orders WHERE id = 1 FOR UPDATE"}
+    )
+    assert "拒绝执行" in result
+    assert "FOR UPDATE" in result

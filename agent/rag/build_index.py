@@ -36,12 +36,27 @@ def _split_entries(text: str, heading_prefix: str) -> list[tuple[int, str, str]]
 
     返回 (起始行号 1-based, 标题行, 条目全文含标题行) 列表；
     没有命中标题行的前置内容（如文件总标题）被丢弃。
+
+    边界规则：条目正文在两种情况下结束——
+    ① 遇到下一个同级标题（heading_prefix）；
+    ② 遇到 `## ` 级别的章节标题（如"## 待真库核对清单"）。
+    规则 ② 防止"最后一条条目切到文件尾"把文件末尾附加内容
+    （核对清单、金标答案等非语料内容）粘进最后一个语料片
+    ——曾导致 W3 金标答案进入 RAG 索引（见 docs/qa_verification.md 头注）。
     """
     lines = text.splitlines()
     starts = [i for i, line in enumerate(lines) if line.startswith(heading_prefix)]
     entries: list[tuple[int, str, str]] = []
     for n, start in enumerate(starts):
-        end = starts[n + 1] if n + 1 < len(starts) else len(lines)
+        end = len(lines)
+        if n + 1 < len(starts):
+            end = starts[n + 1]
+        else:
+            # 最后一条：在剩余行里找第一个非本前缀的 `## ` 章节标题作为终止边界
+            for j in range(start + 1, len(lines)):
+                if lines[j].startswith("## ") and not lines[j].startswith(heading_prefix):
+                    end = j
+                    break
         entry_text = "\n".join(lines[start:end]).strip()
         entries.append((start + 1, lines[start], entry_text))
     return entries

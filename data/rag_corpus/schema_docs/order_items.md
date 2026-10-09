@@ -30,7 +30,13 @@ CREATE TABLE order_items (
 | sale_amount | DECIMAL(10,2) | 行小计（元）= unit_price × quantity；同单各行求和恒等于 orders.order_amount（勾稽 R1/R3） | 2338.20 |
 
 ## 示例数据（3 行，来自库中真实数据）
-（待数据导入后填充真实查询结果——T2 收尾项）
+以下为库中真实数据（`SELECT * FROM order_items LIMIT 3` 的查询结果）：
+
+| id | order_id | product_id | quantity | unit_price | discount_rate | sale_amount |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | 1 | 718 | 3 | 880.76 | 0.90 | 2642.28 |
+| 2 | 1 | 1411 | 1 | 664.61 | 0.95 | 664.61 |
+| 3 | 2 | 1559 | 1 | 267.88 | 1.00 | 267.88 |
 
 ## 关联关系
 - order_items.order_id → orders.id（多对一：一条明细属于一笔订单）

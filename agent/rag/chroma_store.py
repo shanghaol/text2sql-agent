@@ -6,20 +6,19 @@
 - #3 get_or_create_collection 对已存在的 collection 会忽略新传的 configuration，
   所以改配置 = 删目录重建，不能指望 get_or_create "升级"参数。
 
-path 目前写死为 <仓库根>/data/chroma_db；T4 接入 config 的环境变量覆盖
-（CHROMA_PERSIST_DIR）时只改这一处。
+path 由 config.CHROMA_PERSIST_DIR 提供（默认 <仓库根>/data/chroma_db，
+可用环境变量 CHROMA_PERSIST_DIR 覆盖），config 侧已做绝对化。
 """
-
-from pathlib import Path
 
 import chromadb
 from chromadb import Collection
 
+from agent.config import CHROMA_PERSIST_DIR
+
 COLLECTION_NAME = "rag_corpus"
 
-# config.py 位于 <根>/agent/config.py 用 parents[1]；本文件在 <根>/agent/rag/ 下，
-# parents[2] 即仓库根。
-CHROMA_PERSIST_PATH = Path(__file__).resolve().parents[2] / "data" / "chroma_db"
+# 持久化路径统一收口到 config（T4 改造：原来是本文件里 parents[2] 拼路径）
+CHROMA_PERSIST_PATH = CHROMA_PERSIST_DIR
 
 # HNSW 建库参数：cosine 相似度 + 官方建议的建图质量值（设计 §3.1）
 _HNSW_CONFIGURATION = {"hnsw": {"space": "cosine", "ef_construction": 200}}

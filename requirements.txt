@@ -4,6 +4,11 @@ langchain-deepseek>=1.1,<2 # DeepSeek 官方集成（ChatDeepSeek，读 DEEPSEEK
 langgraph>=1.2,<2          # create_agent 的底层状态机；InMemorySaver 所在包（代码直接导入，故显式声明）
 python-dotenv>=1.0         # 从 .env 读取环境变量
 
+# MySQL 连接三件套（W2 T4）
+sqlalchemy>=2.0,<3         # 连接池 + 统一异常体系（角色等同 Java 侧 HikariCP）
+pymysql>=1.1               # MySQL 纯 Python 驱动（Windows 零编译）
+cryptography>=42           # PyMySQL 处理 caching_sha2_password 认证必需
+
 # 检索层依赖（W2 T3）
 chromadb>=1.5.5,<2         # 嵌入式向量库（1.5.4 已被官方撤回，禁用）
 fastembed                  # 本地 ONNX Embedding（BAAI/bge-small-zh-v1.5）；无稳定下限，版本编码期锁定

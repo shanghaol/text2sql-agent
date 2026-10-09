@@ -31,7 +31,39 @@ DEEPSEEK_API_KEY: str = os.environ.get("DEEPSEEK_API_KEY", "")
 # 方便以后换模型时不用改代码。
 DEEPSEEK_MODEL: str = os.environ.get("DEEPSEEK_MODEL", "deepseek-flash")
 
-# 演示数据库路径：默认仓库根目录下的 data/demo.db。
+# 演示数据库路径（W1 遗留，T5 工单统一清理；W2 起 Agent 用下面的 MySQL 配置）。
 # 允许用环境变量 DEMO_DB_PATH 覆盖——这是给测试用的钩子：
 # 测试时把库指到 pytest 的临时目录，不会污染真实数据文件。
 DB_PATH: Path = Path(os.environ.get("DEMO_DB_PATH", str(REPO_ROOT / "data" / "demo.db")))
+
+# ---------------------------------------------------------------------------
+# W2 新增：MySQL 连接配置（设计 §4.2）
+# Agent 用只读账号 text2sql_ro（仅 SELECT ON mart.*）；
+# 管理员账号只给 data/generate_dataset.py 建库/导入用，Agent 代码不碰它。
+# ---------------------------------------------------------------------------
+
+MYSQL_HOST: str = os.environ.get("MYSQL_HOST", "127.0.0.1")
+MYSQL_PORT: int = int(os.environ.get("MYSQL_PORT", "3306"))
+MYSQL_USER: str = os.environ.get("MYSQL_USER", "text2sql_ro")
+# 密码变量名映射：优先 MYSQL_PASSWORD；没有就回退只读账号的 MYSQL_RO_PASSWORD
+# （本项目 .env 里只维护了 MYSQL_RO_PASSWORD 这一个名字）。
+MYSQL_PASSWORD: str = os.environ.get("MYSQL_PASSWORD") or os.environ.get("MYSQL_RO_PASSWORD", "")
+MYSQL_DB: str = os.environ.get("MYSQL_DB", "mart")
+# 仅数据脚本（generate_dataset.py）使用，Agent 运行链路不读这两个值
+MYSQL_ADMIN_USER: str = os.environ.get("MYSQL_ADMIN_USER", "root")
+MYSQL_ADMIN_PASSWORD: str = os.environ.get("MYSQL_ADMIN_PASSWORD", "")
+
+# ---------------------------------------------------------------------------
+# W2 新增：检索层配置（Chroma 索引位置 / Embedding 模型 / 注入条数）
+# ---------------------------------------------------------------------------
+
+# Chroma 持久化目录：绝对化（坑清单 #1：相对路径换启动目录即"数据丢失"）。
+# 允许环境变量覆盖；传相对路径时按仓库根拼接，传绝对路径时 pathlib 直接采用。
+_chroma_dir = Path(os.environ.get("CHROMA_PERSIST_DIR", "data/chroma_db"))
+CHROMA_PERSIST_DIR: Path = _chroma_dir if _chroma_dir.is_absolute() else REPO_ROOT / _chroma_dir
+
+# Embedding 模型：bge-small-zh-v1.5（512 维），fastembed 本地 ONNX 加载
+EMBEDDING_MODEL: str = os.environ.get("EMBEDDING_MODEL", "BAAI/bge-small-zh-v1.5")
+
+# 每轮注入 prompt 的检索条数上限（W6 消融调参入口，设计 §3.4 建议 8）
+RETRIEVER_TOP_N: int = int(os.environ.get("RETRIEVER_TOP_N", "8"))

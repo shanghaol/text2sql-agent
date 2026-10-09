@@ -377,3 +377,19 @@ def test_bge_embedder_query_instruction_prefix():
     """查询侧指令前缀必须与设计一致（bge 检索口径，W6 消融不再动它）。"""
     assert BgeEmbedder.QUERY_INSTRUCTION_PREFIX == "为这个句子生成表示以检索相关文章："
     assert BgeEmbedder.DEFAULT_MODEL_NAME == "BAAI/bge-small-zh-v1.5"
+
+
+def test_split_entries_last_entry_stops_at_h2_section():
+    """回归（W2 审查 P1）：最后一条条目后面跟 `## ` 章节标题时必须截断，
+    防止核对清单/金标答案等非语料内容被粘进最后一个语料片。"""
+    from agent.rag.build_index import _split_entries
+
+    text = (
+        "### QA-001\n**问**：A\n内容A\n"
+        "### QA-002\n**问**：B\n内容B\n"
+        "## 待真库核对清单\n- [x] 金标答案 16,029,955.34\n"
+    )
+    entries = _split_entries(text, "### QA-")
+    assert len(entries) == 2
+    assert "内容B" in entries[1][2]
+    assert "金标答案" not in entries[1][2]  # `## ` 章节被截掉
