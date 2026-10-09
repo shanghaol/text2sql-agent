@@ -13,6 +13,11 @@ __pycache__/
 data/*.db
 **/chroma_db/
 
+# W2 数据与检索产物（派生物/大文件，不入库）
+data/dataset/
+data/chroma_db/
+data/models/
+
 # IDE
 .idea/
 .vscode/

@@ -86,6 +86,7 @@ text2sql-agent/
 | 混合检索       | rank-bm25（关键词路）+ Chroma（稠密语义路），**自实现 RRF 融合**                                 | RRF 自己手写——手撕面试原题从"能讲"升级为"写过可展示"；消融实验用"单路 vs 混合"对比出数字                                                                     |
 | Rerank ⚙️    | P1 阶段接 SiliconFlow bge-reranker-v2-m3                                                         | 用于消融实验出简历数字                                                                                                                                         |
 | 业务后端       | Spring Boot 3.x + MySQL + JWT                                                                    | 用户技术舒适区                                                                                                                                                 |
+| 分析库         | **MySQL（2026-10-09 用户确认）**                                                                 | 与业务后端**同一 MySQL 实例、双库隔离**：`app`（业务：用户/历史/反馈）+ `mart`（分析：Faker 数据集，Agent 查询的库）——2核2G 单实例省内存；Agent 生成 MySQL 方言 SQL；只读账号只授 `mart` 库 SELECT 权限 |
 | 数据集 ⚙️    | 电商模拟数据集（Python Faker 生成：用户/商品/订单/订单项/支付/退款，约 10 万订单）+ 业务口径文档 | 电商是最典型的分析场景；不引入外部真实数据，避免合规问题                                                                                                       |
 | 服务边界       | 前端 → Java 网关（鉴权）→ Python`/agent/chat`（SSE）；Agent → Java REST（历史/反馈/数据源）   | 呼应大厂"Python 大脑 + Java 工程化"分工                                                                                                                        |
 
