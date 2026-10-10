@@ -65,11 +65,16 @@ public class AuthController {
         return ApiResponse.ok(authService.me(user.id()));
     }
 
-    /** X-Forwarded-For 首值（Caddy 注入的客户端真实 IP）；直连开发机时退回 remoteAddr。 */
+    /**
+     * 客户端真实 IP（审查 P1-b 修复）：优先读 nginx 注入的 X-Real-IP——
+     * 它由 $remote_addr 生成、客户端无法伪造；XFF 首值是客户端可控字段，
+     * 直接采用等于登录限流可被伪造头绕过（审查实测 12 次登录全 401 从不 429）。
+     * 直连开发机（无反代、无 X-Real-IP）时退回 remoteAddr。
+     */
     static String clientIp(HttpServletRequest request) {
-        String xff = request.getHeader("X-Forwarded-For");
-        if (xff != null && !xff.isBlank()) {
-            return xff.split(",")[0].trim();
+        String realIp = request.getHeader("X-Real-IP");
+        if (realIp != null && !realIp.isBlank()) {
+            return realIp.trim();
         }
         return request.getRemoteAddr();
     }

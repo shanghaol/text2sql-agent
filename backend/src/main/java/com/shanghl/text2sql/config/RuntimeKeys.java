@@ -90,6 +90,16 @@ public class RuntimeKeys {
 
         this.jwtHmacKey = Keys.hmacShaKeyFor(jwtBytes);
         this.byokMasterKey = new SecretKeySpec(masterBytes, "AES");
+
+        // P1-a（W4 审查）：INTERNAL_TOKEN 空 = 内部接口 fail-open（任何人可调 /api/internal/**）。
+        // 生产必须配置；dev 允许空（本机直连调试语义，见 application-dev.yml 注释）。
+        String internalToken = props.getInternalToken();
+        boolean isProd = env.getActiveProfiles().length == 0; // 无 profile = 生产语义
+        if (isProd && (internalToken == null || internalToken.isBlank())) {
+            throw new IllegalStateException("缺少必需环境变量：INTERNAL_TOKEN 必须配置"
+                    + "（空值 = 内部接口对公网 fail-open，审查 P1-a）。");
+        }
+
         log.info("密钥材料就绪（dev 临时密钥={}，jwt secret 字节数={}，master key 字节数={}）",
                 devTemporaryKeys, jwtBytes.length, masterBytes.length);
     }

@@ -200,7 +200,6 @@ class StreamEventMapper:
             events.extend(self._flush_slot(idx))
         self._pending_tools.clear()
         return events
-        return events
 
 
 # ---------------------------------------------------------------------------
