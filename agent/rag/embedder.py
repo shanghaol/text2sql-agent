@@ -20,13 +20,19 @@ class BgeEmbedder:
 
     DEFAULT_MODEL_NAME = "BAAI/bge-small-zh-v1.5"
 
-    def __init__(self, model_name: str = DEFAULT_MODEL_NAME) -> None:
+    def __init__(self, model_name: str = DEFAULT_MODEL_NAME, cache_dir: str | None = None) -> None:
         # 惰性导入：只在真正实例化（= 真要算向量）时才加载 fastembed。
-        # TextEmbedding(model_name=...) 构造即完成模型加载（本地 ONNX 缓存）。
+        # TextEmbedding(model_name=...) 构造即完成模型加载。
+        # cache_dir：模型缓存目录。不传时 fastembed 用默认（Windows 是 %TEMP% 下，
+        # 生产不可靠——W4 部署实录：服务器 %TEMP% 重启清空 → 重新向 HuggingFace
+        # 下载 → 国内网络挂死，服务假死）。生产由 env FASTEMBED_CACHE_DIR 指到稳定路径。
         from fastembed import TextEmbedding
 
         self.model_name = model_name
-        self._model = TextEmbedding(model_name=model_name)
+        kwargs: dict = {"model_name": model_name}
+        if cache_dir:
+            kwargs["cache_dir"] = cache_dir
+        self._model = TextEmbedding(**kwargs)
 
     def embed(self, docs: list[str]) -> list[list[float]]:
         """文档向量：不加指令前缀。fastembed 返回可迭代对象，转成 list。"""

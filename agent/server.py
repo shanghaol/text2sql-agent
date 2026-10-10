@@ -40,6 +40,7 @@ from fastapi.responses import JSONResponse, StreamingResponse
 from langchain_core.messages import HumanMessage
 from pydantic import BaseModel
 
+import agent.sqlite_shim  # noqa: F401  必须最先导入：chromadb 对 sqlite 版本有硬要求（见模块 docstring）
 from agent.config import (
     DEEPSEEK_API_KEY,
     DEEPSEEK_MODEL,

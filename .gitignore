@@ -28,3 +28,11 @@ backend/target/
 # IDEA HTTP Client 私有环境变量（可能存真实 DeepSeek key，绝不入库）
 http-client.private.env.json
 **/http-client.private.env.json
+
+# W4 服务运行日志
+uvicorn.log
+backend-java.log
+
+# 前端
+frontend/node_modules/
+frontend/dist/

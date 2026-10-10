@@ -39,10 +39,12 @@ DEEPSEEK_MODEL: str = os.environ.get("DEEPSEEK_MODEL", "deepseek-flash")
 
 MYSQL_HOST: str = os.environ.get("MYSQL_HOST", "127.0.0.1")
 MYSQL_PORT: int = int(os.environ.get("MYSQL_PORT", "3306"))
-MYSQL_USER: str = os.environ.get("MYSQL_USER", "text2sql_ro")
-# 密码变量名映射：优先 MYSQL_PASSWORD；没有就回退只读账号的 MYSQL_RO_PASSWORD
-# （本项目 .env 里只维护了 MYSQL_RO_PASSWORD 这一个名字）。
-MYSQL_PASSWORD: str = os.environ.get("MYSQL_PASSWORD") or os.environ.get("MYSQL_RO_PASSWORD", "")
+# 凭据变量名按消费者拆分（W4 教训：共享 MYSQL_PASSWORD 会让 ro 用户配上 app 密码 → 1045）
+# Java 用 MYSQL_APP_*（app 库读写）；Python 用 MYSQL_RO_*（mart 库只读）
+MYSQL_USER: str = os.environ.get("MYSQL_RO_USER", "text2sql_ro")
+# 密码变量名映射：优先只读专用名 MYSQL_RO_PASSWORD（生产 env.prod 的名字）；
+# 本地 .env 也只维护这一个名字。MYSQL_PASSWORD 不再作为回退（生产它属于 app 账号）。
+MYSQL_PASSWORD: str = os.environ.get("MYSQL_RO_PASSWORD", "")
 MYSQL_DB: str = os.environ.get("MYSQL_DB", "mart")
 # 仅数据脚本（generate_dataset.py）使用，Agent 运行链路不读这两个值
 MYSQL_ADMIN_USER: str = os.environ.get("MYSQL_ADMIN_USER", "root")

@@ -11,18 +11,24 @@ importlib.reload 只在本文件使用并在用例结束前恢复，
 import importlib
 
 
-def test_mysql_password_prefers_main_var_then_falls_back_to_ro(monkeypatch):
-    """有 MYSQL_PASSWORD 用之；没有则回退 MYSQL_RO_PASSWORD（.env 实际变量名）。"""
+def test_mysql_password_uses_ro_var_and_ignores_app_var(monkeypatch):
+    """W4 教训回归：Python 只认 MYSQL_RO_PASSWORD；MYSQL_PASSWORD 属于 app 账号，必须忽略。
+
+    生产 env.prod 同时存在两个名字（Java 用 MYSQL_APP_*，Python 用 MYSQL_RO_*），
+    若回退链先读 MYSQL_PASSWORD，ro 用户就会配上 app 密码 → 1045（2026-10-11 实录）。
+    """
     from agent import config
 
-    monkeypatch.delenv("MYSQL_PASSWORD", raising=False)
     monkeypatch.setenv("MYSQL_RO_PASSWORD", "ro-secret")
+    monkeypatch.setenv("MYSQL_PASSWORD", "app-secret")
     importlib.reload(config)
     assert config.MYSQL_PASSWORD == "ro-secret"
 
-    monkeypatch.setenv("MYSQL_PASSWORD", "main-secret")
+    monkeypatch.delenv("MYSQL_RO_PASSWORD", raising=False)
     importlib.reload(config)
-    assert config.MYSQL_PASSWORD == "main-secret"
+    # delenv 后 config 的 load_dotenv 会从本地 .env 重新加载真实值——
+    # 这里的断言点是"app 密码绝不会被采用"（- - 就是它），而非空串
+    assert config.MYSQL_PASSWORD != "app-secret"
 
     # 测试结束前恢复真实配置（monkeypatch.undo 后再 reload 回实际环境值）
     monkeypatch.undo()

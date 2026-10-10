@@ -9,7 +9,8 @@ After=network.target mysqld.service
 [Service]
 Type=simple
 WorkingDirectory=/opt/text2sql/current/backend
-ExecStart=/usr/bin/java -Xmx384m -Xms128m -XX:MaxMetaspaceSize=128m -jar /opt/text2sql/current/backend/text2sql-backend.jar --spring.profiles.active=prod
+# 8080 被同机的相册平台占用 → 网关用 8081（nginx 反代 /api→8081）
+ExecStart=/usr/bin/java -Xmx384m -Xms128m -XX:MaxMetaspaceSize=128m -jar /opt/text2sql/current/backend/text2sql-backend.jar --spring.profiles.active=prod --server.port=8081
 EnvironmentFile=/opt/text2sql/env.prod
 # 内存预算（W4 设计 §5.2）：JVM 堆 384m + Metaspace 128m，容器内合计 ≤550MB
 MemoryMax=550M

@@ -128,7 +128,14 @@ def get_retriever() -> HybridRetriever:
     global _retriever
     if _retriever is None:
         collection = get_collection()
-        embedder = BgeEmbedder(model_name=EMBEDDING_MODEL)
+        # 生产由 FASTEMBED_CACHE_DIR 指到稳定缓存路径（%TEMP% 默认在服务器不可靠，
+        # W4 部署实录：缓存缺失 → 运行时向 HuggingFace 下载 → 国内网络挂死）
+        import os
+
+        embedder = BgeEmbedder(
+            model_name=EMBEDDING_MODEL,
+            cache_dir=os.environ.get("FASTEMBED_CACHE_DIR") or None,
+        )
         _retriever = HybridRetriever(collection, embedder)
     return _retriever
 

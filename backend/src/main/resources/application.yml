@@ -18,8 +18,8 @@ spring:
   datasource:
     # 生产 compose 内为 jdbc:mysql://mysql:3306/app（§5.1）；此处默认仅是本地兜底
     url: ${MYSQL_URL:jdbc:mysql://127.0.0.1:3307/app?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true}
-    username: ${MYSQL_USERNAME:root}
-    password: ${MYSQL_PASSWORD:}
+    username: ${MYSQL_APP_USER:text2sql_app}
+    password: ${MYSQL_APP_PASSWORD:}
     hikari:
       # 设计 §2.1：四张表个位数并发，5 足够且省 MySQL 连接开销（2核2G 预算）
       maximum-pool-size: 5
