@@ -11,6 +11,9 @@ import javax.crypto.AEADBadTagException;
 import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.stereotype.Component;
+
 /**
  * BYOK 主方案的核心：AES-256-GCM 加密落库（设计 §1.3，编码按设计骨架逐行实现）。
  *
@@ -29,6 +32,7 @@ import javax.crypto.spec.SecretKeySpec;
  * 因此 IV 必须每次用 SecureRandom 重新生成 12 字节，并与密文同存（DB key_iv 列），
  * 解密时原样取出——IV 绝不能缓存、复用或由确定性函数生成。
  */
+@Component
 public class KeyCipherService {
 
     private static final String TRANSFORMATION = "AES/GCM/NoPadding";
@@ -40,7 +44,7 @@ public class KeyCipherService {
     // SecureRandom 本身线程安全；Cipher 不是线程安全的 → 每次 encrypt/decrypt 新建实例
     private final SecureRandom secureRandom = new SecureRandom();
 
-    public KeyCipherService(SecretKeySpec masterKey) {
+    public KeyCipherService(@Qualifier("byokMasterKey") SecretKeySpec masterKey) {
         this.masterKey = masterKey;
     }
 

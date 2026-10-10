@@ -20,7 +20,7 @@ class RateLimiterTest {
     @Test
     @DisplayName("窗口内达到上限后拒绝（对话 10/min 场景的缩小版）")
     void rejectsBeyondLimitWithinWindow() {
-        long t0 = 1_000_000L;
+        long t0 = 1_200_000L; // 必须窗口对齐（t0 % 60000 == 0），窗口起点 = t0
         assertThat(limiter.tryAcquire("chat:42", 3, MINUTE, t0)).isTrue();
         assertThat(limiter.tryAcquire("chat:42", 3, MINUTE, t0 + 1)).isTrue();
         assertThat(limiter.tryAcquire("chat:42", 3, MINUTE, t0 + 2)).isTrue();
@@ -31,7 +31,7 @@ class RateLimiterTest {
     @Test
     @DisplayName("窗口过期后恢复可用")
     void recoversAfterWindowExpires() {
-        long t0 = 2_000_000L;
+        long t0 = 2_400_000L; // 窗口对齐
         for (int i = 0; i < 5; i++) {
             assertThat(limiter.tryAcquire("chat:7", 5, MINUTE, t0 + i)).isTrue();
         }
@@ -44,7 +44,7 @@ class RateLimiterTest {
     @Test
     @DisplayName("不同 key 独立计数（不同用户 / 不同 IP）")
     void independentPerKey() {
-        long t0 = 3_000_000L;
+        long t0 = 3_600_000L;
         assertThat(limiter.tryAcquire("chat:1", 1, MINUTE, t0)).isTrue();
         assertThat(limiter.tryAcquire("chat:1", 1, MINUTE, t0 + 1)).isFalse();
         assertThat(limiter.tryAcquire("chat:2", 1, MINUTE, t0 + 2)).isTrue(); // 另一个用户不受影响

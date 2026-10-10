@@ -35,7 +35,7 @@ from collections.abc import Generator
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, Header
+from fastapi import FastAPI, Header, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 from langchain_core.messages import HumanMessage
 from pydantic import BaseModel
@@ -48,8 +48,10 @@ from agent.config import (
 )
 from agent.core.turn import prepare_turn
 
-# §1.5 规则 5：httpx 的 DEBUG 级日志会打请求头（含 key），启动即压到 WARNING
-logging.getLogger("httpx").setLevel(logging.WARNING)
+# §1.5 规则 5：httpx 系 logger 的 DEBUG 级日志会打请求头（含 key），启动即压到 WARNING。
+# "httpx2" 是 openai SDK 依赖树里的 httpx 变体 logger 名（实测 2026-10-11），一并压掉。
+for _httpx_logger in ("httpx", "httpx2"):
+    logging.getLogger(_httpx_logger).setLevel(logging.WARNING)
 
 # 应用日志到 stderr（docker logs 可见）：root 无 handler 时才装（uvicorn 直跑场景），
 # 否则 INFO 级日志会被 logging 的 last-resort 过滤器（WARNING 起）静默丢弃——
@@ -134,6 +136,8 @@ class StreamEventMapper:
 
     def __init__(self) -> None:
         self._last_tool_name = ""  # 记录上一条已发事件的工具名，同一轮里去重防刷屏
+        self._pending_tools: dict[int, dict] = {}  # 工具调用分片累积：index → {name, args}
+        self.last_generated_sql = None  # 本轮最后一次 execute_readonly_sql 的完整 SQL（done 事件携带）
         self.usage_input = 0
         self.usage_output = 0
 
@@ -143,18 +147,58 @@ class StreamEventMapper:
         # 1) 文本增量
         if chunk.content:
             events.append(("delta", {"text": chunk.content}))
-        # 2) 工具调用增量（getattr 兜底：不是 AIMessageChunk 的块没有这个属性）
+        # 2) 工具调用增量（getattr 兜底：不是 AIMessageChunk 的块没有这个属性）。
+        #    tool_call_chunks 是流式分片：name 在首片出现，args 按序号累积成完整 JSON。
+        #    起始分片立即发 tool 事件（前端"正在查询"指示 + Java 记工具名）；
+        #    完整 SQL 要等该条 AIMessage 收尾（usage 到达）才拼得出，见 _finalize_tool_sql。
         tool_chunks = getattr(chunk, "tool_call_chunks", None)
         if tool_chunks:
-            tool_name = tool_chunks[0]["name"] or ""
-            if tool_name and tool_name != self._last_tool_name:
-                self._last_tool_name = tool_name
-                events.append(("tool", {"name": tool_name}))
-        # 3) token 用量（每条 AIMessage 收尾 chunk 携带一次）
+            for tc in tool_chunks:
+                idx = tc.get("index")
+                idx = 0 if idx is None else idx
+                name = tc.get("name") or ""
+                slot = self._pending_tools.get(idx)
+                if slot and name and slot["name"] != name:
+                    # 同一序号来了不同名字的调用：先结算上一条的 sql，再开新槽
+                    events.extend(self._flush_slot(idx))
+                    slot = None
+                if slot is None:
+                    slot = {"name": "", "args": ""}
+                    self._pending_tools[idx] = slot
+                if name and slot["name"] == "":
+                    slot["name"] = name
+                    self._last_tool_name = name
+                    events.append(("tool", {"name": name}))
+                slot["args"] += tc.get("args") or ""
+        # 3) token 用量（每条 AIMessage 收尾 chunk 携带一次）——同时是工具调用参数拼装完成的信号
         usage = getattr(chunk, "usage_metadata", None)
         if usage:
             self.usage_input += int(usage.get("input_tokens") or 0)
             self.usage_output += int(usage.get("output_tokens") or 0)
+            events.extend(self._finalize_tool_sql())
+        return events
+
+    def _flush_slot(self, idx: int) -> list[tuple[str, dict]]:
+        """结算一个工具调用槽：参数拼成完整 JSON 后抽出 sql（无 sql 则静默）。"""
+        slot = self._pending_tools.get(idx)
+        if not slot or not slot["args"]:
+            return []
+        try:
+            parsed = json.loads(slot["args"])
+        except (ValueError, TypeError):
+            return []
+        if isinstance(parsed, dict) and parsed.get("sql"):
+            self.last_generated_sql = parsed["sql"]
+            return [("tool", {"name": slot["name"], "sql": parsed["sql"]})]
+        return []
+
+    def _finalize_tool_sql(self) -> list[tuple[str, dict]]:
+        """AIMessage 收尾：结算全部待决工具调用槽（清空累积）。"""
+        events: list[tuple[str, dict]] = []
+        for idx in sorted(self._pending_tools):
+            events.extend(self._flush_slot(idx))
+        self._pending_tools.clear()
+        return events
         return events
 
 
@@ -185,13 +229,22 @@ def _chat_event_stream(pt, question: str, started_at: float, key_fingerprint: st
             for event, data in mapper.feed(chunk):
                 yield sse_frame(event, data)
         latency_ms = int((time.perf_counter() - started_at) * 1000)
-        logger.info("stream completed: thread_key=%s latency_ms=%s", thread_key, latency_ms)
+        logger.info(
+            "stream completed: thread_key=%s latency_ms=%s has_sql=%s",
+            thread_key, latency_ms, mapper.last_generated_sql is not None,
+        )
         yield sse_frame(
             "done",
-            {"tokens": {"input": mapper.usage_input, "output": mapper.usage_output}, "latencyMs": latency_ms},
+            {
+                "tokens": {"input": mapper.usage_input, "output": mapper.usage_output},
+                "latencyMs": latency_ms,
+                # Java 旁路解析捕获后落 query_history.generated_sql（W5 few-shot 闭环原料）
+                "generatedSql": mapper.last_generated_sql,
+            },
         )
     except GeneratorExit:
-        logger.info("client disconnected: thread_key=%s", thread_key)
+        # 客户端断连：绝不 yield、绝不吞（吞了会 RuntimeError: generator ignored
+        # GeneratorExit）。日志由 _guarded_sse_stream 的确定性收场路径负责。
         raise
     except Exception as exc:  # noqa: BLE001 - 流中异常统一转 error 事件（§1.6 错误映射表）
         code, message = map_llm_error(exc)
@@ -208,6 +261,48 @@ class ChatRequest(BaseModel):
 
     question: str
     threadId: str
+
+
+async def _guarded_sse_stream(sync_gen: Generator[str, None, None], receive, thread_key: str):
+    """给同步 SSE 生成器加确定性断连收场的 async 包装（§9.2-5 实测结论的落地）。
+
+    为什么不直接把同步生成器交给 StreamingResponse：实测（2026-10-11，uvicorn
+    0.54 + starlette 1.7）取消落在 to_thread 等待点时，被弃的同步生成器会被
+    CancelledError 回溯的引用环扣住——GeneratorExit 迟迟不投递，挂起的生成器
+    （连同整轮 LangGraph 状态）长时间滞留。这里在 async 侧自听 http.disconnect，
+    一断连就同步 close() 底层生成器：GeneratorExit 在 finally 里**确定性**触发，
+    无滞留。LangChain 仍是同步驱动——"不引入 async 模型栈"的设计原则不破。
+
+    finally 里全部是同步调用（watcher.cancel / sync_gen.close），不在被取消的
+    协程里 await；薄壳 wrapper 交给 asyncio 的 asyncgen 终结钩子收尾（无害）。
+    """
+    import asyncio
+
+    from starlette.concurrency import iterate_in_threadpool
+
+    wrapper = iterate_in_threadpool(sync_gen)
+    disconnected = asyncio.Event()
+
+    async def _watch_disconnect():
+        while True:
+            message = await receive()
+            if message["type"] == "http.disconnect":
+                disconnected.set()
+                return
+
+    watcher = asyncio.ensure_future(_watch_disconnect())
+    try:
+        async for frame in wrapper:
+            if disconnected.is_set():
+                break
+            yield frame
+    finally:
+        watcher.cancel()
+        if disconnected.is_set():
+            # 断连收场：显式 close 同步生成器，GeneratorExit 在其挂起点确定性触发；
+            # 生成器已自然结束（断连在最后一帧之后才到）时 close() 是无害空操作
+            logger.info("client disconnected: thread_key=%s", thread_key)
+            sync_gen.close()
 
 
 # ---------------------------------------------------------------------------
@@ -299,6 +394,7 @@ def health() -> dict:
 @app.post("/agent/chat")
 def agent_chat(
     body: ChatRequest,
+    request: Request,
     x_internal_token: str | None = Header(default=None),
     x_user_llm_key: str | None = Header(default=None),
     x_user_id: str | None = Header(default=None),
@@ -342,9 +438,14 @@ def agent_chat(
         )
 
     # ⑤ SSE 流：text/event-stream + 禁代理缓冲双保险（X-Accel-Buffering 是
-    #   nginx 系约定头，§2.5 同款；Caddy 侧另有 flush_interval -1）
+    #   nginx 系约定头，§2.5 同款；Caddy 侧另有 flush_interval -1）。
+    #   外面套断连守卫（_guarded_sse_stream）：GeneratorExit 确定性触发，§9.2-5。
     return StreamingResponse(
-        _chat_event_stream(pt, body.question, started_at, key_fingerprint),
+        _guarded_sse_stream(
+            _chat_event_stream(pt, body.question, started_at, key_fingerprint),
+            request.receive,
+            thread_key,
+        ),
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )

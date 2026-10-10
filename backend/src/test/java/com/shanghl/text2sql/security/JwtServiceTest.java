@@ -96,9 +96,10 @@ class JwtServiceTest {
     }
 
     @Test
-    @DisplayName("畸形 token（乱串）→ JwtException，不抛出意外运行时异常")
+    @DisplayName("畸形 token（乱串）→ JwtException/IllegalArgumentException，不抛出意外运行时异常")
     void malformedTokenRejected() {
-        assertThatThrownBy(() -> service.parseAccess("not-a-jwt")).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> service.parseAccess("not-a-jwt")).isInstanceOf(JwtException.class);
         assertThatThrownBy(() -> service.parseAccess("a.b.c")).isInstanceOf(JwtException.class);
+        assertThatThrownBy(() -> service.parseAccess(null)).isInstanceOf(IllegalArgumentException.class);
     }
 }

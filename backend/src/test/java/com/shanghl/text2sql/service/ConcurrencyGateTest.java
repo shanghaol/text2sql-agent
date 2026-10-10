@@ -48,13 +48,14 @@ class ConcurrencyGateTest {
     }
 
     @Test
-    @DisplayName("多线程压测：成功进入次数 == max，全部退出后归零")
+    @DisplayName("多线程并发：恰好 4 个进入并在闸内阻塞，其余 60 个被拒；全部退出后归零（无泄漏）")
     void concurrentHamster() throws Exception {
         ConcurrencyGate gate = new ConcurrencyGate(4);
         int threads = 64;
         ExecutorService pool = Executors.newFixedThreadPool(threads);
         CountDownLatch start = new CountDownLatch(1);
-        CountDownLatch done = new CountDownLatch(threads);
+        CountDownLatch allSettled = new CountDownLatch(threads); // 每个线程都拿到了"进/拒"结果
+        CountDownLatch release = new CountDownLatch(1);          // 进入者阻塞在闸内，制造真实并发
         List<Boolean> results = java.util.Collections.synchronizedList(new ArrayList<>());
         for (int i = 0; i < threads; i++) {
             pool.submit(() -> {
@@ -62,23 +63,27 @@ class ConcurrencyGateTest {
                     start.await();
                     boolean ok = gate.tryEnter();
                     results.add(ok);
+                    allSettled.countDown(); // 先报告进/拒结果（进入者随后阻塞在闸内制造真实并发）
                     if (ok) {
+                        release.await();
                         gate.exit();
                     }
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
-                } finally {
-                    done.countDown();
                 }
             });
         }
         start.countDown();
-        assertThat(done.await(10, TimeUnit.SECONDS)).isTrue();
-        pool.shutdownNow();
+        assertThat(allSettled.await(10, TimeUnit.SECONDS)).isTrue();
 
         long successCount = results.stream().filter(Boolean::booleanValue).count();
-        assertThat(successCount).isLessThanOrEqualTo(4);
-        assertThat(gate.inFlight()).isLessThanOrEqualTo(4);
+        assertThat(successCount).isEqualTo(4);        // 恰好 4 个进入
+        assertThat(results.size() - successCount).isEqualTo(threads - 4); // 其余被拒
+        assertThat(gate.inFlight()).isEqualTo(4);
+
+        release.countDown(); // 放行
+        pool.shutdown();
+        assertThat(pool.awaitTermination(10, TimeUnit.SECONDS)).isTrue();
         assertThat(gate.inFlight()).isEqualTo(0); // 全部退出后归零（无泄漏）
     }
 }

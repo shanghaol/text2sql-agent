@@ -16,7 +16,7 @@ public class BizException extends RuntimeException {
     public BizException(ErrorCode errorCode, String message) {
         super(message);
         this.httpStatus = errorCode.httpStatus;
-        this.code = errorCode.name();
+        this.code = errorCode.wireCode;
     }
 
     /** 上游（Python）非 200 时的透传构造：转发上游 HTTP 状态与业务码（§2.5 步骤 4）。 */

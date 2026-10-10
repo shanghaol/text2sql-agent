@@ -1,0 +1,155 @@
+### =============================================================================
+### Text-to-SQL Java 网关 全接口冒烟（W4-T1）
+### IDEA / VS Code REST Client 可直接点跑。
+###
+### 使用前（开发机）：
+###   cd backend
+###   set -a; source ../.env; set +a        # 注入 MYSQL_ADMIN_PASSWORD / DEEPSEEK_API_KEY 等
+###   export JWT_SECRET="$(openssl rand -base64 32)"    # 不注入则 dev 下生成临时随机值（WARN）
+###   export BYOK_MASTER_KEY="$(openssl rand -base64 32)"
+###   mvn spring-boot:run -Dspring-boot.run.profiles=dev
+###
+### 安全纪律（设计 §1.5）：真实 key 只从环境变量占位（{{DEEPSEEK_KEY}} 手动粘贴或 IDE 私有环境
+### 变量注入），本文件绝不入库任何真实密钥；IDEA 私有环境文件 http-client.private.env.json 已在 .gitignore。
+### =============================================================================
+
+@base = http://localhost:8080
+@username = smoke_user
+@password = passw0rd123
+# 粘贴真实 DeepSeek key（sk- 开头）。也可使用 IDEA 环境：{{DEEPSEEK_KEY}}
+@DEEPSEEK_KEY = paste-your-real-key-here
+# 登录/注册后从响应里复制：
+@accessToken = paste-access-token
+@refreshToken = paste-refresh-token
+@threadId = 8f3a0000-0000-4000-8000-000000000001
+# Java/Python 共享内部密钥（开发机 .env 的 INTERNAL_TOKEN）
+@internalToken = paste-internal-token
+
+### 0. 健康检查（无鉴权）
+GET {{base}}/api/health
+
+### 1. 注册（用户名 ^[A-Za-z0-9_]{4,32}$，密码 ≥8 位；注册即登录发双 token）
+POST {{base}}/api/auth/register
+Content-Type: application/json
+
+{
+  "username": "{{username}}",
+  "password": "{{password}}"
+}
+
+### 1b. 重名注册 → 409 username_taken
+POST {{base}}/api/auth/register
+Content-Type: application/json
+
+{
+  "username": "{{username}}",
+  "password": "{{password}}"
+}
+
+### 2. 登录 → {accessToken, refreshToken, user:{id,username,hasKey}}
+POST {{base}}/api/auth/login
+Content-Type: application/json
+
+{
+  "username": "{{username}}",
+  "password": "{{password}}"
+}
+
+### 2b. 错误密码 → 401 bad_credentials
+POST {{base}}/api/auth/login
+Content-Type: application/json
+
+{
+  "username": "{{username}}",
+  "password": "wrong-password"
+}
+
+### 3. refresh 旋转换发（换发全新双 token）
+POST {{base}}/api/auth/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "{{refreshToken}}"
+}
+
+### 4. 当前用户（hasKey = 是否已配 key）
+GET {{base}}/api/me
+Authorization: Bearer {{accessToken}}
+
+### 5. BYOK-录入（真 key）：格式预检 → DeepSeek GET /models 校验 → AES-GCM 落库 → 返回掩码+指纹
+###    假 key → 400 key_invalid 且不落库；格式非法 → 422 bad_request
+PUT {{base}}/api/user/key
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "key": "{{DEEPSEEK_KEY}}"
+}
+
+### 5b. BYOK-录入（假 key，负路径）→ 400 key_invalid
+PUT {{base}}/api/user/key
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "key": "sk-thisIsAFakeKeyForSmokeTest12345"
+}
+
+### 6. BYOK-查询（只回掩码/指纹/时间，永不回明文）
+GET {{base}}/api/user/key
+Authorization: Bearer {{accessToken}}
+
+### 7. BYOK-复检（重新校验按钮，5 次/分限流）
+POST {{base}}/api/user/key/verify
+Authorization: Bearer {{accessToken}}
+
+### 8. 对话 SSE 代理（Python 端 8000 未起 → 502 upstream_unreachable；起了 → SSE 流，末尾 saved 事件带 historyId）
+POST {{base}}/api/chat
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "question": "上个月的GMV是多少",
+  "threadId": "{{threadId}}"
+}
+
+### 8b. 未录 key 对话 → 403 key_not_set
+POST {{base}}/api/chat
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "question": "测试",
+  "threadId": "{{threadId}}"
+}
+
+### 9. 历史分页（倒序，size 默认 20）
+GET {{base}}/api/history?page=1&size=20
+Authorization: Bearer {{accessToken}}
+
+### 9b. 历史单条详情（answer_text/generated_sql/latency/tokens；非本人 → 404）
+GET {{base}}/api/history/1
+Authorization: Bearer {{accessToken}}
+
+### 10. 反馈 upsert（1 点赞 / 0 点踩；重复点击走更新；history 非本人/不存在 → 404）
+POST {{base}}/api/feedback
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "historyId": 1,
+  "rating": 1,
+  "comment": "可选补充"
+}
+
+### 11. 内部检索（给 Python search_query_history @tool 用：X-Internal-Token + X-User-Id）
+GET {{base}}/api/internal/history/search?keyword=GMV&limit=10
+X-Internal-Token: {{internalToken}}
+X-User-Id: 1
+
+### 11b. 内部检索缺 token → 403
+GET {{base}}/api/internal/history/search?keyword=GMV&limit=10
+
+### 12. BYOK-删除（硬删行，204；删除后对话 → 403 key_not_set）
+DELETE {{base}}/api/user/key
+Authorization: Bearer {{accessToken}}

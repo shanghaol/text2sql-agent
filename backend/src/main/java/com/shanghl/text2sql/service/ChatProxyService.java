@@ -262,7 +262,7 @@ public class ChatProxyService {
     /** 上游非 200：读最多 4KB 错误体，转发 {code,message} 与状态（§2.5 步骤 4）。 */
     private BizException mapUpstreamError(HttpResponse<InputStream> upstream) {
         int status = upstream.statusCode();
-        String code = ErrorCode.UPSTREAM_ERROR.name();
+        String code = ErrorCode.UPSTREAM_ERROR.wireCode;
         String message = ErrorCode.UPSTREAM_ERROR.defaultMessage;
         try (InputStream in = upstream.body()) {
             byte[] bytes = in.readNBytes(4096);

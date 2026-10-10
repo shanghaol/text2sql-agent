@@ -12,6 +12,7 @@
 导入 agent.server 不触发 preflight（preflight 挂在 lifespan，仅启动应用时运行）。
 """
 
+import asyncio
 import json
 
 import httpx
@@ -290,6 +291,72 @@ def test_event_stream_meta_first_even_when_agent_fails_immediately():
 
 
 # ---------------------------------------------------------------------------
+# _guarded_sse_stream：断连守卫的确定性 close（§9.2-5 实测结论的回归测试）
+# ---------------------------------------------------------------------------
+
+
+class CloseTrackingSyncGen:
+    """同步 SSE 生成器替身：记录 close() 是否被调用（= GeneratorExit 确定性触发）。"""
+
+    def __init__(self, frames):
+        self._frames = list(frames)
+        self.closed_explicitly = False
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        if not self._frames:
+            raise StopIteration
+        return self._frames.pop(0)
+
+    def close(self):
+        self.closed_explicitly = True
+
+
+def _receive_script(messages):
+    """ASGI receive 替身：按脚本吐消息，吐完后永远挂起（模拟连接还在）。"""
+    queue = list(messages)
+
+    async def receive():
+        if queue:
+            return queue.pop(0)
+        await asyncio.Event().wait()  # 永不 set：模拟无断连
+        raise AssertionError("unreachable")
+
+    return receive
+
+
+@pytest.mark.anyio
+async def test_guard_closes_sync_gen_on_disconnect():
+    """断连消息到达后：停止透传并显式 close() 底层同步生成器（确定性收场，
+    GeneratorExit 在挂起点触发——§9.2-5 的回归测试）。"""
+    sync_gen = CloseTrackingSyncGen(["f1", "f2", "f3"])
+    release = asyncio.Event()  # 门控：第一帧消费之后才放行断连消息（确定性时序）
+
+    async def receive():
+        await release.wait()
+        return {"type": "http.disconnect"}
+
+    out = []
+    async for frame in server._guarded_sse_stream(sync_gen, receive, "t1"):
+        out.append(frame)
+        release.set()  # 首帧已消费，watcher 现在能看到断连
+    assert out == ["f1"]  # 断连后的帧不再透传
+    assert sync_gen.closed_explicitly
+
+
+@pytest.mark.anyio
+async def test_guard_passes_through_and_exhausts_without_disconnect():
+    """无断连：帧全部透传、生成器自然耗尽、不触发 close（正常收场路径）。"""
+    sync_gen = CloseTrackingSyncGen(["f1", "f2"])
+    receive = _receive_script([])
+    out = [frame async for frame in server._guarded_sse_stream(sync_gen, receive, "t1")]
+    assert out == ["f1", "f2"]
+    assert not sync_gen.closed_explicitly
+
+
+# ---------------------------------------------------------------------------
 # 端点级冒烟（TestClient，lifespan 跳过 preflight：不依赖 MySQL/Chroma）
 # ---------------------------------------------------------------------------
 
@@ -362,3 +429,35 @@ def _restore_server_globals():
 
     server.INTERNAL_TOKEN = cfg.INTERNAL_TOKEN
     server.DEEPSEEK_API_KEY = cfg.DEEPSEEK_API_KEY
+
+
+def test_mapper_tool_sql_fragments_finalize_on_usage():
+    """回归（W4-T1 协调项）：tool_call_chunks 的 args 是流式分片，
+    完整 SQL 在 AIMessage 收尾（usage 到达）才拼得出——收尾时补发带 sql 的
+    tool 事件，Java 旁路解析据此落 generated_sql。"""
+    from langchain_core.messages import AIMessageChunk
+
+    mapper = server.StreamEventMapper()
+    c1 = AIMessageChunk(content="", tool_call_chunks=[
+        {"name": "execute_readonly_sql", "args": '{"sql": "SELECT 1",', "id": "t1", "index": 0}])
+    c2 = AIMessageChunk(content="", usage_metadata={
+        "input_tokens": 100, "output_tokens": 10, "total_tokens": 110}, tool_call_chunks=[
+        {"name": None, "args": '"type": "SELECT"}', "id": None, "index": 0}])
+    events = mapper.feed(c1) + mapper.feed(c2)
+    # 起始分片发 name 事件；收尾补发带 sql 的完成事件
+    assert ("tool", {"name": "execute_readonly_sql"}) in events
+    assert ("tool", {"name": "execute_readonly_sql", "sql": "SELECT 1"}) in events
+    assert mapper.last_generated_sql == "SELECT 1"
+
+
+def test_mapper_same_index_name_change_flushes_previous():
+    """同序号来了不同名字的调用：结算上一个（含 sql），再开新调用。"""
+    from langchain_core.messages import AIMessageChunk
+
+    mapper = server.StreamEventMapper()
+    mapper.feed(AIMessageChunk(content="", tool_call_chunks=[
+        {"name": "execute_readonly_sql", "args": '{"sql": "SELECT 1"}', "id": "t1", "index": 0}]))
+    events = mapper.feed(AIMessageChunk(content="", tool_call_chunks=[
+        {"name": "list_tables", "args": "", "id": "t2", "index": 0}]))
+    assert ("tool", {"name": "execute_readonly_sql", "sql": "SELECT 1"}) in events
+    assert ("tool", {"name": "list_tables"}) in events

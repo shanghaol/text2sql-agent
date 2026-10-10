@@ -18,6 +18,12 @@ public class HttpClientConfig {
     @Bean
     public HttpClient httpClient() {
         return HttpClient.newBuilder()
+                // 显式钉死 HTTP/1.1：JDK 默认 HTTP/2 会对明文 http:// 地址发起 h2c 升级
+                // （Upgrade: h2c 头），uvicorn/h11 不支持升级 → 422 Unprocessable Entity。
+                // 2026-10-11 集成冒烟实录：Java→Python 全部 422，uvicorn 日志
+                // "Unsupported upgrade request"，钉死版本后消失。上游是 SSE（HTTP/1.1
+                // 逐行分帧），h2c 本就无收益。
+                .version(HttpClient.Version.HTTP_1_1)
                 .connectTimeout(Duration.ofSeconds(5))
                 .build();
     }

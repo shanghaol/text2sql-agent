@@ -29,7 +29,8 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> biz(BizException e) {
         // rate_limited / verify_rate_limited 按设计 §3.3 附带 Retry-After
         ResponseEntity.BodyBuilder builder = ResponseEntity.status(e.httpStatus());
-        if ("rate_limited".equals(e.code()) || "verify_rate_limited".equals(e.code())) {
+        if (ErrorCode.RATE_LIMITED.wireCode.equals(e.code())
+                || ErrorCode.VERIFY_RATE_LIMITED.wireCode.equals(e.code())) {
             builder.header("Retry-After", "60");
         }
         return builder.body(ApiResponse.error(e.code(), e.getMessage()));
@@ -42,7 +43,7 @@ public class GlobalExceptionHandler {
                 .map(f -> f.getField() + ": " + f.getDefaultMessage())
                 .collect(Collectors.joining("; "));
         return ResponseEntity.status(422)
-                .body(ApiResponse.error(ErrorCode.BAD_REQUEST.name(), "请求参数不合法: " + detail));
+                .body(ApiResponse.error(ErrorCode.BAD_REQUEST.wireCode, "请求参数不合法: " + detail));
     }
 
     /** 请求体不是合法 JSON / 缺参数 / 参数类型错 → 422 bad_request。 */
@@ -52,7 +53,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> badPayload(Exception e) {
         log.info("bad request payload: {}", e.getClass().getSimpleName());
         return ResponseEntity.status(422)
-                .body(ApiResponse.error(ErrorCode.BAD_REQUEST.name(), ErrorCode.BAD_REQUEST.defaultMessage));
+                .body(ApiResponse.error(ErrorCode.BAD_REQUEST.wireCode, ErrorCode.BAD_REQUEST.defaultMessage));
     }
 
     /** 兜底。日志含堆栈但不含请求体（堆栈里没有请求体内容）。 */
@@ -60,6 +61,6 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> unexpected(Exception e) {
         log.error("unexpected error: {}", e.toString(), e);
         return ResponseEntity.status(500)
-                .body(ApiResponse.error(ErrorCode.INTERNAL_ERROR.name(), ErrorCode.INTERNAL_ERROR.defaultMessage));
+                .body(ApiResponse.error(ErrorCode.INTERNAL_ERROR.wireCode, ErrorCode.INTERNAL_ERROR.defaultMessage));
     }
 }

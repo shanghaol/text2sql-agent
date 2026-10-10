@@ -137,6 +137,7 @@ class ChatProxyServiceTest {
     }
 
     private void upstreamRespond(int status, String contentType, byte[] body) {
+        upstream.removeContext("/agent/chat"); // JDK HttpServer 不允许同路径重复注册，先移除默认处理器
         upstream.createContext("/agent/chat", exchange -> {
             upstreamRequestBody.set(exchange.getRequestBody().readAllBytes());
             upstreamKeyHeader.set(exchange.getRequestHeaders().getFirst("X-User-LLM-Key"));
@@ -151,6 +152,7 @@ class ChatProxyServiceTest {
     }
 
     private void upstreamRespondStream(byte[] body) {
+        upstream.removeContext("/agent/chat");
         upstream.createContext("/agent/chat", exchange -> {
             exchange.getResponseHeaders().add("Content-Type", "text/event-stream");
             exchange.sendResponseHeaders(200, 0);
@@ -222,7 +224,7 @@ class ChatProxyServiceTest {
         assertThatThrownBy(() -> service.open(42L, "q", UUID.randomUUID().toString()))
                 .isInstanceOf(BizException.class)
                 .satisfies(e -> assertThat(((BizException) e).code())
-                        .isEqualTo(ErrorCode.KEY_NOT_SET.name()));
+                        .isEqualTo("key_not_set"));
         assertThat(gate.inFlight()).isEqualTo(0);
     }
 
@@ -277,7 +279,9 @@ class ChatProxyServiceTest {
                 "data: {\"tokens\":{\"input\":1,\"output\":1},\"latencyMs\":5}",
                 "").getBytes(StandardCharsets.UTF_8));
         ChatSession session = service.open(42L, "q", UUID.randomUUID().toString());
-        AbortAfterLines sink = new AbortAfterLines(4); // 第 5 行（"第二段"的 data 行）处断开，第一段已收到
+        // 断在第 4 行（第二个 delta 的 event: 行）——旁路解析先于写出，因此第 5 行（第二段 data）
+        // 根本不会被读入：断言"已有多少 delta 存多少"
+        AbortAfterLines sink = new AbortAfterLines(3);
         service.streamAndPersist(session, sink); // 不应抛异常
 
         ArgumentCaptor<QueryHistory> captor = ArgumentCaptor.forClass(QueryHistory.class);

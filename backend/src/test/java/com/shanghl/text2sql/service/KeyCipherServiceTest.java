@@ -30,7 +30,7 @@ class KeyCipherServiceTest {
 
     @Test
     @DisplayName("加密→解密往返得到原文")
-    void roundTrip() {
+    void roundTrip() throws AEADBadTagException {
         KeyCipherService.SealedKey sealed = cipher.encrypt(KEY);
         assertThat(sealed.iv()).hasSize(12);
         assertThat(sealed.ciphertext()).hasSize(KEY.getBytes(StandardCharsets.UTF_8).length + 16); // 含 16B tag
@@ -49,7 +49,7 @@ class KeyCipherServiceTest {
 
     @Test
     @DisplayName("IV 每次随机：同一明文两次加密 IV 与密文都不同（IV 纪律 §1.3）")
-    void ivDiffersBetweenEncryptions() {
+    void ivDiffersBetweenEncryptions() throws AEADBadTagException {
         KeyCipherService.SealedKey a = cipher.encrypt(KEY);
         KeyCipherService.SealedKey b = cipher.encrypt(KEY);
         assertThat(a.iv()).isNotEqualTo(b.iv());
@@ -81,9 +81,11 @@ class KeyCipherServiceTest {
 
     @Test
     @DisplayName("主密钥不匹配（换环境忘迁 BYOK_MASTER_KEY）→ AEADBadTagException")
-    void wrongMasterKeyRejected() {
+    void wrongMasterKeyRejected() throws AEADBadTagException {
         KeyCipherService.SealedKey sealed = cipher.encrypt(KEY);
-        KeyCipherService other = new KeyCipherService(new SecretKeySpec(new byte[32], "AES"));
+        byte[] otherKeyBytes = new byte[32];
+        java.util.Arrays.fill(otherKeyBytes, (byte) 0x5A); // 与加密用的全零密钥不同
+        KeyCipherService other = new KeyCipherService(new SecretKeySpec(otherKeyBytes, "AES"));
         assertThatThrownBy(() -> other.decrypt(sealed.iv(), sealed.ciphertext()))
                 .isInstanceOf(AEADBadTagException.class);
     }
