@@ -1,0 +1,32 @@
+# =============================================================================
+# 开发机联调配置（--spring.profiles.active=dev）
+#
+# 与生产的唯一语义分歧（RuntimeKeys 内有同款注释）：
+#   JWT_SECRET / BYOK_MASTER_KEY 缺失时【不 fail-fast】，而是生成临时随机值并打 WARN——
+#   方便没配 .env 也能起来联调；代价：重启后旧密文不可解（AEADBadTag）、旧签发的 token 全部失效。
+#   生产（无 dev profile）依旧缺失即退出。
+#
+# 密钥类默认值留空：开发机从 .env 注入——
+#   cd backend && set -a; source ../.env; set +a && mvn spring-boot:run -Dspring-boot.run.profiles=dev
+# =============================================================================
+
+spring:
+  datasource:
+    # 开发机 MySQL 容器（text2sql-mysql）映射在 127.0.0.1:3307，app 库已建空库（README/W2）
+    url: ${MYSQL_URL:jdbc:mysql://127.0.0.1:3307/app?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true}
+    username: ${MYSQL_ADMIN_USER:root}
+    password: ${MYSQL_ADMIN_PASSWORD:}   # 开发机从 .env 注入（MYSQL_ADMIN_PASSWORD）
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:}          # 留空 = dev 下生成临时随机值（WARN）；开发机从 .env 注入
+    access-ttl: 2h
+    refresh-ttl: 7d
+  byok:
+    master-key: ${BYOK_MASTER_KEY:} # 留空 = dev 下生成临时随机值（WARN）；开发机从 .env 注入
+  internal-token: ${INTERNAL_TOKEN:} # 开发机从 .env 注入；留空 = 内部接口不校验 token（仅限本机）
+  python:
+    base-url: ${PYTHON_BASE_URL:http://localhost:8000}
+  deepseek:
+    base-url: ${DEEPSEEK_BASE_URL:https://api.deepseek.com}
+    verify-timeout: 5s

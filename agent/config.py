@@ -62,3 +62,19 @@ EMBEDDING_MODEL: str = os.environ.get("EMBEDDING_MODEL", "BAAI/bge-small-zh-v1.5
 
 # 每轮注入 prompt 的检索条数上限（W6 消融调参入口，设计 §3.4 建议 8）
 RETRIEVER_TOP_N: int = int(os.environ.get("RETRIEVER_TOP_N", "8"))
+
+# ---------------------------------------------------------------------------
+# W4 新增：服务化配置（W4 设计 §3.4）
+# ---------------------------------------------------------------------------
+
+# Java/Python 共享密钥：非空时 server.py 校验请求头 X-Internal-Token，
+# 空串（默认）= 跳过校验，供开发机不经 Java 直连 uvicorn 调试。
+# 生产必配（compose 的 .env.prod 注入，§5.5 清单核对）。
+INTERNAL_TOKEN: str = os.environ.get("INTERNAL_TOKEN", "")
+
+# 单个 question 的最大字符数：超长直接 422 bad_request，不进检索/模型（§1.6 流前错误）
+MAX_QUESTION_CHARS: int = int(os.environ.get("MAX_QUESTION_CHARS", "2000"))
+
+# LLM 客户端缓存容量（§1.6）：按 key 指纹缓存的 ChatDeepSeek 实例数上限，
+# LRU 逐出。演示规模并发个位数，16 个 httpx 连接池在 2G 预算内可忽略。
+LLM_CLIENT_CACHE_SIZE: int = int(os.environ.get("LLM_CLIENT_CACHE_SIZE", "16"))

@@ -1,0 +1,70 @@
+# =============================================================================
+# Text-to-SQL Java 网关 —— 默认（生产语义）配置（W4 设计 §2.1）
+#
+# 密钥类配置全部来自环境变量、缺省为空：
+#   * 生产（不带 dev profile 启动）：JWT_SECRET / BYOK_MASTER_KEY 缺失或非法 → 启动即失败
+#     （fail-fast：缺主密钥的 BYOK 应用等于裸奔，不许带病运行，设计 §1.4，见 RuntimeKeys）。
+#   * dev（--spring.profiles.active=dev）：缺失时生成临时随机值并打 WARN，方便本机联调。
+#
+# 服务器部署时按设计 §5.5 .env.prod 注入；本文件绝不出现任何真实密钥值。
+# =============================================================================
+
+server:
+  port: 8080
+
+spring:
+  application:
+    name: text2sql-backend
+  datasource:
+    # 生产 compose 内为 jdbc:mysql://mysql:3306/app（§5.1）；此处默认仅是本地兜底
+    url: ${MYSQL_URL:jdbc:mysql://127.0.0.1:3307/app?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true}
+    username: ${MYSQL_USERNAME:root}
+    password: ${MYSQL_PASSWORD:}
+    hikari:
+      # 设计 §2.1：四张表个位数并发，5 足够且省 MySQL 连接开销（2核2G 预算）
+      maximum-pool-size: 5
+  sql:
+    init:
+      # schema-app.sql 全部 CREATE TABLE IF NOT EXISTS → 幂等零运维（§2.2，被否 Flyway 的理由见设计）
+      mode: always
+      schema-locations: classpath:schema-app.sql
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+
+# 日志脱敏（设计 §1.5 规则 4）：不开任何 wire-level 日志、不挂 CommonsRequestLoggingFilter 之类的过滤器。
+# 本文件刻意没有任何 http/client 的 DEBUG logger。
+# 规则 9 验收：应用日志 grep -c "sk-" 必须为 0（key 的唯一日志替身是指纹 fp + 长度 len，规则 2）。
+logging:
+  level:
+    root: INFO
+
+app:
+  jwt:
+    # HS256 密钥，≥32 字节随机串（生成：openssl rand -base64 32）。生产必填。
+    # 应急轮换：整体更换 JWT_SECRET 可强制全员重新登录（§2.3 已知限制的运维补偿）。
+    secret: ${JWT_SECRET:}
+    access-ttl: 2h          # 设计 §2.3：access 2h / refresh 7d，无状态双 token
+    refresh-ttl: 7d
+  byok:
+    # BYOK 主密钥：32 字节（256 位）随机数的 Base64（生成：openssl rand -base64 32）。
+    # 生产必填；一旦启用不可更换（换 = 全员重录，§1.4）。本文件与 git 内永不允许出现真实值。
+    master-key: ${BYOK_MASTER_KEY:}
+  # Java/Python 共享内部密钥（头 X-Internal-Token）。空串 = 不校验（仅限开发机直连调试，§3.4）；
+  # 生产必配（§5.5 部署核对清单）。
+  internal-token: ${INTERNAL_TOKEN:}
+  python:
+    # Python FastAPI 上游地址。生产 compose 内网为 http://python:8000（§5.1），可配。
+    base-url: ${PYTHON_BASE_URL:http://localhost:8000}
+  deepseek:
+    # 仅用于 GET /models 的 key 有效性校验（§1.2 选型：免费幂等；被否 1-token completion）。
+    # 注意：Java 侧永不持有站点级 DEEPSEEK_API_KEY——"服务端不留站点级 key"是结构性原则（§1.1/§5.5）。
+    base-url: ${DEEPSEEK_BASE_URL:https://api.deepseek.com}
+    verify-timeout: 5s
+  chat:
+    max-question-chars: 2000
+    rate-limit-per-min: 10            # 对话 10 次/分钟/用户，固定窗口（§1.7）
+    key-verify-rate-limit-per-min: 5  # key 录入/复检 5 次/分钟/用户（每次是一次出站 DeepSeek 调用）
+    auth-rate-limit-per-min: 10       # 登录/注册 10 次/分钟/IP（X-Forwarded-For 首值）
+    max-concurrent-streams: 4         # 全局并发流上界：2 核 CPU 上 P95 不劣化的保守值（§1.7）

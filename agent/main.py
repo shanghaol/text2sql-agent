@@ -7,6 +7,8 @@ W2 流程（设计 §4.4）：
 - 启动 preflight 三连：DeepSeek API key → MySQL 连通 → Chroma 索引存在；
 - 每轮用户输入后：检索 query = 上一条用户消息 + 当前输入（§3.6，多轮指代补全）
   → 混合检索 → 动态注入 system_prompt → 用新 prompt 重建 agent → 流式回答；
+  （W4 起，这一段组装统一走 agent/core/turn.py::prepare_turn——CLI / FastAPI /
+  评测三方共用的唯一组装点，本文件不再内联这些步骤。）
 - 对话主循环、流式打印、异常兜底与 W1 保持一致。
 
 用到的 LangChain v1 流式接口：
@@ -20,15 +22,8 @@ import uuid
 
 from langchain_core.messages import HumanMessage
 
-from agent.config import DEEPSEEK_API_KEY, MYSQL_PORT, RETRIEVER_TOP_N
-from agent.core.agent import (
-    build_agent,
-    build_system_prompt,
-    format_context_block,
-    get_checkpointer,
-    get_retriever,
-    previous_human_message,
-)
+from agent.config import DEEPSEEK_API_KEY, MYSQL_PORT
+from agent.core.turn import prepare_turn
 
 
 def _check_mysql() -> bool:
@@ -93,9 +88,8 @@ def main() -> None:
     print("输入 退出 / quit / exit 结束对话。")
     print("=" * 60)
 
-    # 检索器和记忆存储都是进程级单例：模型加载一次，多轮对话共享记忆
-    retriever = get_retriever()
-    checkpointer = get_checkpointer()
+    # 检索器和记忆存储是进程级单例，由 prepare_turn 内部按需懒加载：
+    # 首轮对话时才初始化（fastembed 模型加载约几秒），多轮对话共享。
 
     while True:
         try:
@@ -111,17 +105,15 @@ def main() -> None:
             print("再见！")
             break
 
-        # 设计 §3.6：检索 query = 上一条用户消息 + 当前输入。
-        # 否则"那 8 月呢？"这种指代式短问在检索层什么都召不回；
-        # 首轮没有历史时检索 query 就是当前输入。
-        previous_question = previous_human_message(checkpointer, config)
-        retrieval_query = f"{previous_question}\n{user_input}".strip() if previous_question else user_input
-        chunks = retriever.search(retrieval_query, top_n=RETRIEVER_TOP_N)
+        # 每轮组装走 prepare_turn（W4 §3.1 三方共用）：
+        # 检索 query 拼接、混合检索、prompt 组装、agent 重建全部在核心函数内完成；
+        # 检索器和记忆存储仍是进程级单例（在 get_retriever/get_checkpointer 内），
+        # 重建不丢多轮记忆。CLI 传 uuid 原文作 thread_key，与现状一致。
+        pt = prepare_turn(user_input, thread_id)
+        chunks = pt.injected_chunks
         print(f"（检索注入 {len(chunks)} 条：{'、'.join(chunk.id for chunk in chunks) or '无'}）")
-
-        # 每轮用"静态骨架 + 本轮检索结果"重建 agent（组装微秒级）；
-        # checkpointer 是共享单例，重建不丢多轮记忆。
-        agent = build_agent(build_system_prompt(format_context_block(chunks)))
+        agent = pt.agent
+        config = pt.config
 
         print("助手> ", end="", flush=True)
         last_tool_name = ""  # 记录上一条已打印的工具名，同一轮里去重防刷屏

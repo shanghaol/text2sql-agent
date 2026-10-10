@@ -1,8 +1,11 @@
 """W3 评测 runner：加载评测集 → 逐题运行 Agent → 重放判定 → 报告与明细落盘。
 
-**同构契约（W3 设计 §2.3 / §6 风险 8）**：本 runner 与线上 agent/main.py 每轮流程
-逐点同构——main.py 每轮流程变更必须同步评审本文件。逐点对照已在
-evaluate_single_case / evaluate_multiturn_case 内用 [§2.3-N] 注释标注。
+**同构契约（W3 设计 §2.3 / W4 设计 §3.1 / §6）**：W3 是"main ↔ eval 逐点对照"，
+W4 起升级为"三方向 prepare_turn 看齐"——CLI（agent/main.py）、FastAPI
+（agent/server.py）与本 runner 的每轮组装统一走 agent/core/turn.py::prepare_turn，
+检索 query 拼接、混合检索、prompt 组装、build_agent 不再在 runner 内联。
+本文件对 prepare_turn 的依赖只有两处调用（单轮 / 多轮各一）+ agent.invoke；
+核心组装行为变更由 prepare_turn 自身的同构闸门验收（W4 §6.2）兜住。
 
 运行方式（在仓库根目录）：
     .venv/Scripts/python.exe -m eval.run_eval --tag baseline_full --top-n 8 --runs 3
@@ -32,19 +35,12 @@ from langchain_core.messages import HumanMessage
 from sqlalchemy import text
 
 from agent.config import DEEPSEEK_MODEL
-from agent.core.agent import (
-    build_agent,
-    build_system_prompt,
-    format_context_block,
-    get_checkpointer,
-    get_retriever,
-    previous_human_message,
-)
+from agent.core.agent import get_retriever
+from agent.core.turn import prepare_turn
 from agent.tools.sql_tools import get_engine
 from eval.judge import (
     extract_execute_calls,
     extract_final_answer_text,
-    join_retrieval_query,
     judge_case,
     load_dataset,
     load_multiturn_dataset,
@@ -159,35 +155,35 @@ class Replayer:
 
 
 # ---------------------------------------------------------------------------
-# 逐题评测（与 main.py 逐点同构，§2.3 对照表）
+# 逐题评测（组装走 prepare_turn，W4 §3.1 三方看齐；对照锚点承 W3 §2.3）
 # ---------------------------------------------------------------------------
 
 
-def evaluate_single_case(case: dict, run_idx: int, top_n: int, retriever, replayer: Replayer) -> dict:
+def evaluate_single_case(case: dict, run_idx: int, top_n: int, replayer: Replayer) -> dict:
     """跑一题单轮评测，返回 §3.3 明细记录。
 
-    与线上 main.py 的逐点同构对照（W3 设计 §2.3 表格，步骤号见行内注释）：
+    与线上 main.py 的逐点同构对照（W3 设计 §2.3 表格；W4 起组装三步收进
+    prepare_turn，锚点标注它接管了哪些点）：
     [1 thread]  线上=启动生成一个 thread、会话内共享；评测=每题每 run 唯一——
                 有意的更细隔离粒度，防跨题污染（前一题的口径/SQL/结果残留）。
     [2 query]   线上=previous_human_message + 输入；评测 thread 恒为新会话，
                 previous_human_message 返回空串 → query == question 本身（与线上首轮一致）。
-    [3 search]  get_retriever().search(query, top_n=args.top_n)，doc_types 缺省全类型——
-                同一函数同一参数路径；top_n=8 时与线上逐字节一致（检索全链路确定性）。
-    [4 prompt]  build_agent(build_system_prompt(format_context_block(chunks)))——原样 import 零差异。
+                —— prepare_turn 内部逐字符同款实现（W4 §3.1）。
+    [3 search]  prepare_turn → get_retriever().search(query, top_n)，doc_types 缺省全类型
+                ——同一函数同一参数路径；top_n=8 时与线上逐字节一致（检索全链路确定性）。
+    [4 prompt]  prepare_turn → build_agent(build_system_prompt(format_context_block(chunks)))
+                ——原样 import 零差异，收进 prepare_turn 内部（W4 §3.1）。
     [5 调用]    invoke 替代 stream——同一 LangGraph 执行、消息状态语义相同，评测取全量消息。
-    [6 计时]    perf_counter 从 search 之前起、invoke 返回止（检索计入用户体感）。
+    [6 计时]    perf_counter 从 prepare_turn 之前起、invoke 返回止（检索计入用户体感，
+                口径与 W3"search 之前起"一致——组装段就是原 search+prompt 段）。
     [7 兜底]    检索空 → build_system_prompt 内部换兜底文案（top_n=0 走线上真实降级路径）。
     """
     case_id = case["id"]
     thread_id = f"eval-{case_id}-r{run_idx}"  # [1]
-    config = {"configurable": {"thread_id": thread_id}}
 
-    start = time.perf_counter()  # [6] 计时起点：search 之前
-    previous_question = previous_human_message(get_checkpointer(), config)  # [2] main.py 同款
-    retrieval_query = join_retrieval_query(previous_question, case["question"])  # [2]
-    chunks = retriever.search(retrieval_query, top_n=top_n)  # [3]
-    agent = build_agent(build_system_prompt(format_context_block(chunks)))  # [4]
-    result = agent.invoke({"messages": [HumanMessage(content=case["question"])]}, config=config)  # [5]
+    start = time.perf_counter()  # [6] 计时起点：组装（检索）之前
+    pt = prepare_turn(case["question"], thread_id, top_n=top_n)  # [2][3][4] 三方看齐 prepare_turn
+    result = pt.agent.invoke({"messages": [HumanMessage(content=case["question"])]}, config=pt.config)  # [5]
     latency_s = time.perf_counter() - start  # [6] 计时终点：invoke 返回
 
     messages = result["messages"]
@@ -196,7 +192,7 @@ def evaluate_single_case(case: dict, run_idx: int, top_n: int, retriever, replay
         run_idx=run_idx,
         replayer=replayer,
         sql_calls=extract_execute_calls(messages),
-        injected_ids=[chunk.id for chunk in chunks],
+        injected_ids=[chunk.id for chunk in pt.injected_chunks],  # 来源不变：仍是检索产物
         latency_s=latency_s,
         tokens=sum_usage(messages),
         # §2.4 v2 答案级回退的取材面：最后一条 AIMessage 的文本（明细落盘审计用）
@@ -204,44 +200,41 @@ def evaluate_single_case(case: dict, run_idx: int, top_n: int, retriever, replay
     )
 
 
-def evaluate_multiturn_case(case: dict, run_idx: int, top_n: int, retriever, replayer: Replayer) -> dict:
+def evaluate_multiturn_case(case: dict, run_idx: int, top_n: int, replayer: Replayer) -> dict:
     """跑一个多轮 case（§2.7）：逐轮 invoke 共享 thread，判定只看最后一轮。
 
-    与单轮的差异（每点仍与线上多轮同构，§2.3 表 + §2.7 增补）：
+    与单轮的差异（每点仍与线上多轮同构，§2.3 表 + §2.7 增补；W4 起每轮组装
+    走 prepare_turn——多轮检索 query 拼接在其内部逐字符同款实现）：
     - thread_id 同 case 内共享（多轮记忆生效——这正是被测对象，W2 §3.6 的量化场景）；
-    - 每轮检索 query = previous_human_message + 当前轮输入（经 join_retrieval_query，
+    - 每轮检索 query = previous_human_message + 当前轮输入（prepare_turn 内部拼接，
       与 main.py 逐字符同款）；
     - 每轮全量记录明细（query / 注入 / 工具调用 / 延迟 / token）；
     - 金标 = final_gold_sql，只判最后一轮产出的 SQL；中间轮是上下文提供者不单独判分；
     - Recall 取最后一轮的注入（q1 注入是"为 q2 铺垫"的副产物，计入会稀释指标）。
     """
     thread_id = f"eval-{case['id']}-r{run_idx}"  # case 内共享、跨 case/run 唯一
-    config = {"configurable": {"thread_id": thread_id}}
-    checkpointer = get_checkpointer()
 
     turn_records: list[dict] = []
     total_latency = 0.0
     final_calls: list[dict] = []
     final_injected: list[str] = []
+    messages: list = []
     for turn_idx, user_input in enumerate(case["turns"], 1):
         start = time.perf_counter()
-        # 以下四步与 main.py 每轮流程逐行同款（§2.3 [2][3][4][5]）
-        previous_question = previous_human_message(checkpointer, config)
-        retrieval_query = join_retrieval_query(previous_question, user_input)
-        chunks = retriever.search(retrieval_query, top_n=top_n)
-        agent = build_agent(build_system_prompt(format_context_block(chunks)))
-        result = agent.invoke({"messages": [HumanMessage(content=user_input)]}, config=config)
+        # 组装 + 调用：prepare_turn 覆盖 W3 §2.3 的 [2][3][4]，invoke 即 [5]
+        pt = prepare_turn(user_input, thread_id, top_n=top_n)
+        result = pt.agent.invoke({"messages": [HumanMessage(content=user_input)]}, config=pt.config)
         latency = time.perf_counter() - start
         total_latency += latency
 
         messages = result["messages"]
         calls = extract_execute_calls(messages)
-        injected_ids = [chunk.id for chunk in chunks]
+        injected_ids = [chunk.id for chunk in pt.injected_chunks]
         turn_records.append(
             {
                 "turn_idx": turn_idx,
                 "question": user_input,
-                "retrieval_query": retrieval_query,
+                "retrieval_query": pt.retrieval_query,
                 "injected_chunks": injected_ids,
                 "sql_calls": calls,
                 "latency_s": round(latency, 3),
@@ -842,9 +835,9 @@ def main() -> None:
         for case in cases:
             try:
                 if args.multiturn:
-                    record = evaluate_multiturn_case(case, run_idx, args.top_n, retriever, replayer)
+                    record = evaluate_multiturn_case(case, run_idx, args.top_n, replayer)
                 else:
-                    record = evaluate_single_case(case, run_idx, args.top_n, retriever, replayer)
+                    record = evaluate_single_case(case, run_idx, args.top_n, replayer)
             except Exception as exc:  # noqa: BLE001 - 题级 try/except 不中断整场（§6 风险 4）
                 record = _invoke_exception_record(case, run_idx, exc)
             records.append(record)

@@ -17,6 +17,10 @@ fastembed>=0.9             # 本地 ONNX Embedding BAAI/bge-small-zh-v1.5（实�
 rank-bm25>=0.2.2           # BM25 关键词检索路（实测 0.2.2，多年稳定）
 jieba>=0.42.1              # 中文分词；必须配合 jieba_dict 自定义词典（实测 0.42.1）
 
+# 服务化（W4，2026-10-11 venv 实测）
+fastapi>=0.100             # /agent/chat SSE + /agent/health（实测 0.143.0）
+uvicorn[standard]>=0.23    # ASGI 服务器；必须单 worker（进程内单例不允许 ×N，实测 0.54.0）
+
 # 数据集生成（W2）
 Faker>=40                  # zh_CN 假数据（实测 40.41.0；生成脚本固定种子可复现）
 

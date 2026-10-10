@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <!-- 编码前实测（W4 §9.2-8）：Maven Central 上 Spring Boot 3.x 最新 GA 为 3.5.16，
+             在开发机 JDK 25.0.3 (LTS) 下正常编译/启动/测试（Spring Framework 6.2.x 官方支持 JDK 17-27）。
+             编译目标仍是 maven.compiler.release=17，生产容器可用 JRE 17 运行。 -->
+        <version>3.5.16</version>
+        <relativePath/>
+    </parent>
+
+    <groupId>com.shanghl</groupId>
+    <artifactId>text2sql-backend</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+    <name>text2sql-backend</name>
+    <description>Text-to-SQL 分析助手 Java 网关：JWT 鉴权 + BYOK 密钥管理（AES-GCM）+ SSE 代理 + 限流（W4-T1）</description>
+
+    <properties>
+        <java.version>17</java.version>
+        <maven.compiler.release>17</maven.compiler.release>
+        <!-- MyBatis-Plus spring-boot3 starter：3.5.17（3.5.9 起 jsqlparser 支持拆分到独立模块，
+             因此分页插件需要同时引入 mybatis-plus-jsqlparser，见下方依赖） -->
+        <mybatis-plus.version>3.5.17</mybatis-plus.version>
+    </properties>
+
+    <dependencies>
+        <!-- Web（MVC，内嵌 Tomcat）。刻意不引 spring-webflux / WebClient，也不使用 RestTemplate：
+             所有出站 HTTP（DeepSeek /models 校验、Python /agent/chat SSE 代理）走 JDK 内置 java.net.http.HttpClient（设计 §2.1） -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+
+        <!-- Spring Security 6：过滤器链 + BCrypt（design §2.1） -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
+
+        <!-- Bean Validation：注册/录 key/对话请求的参数校验（§2.3/§1.2/§3.3 bad_request） -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+
+        <!-- MyBatis-Plus（用户简历栈；服务层显式加解密 + BaseMapper CRUD，§2.1） -->
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
+            <version>${mybatis-plus.version}</version>
+        </dependency>
+        <!-- 3.5.9+ 分页插件 PaginationInnerInterceptor 的 jsqlparser 支持模块 -->
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-jsqlparser</artifactId>
+            <version>${mybatis-plus.version}</version>
+        </dependency>
+
+        <!-- jjwt 0.12.x：中文教程主流 JWT 库（§2.1）。api 编译期、impl/jackson 运行期 -->
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-api</artifactId>
+            <version>0.12.7</version>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-impl</artifactId>
+            <version>0.12.7</version>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-jackson</artifactId>
+            <version>0.12.7</version>
+            <scope>runtime</scope>
+        </dependency>
+
+        <!-- MySQL 8 驱动（仅运行期需要） -->
+        <dependency>
+            <groupId>com.mysql</groupId>
+            <artifactId>mysql-connector-j</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
+        <!-- 测试：spring-boot-starter-test 自带 JUnit5 + Mockito + AssertJ。
+             测试全部为不起 Spring 容器的纯单测（JWT/限流/加解密/并发闸/代理逻辑），
+             不依赖 MySQL 与外网（上游用 JDK 内置 com.sun.net.httpserver 起本地桩）。 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+</project>

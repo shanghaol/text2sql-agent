@@ -11,8 +11,18 @@ W2 改造（设计 §3.5 / §4.3）：
 - checkpointer 提为模块级单例：多次 build_agent 共享同一个记忆存储，
   多轮对话的记忆才能跨请求（跨轮重建）保留；
 - get_retriever() 懒加载混合检索器（fastembed 模型加载约几秒，进程内只做一次）。
+
+W4 改造（设计 §1.6）：build_agent 增加 api_key 参数（BYOK 每请求 key），
+get_chat_model 按 sha256(key)[:16]+模型名 LRU 缓存 ChatDeepSeek 实例——
+每个实例内含 openai SDK client（httpx 连接池），不缓存则每轮付 TCP+TLS 握手税。
+**绝不改为"全局单例 client、每请求换 api_key"**：openai SDK 的 api_key 在
+client 构造时绑定，并发下换 key 是数据竞争，两个用户的请求可能带上对方的
+key——那是安全事故不是性能问题。
 """
 
+import hashlib
+import threading
+from collections import OrderedDict
 from collections.abc import Sequence
 
 from langchain.agents import create_agent
@@ -20,7 +30,7 @@ from langchain_core.messages import HumanMessage
 from langchain_deepseek import ChatDeepSeek
 from langgraph.checkpoint.memory import InMemorySaver
 
-from agent.config import DEEPSEEK_MODEL, EMBEDDING_MODEL
+from agent.config import DEEPSEEK_MODEL, EMBEDDING_MODEL, LLM_CLIENT_CACHE_SIZE
 from agent.rag.chroma_store import get_collection
 from agent.rag.embedder import BgeEmbedder
 from agent.rag.hybrid_retriever import HybridRetriever, RetrievedChunk
@@ -140,21 +150,57 @@ def previous_human_message(checkpointer: InMemorySaver, config: dict) -> str:
     return ""
 
 
-def build_agent(system_prompt: str):
+# ---------------------------------------------------------------------------
+# LLM 客户端缓存（W4 设计 §1.6）：按 key 指纹复用 ChatDeepSeek 实例
+# ---------------------------------------------------------------------------
+
+# 缓存键 = (sha256(key)[:16] 或 "__env__", 模型名)。不缓存明文 key 做键
+# （避免明文常驻 dict 内存），哈希前 16 位碰撞概率在此规模可忽略；
+# 不同用户不同实例，auth 隔离天然正确。
+_LLM_CACHE: OrderedDict[tuple[str, str], ChatDeepSeek] = OrderedDict()
+_LLM_CACHE_LOCK = threading.Lock()
+
+
+def get_chat_model(api_key: str | None) -> ChatDeepSeek:
+    """取（或建）一个 ChatDeepSeek 实例：同一 key 复用同一实例（LRU 缓存）。
+
+    - 同 key 同实例：命中即移到队尾（LRU 语义），复用其 httpx 连接池；
+    - 不同 key 不同实例：并发请求互不串号（见模块 docstring 的反面教材）；
+    - api_key=None：走环境变量回退，构造参数与 W3 现状逐字节等价——
+      条件传参，None 时绝不传 api_key 参数（CLI 与评测路径零变化）；
+    - 容量 LLM_CLIENT_CACHE_SIZE（默认 16），超出逐出最旧条目
+      （丢弃引用由 GC 回收 httpx 连接池；openai SDK 未提供逐实例显式
+      close 的公开途径，§9.2-4 已确认靠 GC，无连接泄漏告警）。
+    """
+    cache_key = (hashlib.sha256(api_key.encode()).hexdigest()[:16] if api_key else "__env__", DEEPSEEK_MODEL)
+    with _LLM_CACHE_LOCK:
+        if cache_key in _LLM_CACHE:
+            _LLM_CACHE.move_to_end(cache_key)
+            return _LLM_CACHE[cache_key]
+    kwargs: dict = {"model": DEEPSEEK_MODEL, "api_base": "https://api.deepseek.com", "temperature": 0}
+    if api_key:
+        kwargs["api_key"] = api_key  # 只有显式给了才传——None 时绝不多传参数
+    model = ChatDeepSeek(**kwargs)
+    with _LLM_CACHE_LOCK:
+        _LLM_CACHE[cache_key] = model
+        while len(_LLM_CACHE) > LLM_CLIENT_CACHE_SIZE:  # LRU 逐出（线程锁保护）
+            _LLM_CACHE.popitem(last=False)
+    return model
+
+
+def build_agent(system_prompt: str, api_key: str | None = None):
     """组装并返回一个带会话记忆的 Text-to-SQL Agent。
 
     组成部分：
-    - model：ChatDeepSeek，temperature=0 让输出更稳定（适合生成 SQL）
+    - model：ChatDeepSeek（get_chat_model 按 key 缓存复用），temperature=0
+      让输出更稳定（适合生成 SQL）；api_key=None 时与 W3 现状逐字节等价
+      （环境变量回退），显式传 key 时该请求用用户自己的 key（BYOK）
     - tools：两个 SQL 工具（查表、执行只读查询）
     - system_prompt：调用方传入（静态骨架 + 本轮动态检索注入）
     - checkpointer：模块级单例，保存对话历史让 Agent 记住上下文；
       调用时通过 config={"configurable": {"thread_id": ...}} 区分不同会话
     """
-    model = ChatDeepSeek(
-        model=DEEPSEEK_MODEL,
-        api_base="https://api.deepseek.com",
-        temperature=0,  # 温度 0：SQL 生成要的是确定性，不是创造力
-    )
+    model = get_chat_model(api_key)
     agent = create_agent(
         model=model,
         tools=[execute_readonly_sql, list_tables],
