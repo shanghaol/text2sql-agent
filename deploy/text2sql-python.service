@@ -1,0 +1,19 @@
+# Text-to-SQL Python Agent 服务（W4 §5.6 原生部署形态）
+# 放置位置（服务器）：/etc/systemd/system/text2sql-python.service
+# 启用：systemctl daemon-reload && systemctl enable --now text2sql-python
+[Unit]
+Description=Text-to-SQL Python Agent (FastAPI SSE)
+After=network.target mysqld.service
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/text2sql/current
+ExecStart=/opt/text2sql/venv/bin/uvicorn agent.server:app --host 127.0.0.1 --port 8000 --workers 1
+EnvironmentFile=/opt/text2sql/env.prod
+# 内存预算（W4 设计 §5.2）：python 合计 ≤450MB，超限只杀自己
+MemoryMax=450M
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
