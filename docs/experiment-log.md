@@ -98,11 +98,13 @@
 1. `AIMessage(tool_calls)` —— 并行发起两个调用：
    - `list_tables()` —— 摸库（保险动作）
    - `execute_readonly_sql`：
+
      ```sql
      SELECT u.city, COUNT(*) AS order_count
      FROM orders o JOIN users u ON o.user_id = u.id
      GROUP BY u.city ORDER BY order_count DESC
      ```
+
      **一次写对**：直接 JOIN users 取 city，没有先写错再修正
 2. `ToolMessage` ×2 —— 表清单；结果 5 行：北京 7 / 深圳 6 / 广州 6 / 上海 6 / 杭州 5（合计 30 ✓ 与 seed 一致）
 3. `AIMessage` —— 表格呈现最终答案
@@ -186,7 +188,7 @@
 
 - 第 1 问注入 8 片：`qa_pair:qa_003`（上个月GMV金标示例）、`glossary:gmv` 等——检索→提示词→SQL 的全链路首次贯通
 - 第 2 问检索 query 自动拼接为"上个月 GMV 多少？
-环比呢"（§3.6 多轮拼接），注入含 `glossary:yoy_mom`
+  环比呢"（§3.6 多轮拼接），注入含 `glossary:yoy_mom`
 - SQL 全部 MySQL 方言：`DATE_FORMAT` 按月分组、`SUM(payments.amount)` 走支付口径、半开区间时间过滤
 
 **【点评】**
@@ -194,3 +196,247 @@
 - ✅ W1 实验 1 的所有能力（多轮记忆/口径敏感/自我修正）在 MySQL + RAG 新架构下全部保持
 - ⭐ 模型没有用 `SUM(orders.order_amount)`（那个数是 20,280,681.72，虚高 26.5%）——口径检索直接改变了 SQL 行为，这是"RAG 有没有用"的最硬证据
 - 📌 W2 阶段的实验方法升级：`inspect_chain.py` 已能打印每轮检索注入片 id，做"有/无检索"对照实验很方便（见 W2 讲解第五节）
+
+W2
+
+### 实验 1
+
+**【输入】**
+
+- 第 1 问：`上个月卖了多少？`
+
+**【Agent 实际回答】**（原样粘贴）
+
+> （检索注入 8 条：qa_pair:qa_004、glossary:refund_rate、schema:refunds、glossary:net_sales、qa_pair:qa_008、qa_pair:qa_010、qa_pair:qa_003、qa_pair:qa_001）
+> 助手>
+> ⚙ 调用工具: execute_readonly_sql
+> 共 1 行
+> refund_rate_amount | pay_amount | refund_amount
+> 0.0775 | 16029955.34 | 1242030.15共 1 行
+> paid_orders | refunded_orders | refund_rate_order
+> 5901 | 523 | 0.0886**2026 年 9 月退款率**（数据期终点为 2026-09-30，故“9 月”即 2026-09）：
+>
+>
+> | 口径     | 数值      | 说明                                                  |
+> | -------- | --------- | ----------------------------------------------------- |
+> | 金额口径 | **7.75%** | 退款金额 1,242,030.15 元 ÷ 支付金额 16,029,955.34 元 |
+> | 订单口径 | **8.86%** | 有退款记录订单 523 单 ÷ 支付成功订单 5,901 单        |
+>
+> 说明：
+>
+> - 两口径都按**支付时间 `paid_at` 落在 2026-09-01 ~ 2026-09-30**定期（口径 6：当期支付订单中退款金额占比），分子分母同源时间轴。
+> - 退款数据来自 `refunds` 表并 JOIN `payments`，不是用 `orders.status='refunded'`（那会漏掉约四成部分退款订单，其状态仍为 completed）。
+> - 金额与订单两个口径数值不同但都合法，回答需报口径，以上分别为“按支付成功金额计”和“按支付成功订单数计”。
+
+**【记录】**
+
+模型走向c，双口径（但好像另一条口径和b描述的不同）。思考题，会上升，我可以理解为是增加了规则吗？
+
+**【点评·续】（主 Agent 答你的两个问题）**
+
+- ⭐ **走向 c 完美达成，且比预期更好**：不只报了双口径，还主动声明"查 refunds 表 JOIN payments 而非 orders.status"——把口径 6 的陷阱警告复述给了用户
+- 📖 **"另一条口径和 b 描述的不同"——对，它们本来就不是一回事**。现在场上其实有三个数：
+  | 数值 | 算法 | 定性 |
+  |---|---|---|
+  | 7.75% | 退款金额 ÷ 支付金额（查 refunds 表） | **金额口径，对** |
+  | 8.86% | 523（当期有退款记录的订单）÷ 5,901（当期支付订单） | **订单口径，对**（glossary 口径 6 的定义就是这个） |
+  | 5.65% | 用 `orders.status='refunded'` 算 | **陷阱值，错**（漏掉部分退款订单；qa_verification 存档它就是当"标准错答"用的） |
+  模型报的 8.86% 和 5.65% 不是同一维度（订单数 vs 金额、查的表都不同）——它算的两个口径都符合 glossary 定义，走向 c 判定成立
+- 📖 **思考题的理解修正**："增加了规则"不太准。提示词的 5 条行为规则是**常驻**的（每轮必在），检索注入的是**知识**（按需、概率性）。删掉 refund_rate 条目 = 那份知识不再进入上下文，模型只剩参数记忆里的字面直觉（status='refunded' 看着就像退款率）→ 走向 b 概率上升。**RAG 的本质是把知识当数据管理、按需注入**——这正是它和提示词工程的分工：规则管行为边界，检索管事实供给
+
+实验 2
+
+**【输入】**
+
+//=0
+
+你> 上个月 GMV 多少？环比呢
+（检索注入 8 条：glossary:yoy_mom、qa_pair:qa_003、qa_pair:qa_001、qa_pair:qa_008、schema:products、glossary:arpu、glossary:gmv、qa_pair:qa_009）
+助手>
+⚙ 调用工具: execute_readonly_sql
+共 2 行
+month | gmv
+2026-08 | 16164482.43
+2026-09 | 16029955.34**2026 年 9 月（上个月）GMV = 16,029,955.34 元**，环比下降 **0.83%**。
+
+
+| 月份            | GMV（元）     |
+| --------------- | ------------- |
+| 2026-08（上期） | 16,164,482.43 |
+| 2026-09（本期） | 16,029,955.34 |
+| 环比            | **-0.83%**    |
+
+口径说明：
+
+- GMV = `SUM(payments.amount)`，按**支付成功时间**（`paid_at`）归属自然月，不冲减退款，也不使用 `orders.order_amount`（会含未支付订单）。
+- 环比 =（本期 − 上期）÷ 上期 =（16,029,955.34 − 16,164,482.43）÷ 16,164,482.43 ≈ **-0.83%**。
+- 数据截至 2026-09-30，故"上个月"为 2026-09，"上期"为 2026-08。
+
+以上数字来自对 `payments` 表按 `paid_at` 分组的一次查询（2026-08-01 至 2026-10-01 左闭右开）。
+
+//=8
+
+你> 上个月 GMV 多少？环比呢
+（检索注入 8 条：glossary:yoy_mom、qa_pair:qa_003、qa_pair:qa_001、qa_pair:qa_008、schema:products、glossary:arpu、glossary:gmv、qa_pair:qa_009）
+助手>
+⚙ 调用工具: execute_readonly_sql
+共 2 行
+month | gmv | paid_orders
+2026-08 | 16164482.43 | 6079
+2026-09 | 16029955.34 | 5901**2026 年 9 月 GMV ≈ 1,602.99 万元，环比 8 月下降约 0.83%。**
+
+数据来源：对 `payments` 按支付时间聚合（口径：GMV = SUM(payments.amount)，按支付成功时间定期，不冲减退款）。
+
+
+| 月份    | GMV（元）     | 支付订单数 |
+| ------- | ------------- | ---------- |
+| 2026-08 | 16,164,482.43 | 6,079      |
+| 2026-09 | 16,029,955.34 | 5,901      |
+
+**环比计算**（口径：本期 vs 上一自然月，按 `DATE_FORMAT(paid_at,'%Y-%m')` 分月后相除）：
+
+- (16,029,955.34 − 16,164,482.43) ÷ 16,164,482.43 ≈ **−0.83%**
+
+补充说明：
+
+- 数据快照截至 2026-09-30，故"上个月"取 **2026 年 9 月**（>= '2026-09-01' 且 < '2026-10-01' 左闭右开区间）。
+- 9 月 GMV 小幅回落，与支付订单数从 6,079 单降到 5,901 单（−2.93%）一致，主要由订单量下滑带动。
+
+**【记录】**
+
+符合预期
+
+**【点评·续】（主 Agent 复查：本次对照无效，已重跑——重跑结果反而更精彩）**
+
+- ⚠️ **作废原因**：复查发现你 `.env` 里实际**不存在** `RETRIEVER_TOP_N` 这一行（可能改完没保存，或恢复时删了行）——两次运行的注入都是"8 条"，即 top_n=8 vs top_n=8，对照从未发生；两次输出的细微差异只是 LLM 非确定性。**教训：对照实验先验证"开关真的拨动了"——看注入条数那行打印**
+- 🔥 **主 Agent 重跑**（`RETRIEVER_TOP_N=0` 环境变量覆写，不落盘）：注入 0 条确认生效，降级行为比预期深刻得多：
+  1. 兜底生效但代价可见：先调 `list_tables`，又**主动查 `information_schema.columns`** 摸表结构（没有 schema 文档注入只能自己探）——没幻觉出表，但多花了 2 次工具调用
+  2. **答案整个换了个月份**：回答"上月 GMV = 16,164,482.43（2026-08）、环比 −6.4%（8 月 vs 7 月）"。这两个数在它自己的解释里自洽，但都不是用户想要的。根因：数据锚点声明"今天=2026-09-30"被字面理解 →"上个月"=8 月；而 top_n=8 时注入的 qa_003 金标（上个月→2026-09）恰好消除了这个歧义
+  3. 讽刺的是正确答案就在它自己的工具结果里——9 月的 16,029,955.34 也被查出来了。**数据在，解释错**
+- 📖 升级后的结论：降级损失的不只是"口径细节"，而是**消歧依据**。静态锚点是必需的（否则 NOW() 算相对时间全是 0 行），但锚点自己会引入新歧义，要靠 few-shot 压住。面试讲"RAG 的价值"这是高级素材：**检索注入的不只是知识，还有意图消歧的锚定**
+
+---
+
+### 实验 3：同义改写鲁棒性 ｜ 2026-10-09 ｜ 验证目标：语义路 + BM25 路对不同措辞的覆盖
+
+【输入输出】
+
+===========================================================
+你> 上个月 GMV 多少
+（检索注入 8 条：qa_pair:qa_003、qa_pair:qa_001、qa_pair:qa_008、glossary:gmv、glossary:arpu、glossary:yoy_mom、qa_pair:qa_007、schema:products）
+助手>
+⚙ 调用工具: execute_readonly_sql
+共 1 行
+gmv | paid_orders
+16029955.34 | 5901**上个月（2026-09）GMV：约 1,603.00 万元（16,029,955.34 元）**
+
+- 口径：GMV = 成功支付金额总和，`SUM(payments.amount)`，按**支付时间** `paid_at` 过滤 2026-09-01 至 2026-10-01（左闭右开），不使用 `orders.order_amount`（那会含未支付的 pending/cancelled 订单）。
+- 数据来源：对 `payments` 表的一次查询，返回 `gmv = 16029955.34`。
+- 同期成功支付的订单数为 5,901 单（`COUNT(DISTINCT order_id)`），据此该月客单价约 2,716.48 元（此为补充计算，非查询直接返回值）。
+
+注：数据为截至 2026-09-30 的静态快照，故"上个月"按 2026 年 9 月计算。GMV 不冲减退款，如需扣除退款请说明，我再算净销售额。
+你>
+再见！
+PS C:\Users\yhnt\rg\agent> .venv/Scripts/python -m agent.main
+Building prefix dict from the default dictionary ...
+Loading model from cache C:\Users\yhnt\AppData\Local\Temp\jieba.cache
+Loading model cost 0.404 seconds.
+Prefix dict has been built successfully.
+注：数据为截至 2026-09-30 的静态快照，故"上个月"按 2026 年 9 月计算。GMV 不冲减退款，如需扣除退款请说明，我再算净销售额。
+你>
+再见！
+PS C:\Users\yhnt\rg\agent> .venv/Scripts/python -m agent.main
+Building prefix dict from the default dictionary ...
+Loading model from cache C:\Users\yhnt\AppData\Local\Temp\jieba.cache
+Loading model cost 0.404 seconds.
+Prefix dict has been built successfully.
+
+Text-to-SQL 电商数据分析助手（W2）
+会话 ID：4d3d9b6b
+试试问：上个月的 GMV 是多少？/ 2026 年 8 月的退款率呢？
+输入 退出 / quit / exit 结束对话。
+Text-to-SQL 电商数据分析助手（W2）
+会话 ID：4d3d9b6b
+试试问：上个月的 GMV 是多少？/ 2026 年 8 月的退款率呢？
+输入 退出 / quit / exit 结束对话。
+
+
+你> 上月成交额是多少
+（检索注入 8 条：qa_pair:qa_004、qa_pair:qa_008、qa_pair:qa_003、schema:order_items、qa_pair:qa_001、qa_pair:qa_007、glossary:arpu、glossary:yoy_mom）
+助手>
+⚙ 调用工具: execute_readonly_sql
+共 1 行
+gmv | paid_orders
+16029955.34 | 5901**2026 年 9 月（上月）成交额（GMV）：16,029,955.34 元**（约 1603.0 万元），同期支付订单数 5,901 单。
+
+口径说明：
+
+- 时间口径：数据快照以 2026-09-30 为“今天”，故“上月”= 2026-09-01 至 2026-09-30，按支付时间（payments.paid_at）左闭右开圈期。
+- 金额口径：GMV = SUM(payments.amount)，即按支付成功金额统计（依据口径 1）。未使用 SUM(orders.order_amount)，因为那会包含 pending/cancelled 等未支付订单。
+- 数据来源：上述对 payments 表的一次查询结果。
+  你>
+  再见！
+  PS C:\Users\yhnt\rg\agent> .venv/Scripts/python -m agent.main
+  Building prefix dict from the default dictionary ...
+  Loading model from cache C:\Users\yhnt\AppData\Local\Temp\jieba.cache
+  Loading model cost 0.408 seconds.
+  Prefix dict has been built successfully.
+  ============================================================
+  Text-to-SQL 电商数据分析助手（W2）
+  会话 ID：a8f1f5f2
+  试试问：上个月的 GMV 是多少？/ 2026 年 8 月的退款率呢？
+  输入 退出 / quit / exit 结束对话。
+  ============================================================
+  你> 9 月卖了多少钱
+  （检索注入 8 条：qa_pair:qa_004、qa_pair:qa_008、schema:order_items、qa_pair:qa_003、schema:products、qa_pair:qa_001、schema:payments、glossary:sell_through）
+  助手>
+  ⚙ 调用工具: execute_readonly_sql
+  共 1 行
+  gmv | paid_orders
+  16029955.34 | 5901**2026 年 9 月销售额（GMV）：约 1,602.99 万元**
+
+
+| 指标                        | 数值             |
+| --------------------------- | ---------------- |
+| GMV（支付成功金额）         | 16,029,955.34 元 |
+| 支付订单数                  | 5,901 笔         |
+| 客单价（GMV ÷ 支付订单数） | 约 2,716.48 元   |
+
+**口径说明**：
+
+- 按**支付成功时间**（`payments.paid_at`）落在 2026-09-01 至 2026-09-30 的实付金额求和，即 GMV 口径（含后续发生退款的订单，未扣减退款）。
+- 数据快照截至 2026-09-30，"9 月"即 2026 年 9 月整月，时间区间采用左闭右开 `>= '2026-09-01' AND < '2026-10-01'`。
+- 未使用 `orders.order_amount` 汇总，因为其中含 pending/cancelled 未支付订单；pending/cancelled 订单在 payments 表中没有记录。
+
+以上数字来自对 `payments` 表的一次查询结果。如需**净销售额**（扣除退款）或按类目/支付方式拆分，可以继续帮你算。
+
+【记录】
+
+符合预期，
+
+**【消息链·补】（主 Agent inspect_chain 实测）**
+
+- **注入对比验证"top 集合稳定、排序对措辞敏感"**：三问的核心片稳定（`qa_003` + gmv 口径类必现），边缘片随措辞漂移——问法 1 混进 `qa_007`（近 7 天示例）、问法 2 混进 `schema:order_items`、问法 3 混进 `glossary:sell_through` 和 `schema:payments`。"9 月"这个精确 token 让问法 3 的 BM25 路命中了时间相关的 QA
+- **三问都一发命中**（各 1 次 `execute_readonly_sql`，零重试），结果全部 16,029,955.34 ✓；SQL 形态略有个性：问法 1 用 `COUNT(DISTINCT order_id)`、问法 2 同、问法 3 用 `COUNT(*)` 还顺手多算了客单价 AOV（2,716.48）——payments 一单一条所以 COUNT(*) 等价，模型对 schema 的理解到位
+- 三个回答都主动声明了口径和快照时间；问法 1 还补充"如需净销售额可以再算"——口径 2 的知识在待命
+
+实验 4 ｜ 2026-10-09 ｜ 验证目标：方言规则的生成端预防 + 错误可读化兜底
+
+**【输入】**
+
+`用 strftime 按月统计订单量`（故意用 SQLite 函数名）
+
+**【Agent 实际回答】**（摘要）
+
+> 先说明一点：本库是 **MySQL 8.0**，不支持 SQLite 的 `strftime()`，日期格式化要用 `DATE_FORMAT()`。我按等价写法执行，结果一样。（随后给出 12 个月的订单量表）
+
+**【消息链·补】（主 Agent inspect_chain 实测）**
+
+- **走向 a（生成端预防）实锤**：模型没有写 strftime——第一条 AIMessage 就同时携带说明文字和 tool_call，SQL 直接用 `DATE_FORMAT(created_at, '%Y-%m')`，一次调用成功，错误可读化兜底根本没被触发
+- 注入 8 条含 `qa_001`/`qa_003`——金标示例里全是 DATE_FORMAT 写法，**few-shot 与提示词规则双重强化**了方言
+- 新观察：这条 AIMessage 是"文字说明 + 工具调用"的混合体（W1 阶段的工具调用消息通常没有正文）——模型在调工具之前先向用户解释了自己的改写决策，这是比"默默改对"更好的用户体验
+
+**【点评】**
+
+- ✅ 防线纵深生效：最省 token 的防御是让错误不发生——提示词规则在生成端就拦住了；想看走向 b（写错→报错→自愈），得临时删掉【数据库】段的方言规则做对照（顺带验证"规则到底有没有用"）
+- 📌 对照 W1 实验 2：同样的"错误自愈"能力，W1 是 SQLite 列名错触发，W4 换 MySQL 后升级成了"方言预防"——防线前移了一层
