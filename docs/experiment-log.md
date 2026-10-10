@@ -469,7 +469,7 @@ gmv | paid_orders
 | 答案级准确率（含文本计算） | **64.4%**（sql 37 + text 21） | 43.3% | +21.1pp |
 | Recall@8 | 57.6%（schema 51.9% / glossary 100% / qa 100%） | 0（设定使然） | — |
 | 延迟 | median 3.2s / P95 7.4s / max 164s（离群） | — | — |
-| token/题 | mean 9,105（cache_read 7,947，命中率 87%） | — | — |
+| token/题 | mean 9,105（cache_read 占 input token 的 94.1%；占总 token 87.3%——两种口径都成立，简历引用标明分母） | — | — |
 | 多轮 4 题 ×3 | SQL 级 16.7% / 答案级 **91.7%** | 未跑 | — |
 
 ## 五个核心发现

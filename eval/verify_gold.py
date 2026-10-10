@@ -135,8 +135,10 @@ TIE_CHECKS: dict[str, tuple[str, int, int]] = {
     "EV-021": (None, 1, 5),
 }
 
-# qa_verification.md 已实测登记的标准错答值：(case_id, trap_id) -> value 字符串。
-# 核对方式：与 jsonl 登记值直接数值比对，一致打勾。
+# 已实测登记的标准错答值：(case_id, trap_id) -> value 字符串。
+# 来源有两处（核对方式相同：与 jsonl 登记值直接数值比对，一致打勾）：
+# - 多数出自 docs/qa_verification.md（T2 收尾时的口径陷阱实测）
+# - month_shift_aug 的 16164482.43 出自 docs/experiment-log.md（实验二重跑/基线对照实测）
 KNOWN_WRONG_VALUES: dict[tuple[str, str], str] = {
     ("EV-003", "gmv_order_amount"): "20280681.72",
     ("EV-003", "month_shift_aug"): "16164482.43",
@@ -446,12 +448,12 @@ def main() -> int:
                 if dec_equal(registered, known):
                     wrong_lines.append(
                         f"- ✓ {case['id']}/{entry['trap_id']}：登记 {registered} "
-                        f"= qa_verification.md 已知值")
+                        f"= 已实测登记值（见 KNOWN_WRONG_VALUES 注释的来源）")
                     print(f"    ✓ {case['id']}/{entry['trap_id']} = {known}")
                 else:
                     problems.append(
                         f"{case['id']}/{entry['trap_id']}: 登记值 {registered} "
-                        f"≠ qa_verification.md 已知值 {known}")
+                        f"≠ 已实测登记值 {known}")
                     wrong_lines.append(
                         f"- ✗ {case['id']}/{entry['trap_id']}：登记 {registered} ≠ 已知 {known}")
             elif key in MEASURED_WRONG_SQL:
