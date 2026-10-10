@@ -1,0 +1,110 @@
+{
+  "tag": "smoke",
+  "started_at": "2026-10-10 15:32:20",
+  "config": {
+    "dataset": "C:\\Users\\yhnt\\rg\\agent\\eval\\dataset\\eval_v1.jsonl",
+    "multiturn": false,
+    "top_n": 8,
+    "runs": 1,
+    "model": "deepseek-flash",
+    "temperature": 0,
+    "snapshot_anchor": "2026-09-30",
+    "retrieval": {
+      "top_k_each": 20,
+      "rrf_k": 60
+    },
+    "replay_max_rows": 5000
+  },
+  "cases": [
+    {
+      "id": "EV-001",
+      "run_idx": 1,
+      "question_type": "time_window",
+      "injected_chunks": [
+        "qa_pair:qa_001",
+        "qa_pair:qa_008",
+        "glossary:gmv",
+        "qa_pair:qa_007",
+        "glossary:avg_order_value",
+        "qa_pair:qa_003",
+        "qa_pair:qa_009",
+        "qa_pair:qa_010"
+      ],
+      "expected_chunks": [
+        "schema:orders"
+      ],
+      "recall_hits": [],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT DATE_FORMAT(created_at, '%Y-%m-%d') AS order_date, COUNT(*) AS order_count\nFROM orders\nWHERE created_at >= '2026-03-01' AND created_at < '2026-04-01'\nGROUP BY order_date\nORDER BY order_date"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT DATE_FORMAT(created_at, '%Y-%m-%d') AS order_date, COUNT(*) AS order_count\nFROM orders\nWHERE created_at >= '2026-03-16' AND created_at < '2026-04-01'\nGROUP BY order_date\nORDER BY order_date"
+        }
+      ],
+      "sql_used": "SELECT DATE_FORMAT(created_at, '%Y-%m-%d') AS order_date, COUNT(*) AS order_count\nFROM orders\nWHERE created_at >= '2026-03-16' AND created_at < '2026-04-01'\nGROUP BY order_date\nORDER BY order_date",
+      "sql_source": "last",
+      "gold_row_count": 31,
+      "model_row_count": 16,
+      "judge": "fail",
+      "failure_mode": "other",
+      "error_msg": null,
+      "latency_s": 5.021,
+      "tokens": {
+        "input": 8339,
+        "output": 1124,
+        "total": 9463,
+        "cache_read": 5760
+      },
+      "oversized": false,
+      "ended_with_failed_call": false
+    },
+    {
+      "id": "EV-002",
+      "run_idx": 1,
+      "question_type": "multi_join",
+      "injected_chunks": [
+        "qa_pair:qa_002",
+        "glossary:net_sales",
+        "schema:users",
+        "qa_pair:qa_010",
+        "qa_pair:qa_009",
+        "schema:products",
+        "qa_pair:qa_008",
+        "schema:order_items"
+      ],
+      "expected_chunks": [
+        "schema:payments",
+        "schema:orders",
+        "schema:users"
+      ],
+      "recall_hits": [
+        "schema:users"
+      ],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT u.city, SUM(p.amount) AS sales_amount\nFROM payments p\nJOIN orders o ON o.id = p.order_id\nJOIN users u ON u.id = o.user_id\nWHERE p.paid_at >= '2025-10-01' AND p.paid_at < '2026-10-01'\nGROUP BY u.city\nORDER BY sales_amount DESC\nLIMIT 5;"
+        }
+      ],
+      "sql_used": "SELECT u.city, SUM(p.amount) AS sales_amount\nFROM payments p\nJOIN orders o ON o.id = p.order_id\nJOIN users u ON u.id = o.user_id\nWHERE p.paid_at >= '2025-10-01' AND p.paid_at < '2026-10-01'\nGROUP BY u.city\nORDER BY sales_amount DESC\nLIMIT 5;",
+      "sql_source": "last",
+      "gold_row_count": 5,
+      "model_row_count": 5,
+      "judge": "pass",
+      "failure_mode": null,
+      "error_msg": null,
+      "latency_s": 2.969,
+      "tokens": {
+        "input": 9475,
+        "output": 512,
+        "total": 9987,
+        "cache_read": 4864
+      },
+      "oversized": false,
+      "ended_with_failed_call": false
+    }
+  ]
+}
