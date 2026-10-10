@@ -138,7 +138,7 @@ text2sql-agent/
 
 > **Text-to-SQL 智能数据分析助手**（Python / LangChain v1 / DeepSeek / Spring Boot / Vue3）—— 独立开发，已上线 [demo 链接]
 >
-> - 设计单 Agent + RAG 架构：三路语料检索（表结构/业务口径/few-shot 自举）+ BM25/向量混合检索（自实现 RRF 融合），自建 50 条评测集，执行准确率从基线 __% 提升至 __%，P95 延迟 __s
+> - 设计单 Agent + RAG 架构：三路语料检索（表结构/业务口径/few-shot 自举）+ BM25/向量混合检索（自实现 RRF 融合），自建评测集（30 单轮 + 4 多轮，W6 扩至 50），SQL 级执行准确率 41.1% / 答案级 64.4%，无 RAG 对照 6.7%（RAG 贡献 +34.4pp）；Recall@8 57.6%、P95 7.4s、单题成本 9.1k token（缓存命中 87%）（W3 基线实测；W6 消融与扩题后复测定稿）
 > - 实现四层 SQL 安全防线（只读账号/AST 白名单/强制 LIMIT/审计日志）与 SQL 执行前人工审批（Human-in-the-loop）；Java 网关 + Python Agent 双服务 Docker 部署
 
 ## 10. ⚙️ 待用户确认的默认项清单（逐条可否决）
