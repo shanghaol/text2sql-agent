@@ -101,7 +101,7 @@ def test_finalize_record_fail_classifies_trap():
 
 
 def test_finalize_record_no_usable_sql_error():
-    """模型一条 SQL 都没调（或全部重放失败）→ error/no_usable_sql（§2.2 规则三）。"""
+    """模型一条 SQL 都没调（或全部重放失败）、文本回退也不适用 → error/no_usable_sql。"""
     replayer = FakeReplayer({_CASE["gold_sql"]: _GOLD_ROWS})
     record = run_eval._finalize_record(
         case=_CASE,
@@ -114,6 +114,67 @@ def test_finalize_record_no_usable_sql_error():
     )
     assert record["judge"] == "error"
     assert record["error_msg"] == "no_usable_sql"
+    assert record["pass_via"] is None
+
+
+def test_finalize_record_sql_pass_records_pass_via_sql():
+    """SQL 级一致 → pass_via="sql"、text_matched 空（§2.4 v2 双层指标字段落盘）。"""
+    replayer = FakeReplayer({_CASE["gold_sql"]: _GOLD_ROWS, "SELECT 1": _GOLD_ROWS})
+    record = run_eval._finalize_record(
+        case=_CASE,
+        run_idx=1,
+        replayer=replayer,
+        sql_calls=[{"seq": 1, "sql": "SELECT 1"}],
+        injected_ids=[],
+        latency_s=1.0,
+        tokens={"input": 0, "output": 0, "total": 0, "cache_read": 0},
+        final_answer_text="净销售额 14,787,925.19 元",
+    )
+    assert record["judge"] == "pass"
+    assert record["pass_via"] == "sql"
+    assert record["text_matched"] is None
+    assert record["final_answer_text"] == "净销售额 14,787,925.19 元"
+
+
+def test_finalize_record_text_fallback_passes_and_persists_detail_fields():
+    """§2.4 v2 答案级回退：SQL 级 fail（SQL 返回 GMV 陷阱值）+ 最终文本算出金标
+    → pass 且 pass_via="text"；final_answer_text / pass_via / text_matched 落盘。"""
+    replayer = FakeReplayer({_CASE["gold_sql"]: _GOLD_ROWS, "SELECT GMV": [(16029955.34,)]})
+    record = run_eval._finalize_record(
+        case=_CASE,
+        run_idx=2,
+        replayer=replayer,
+        sql_calls=[{"seq": 1, "sql": "SELECT GMV"}],
+        injected_ids=[],
+        latency_s=1.0,
+        tokens={"input": 0, "output": 0, "total": 0, "cache_read": 0},
+        final_answer_text="净销售额为 14,787,925.19 元",
+    )
+    assert record["judge"] == "pass"
+    assert record["pass_via"] == "text"
+    assert record["text_matched"] == "14787925.19"  # Decimal 候选值 str 化，JSON 可序列化
+    assert record["failure_mode"] is None
+    assert record["error_msg"] is None
+    assert record["final_answer_text"] == "净销售额为 14,787,925.19 元"
+
+
+def test_finalize_record_no_usable_sql_tries_text_fallback_first():
+    """§2.4 v2 规则一：无可用 SQL 先试文本回退，命中即 pass（不判 error）。"""
+    replayer = FakeReplayer({_CASE["gold_sql"]: _GOLD_ROWS})
+    record = run_eval._finalize_record(
+        case=_CASE,
+        run_idx=1,
+        replayer=replayer,
+        sql_calls=[],
+        injected_ids=[],
+        latency_s=1.0,
+        tokens={"input": 0, "output": 0, "total": 0, "cache_read": 0},
+        final_answer_text="净销售额约 14,787,925.19 元",
+    )
+    assert record["judge"] == "pass"
+    assert record["pass_via"] == "text"
+    assert record["error_msg"] is None
+    assert record["gold_row_count"] == 1
 
 
 def test_finalize_record_gold_replay_error():
@@ -339,6 +400,7 @@ def test_render_report_single_turn_fixed_structure():
         "## 运行配置",
         "## 四指标汇总",
         "### 执行准确率",
+        "### 回答准确率（答案级，含文本计算）",
         "### Recall@8",
         "### 延迟",
         "### token 成本",
@@ -349,16 +411,22 @@ def test_render_report_single_turn_fixed_structure():
         "## 逐题结果",
     ):
         assert section in report, f"缺少固定结构节：{section}"
-    # 声明段四条写死（§3.3）
-    assert "## 声明（固定四条，W3 设计 §3.3）" in report
+    # 声明段五条写死（§3.3，⑤ 为判定规则 v2 增补）
+    assert "## 声明（固定五条，W3 设计 §3.3）" in report
     assert "few-shot 自举" in report
     assert "服务端非确定性" in report
     assert "网络波动" in report
     assert "cache_read" in report
+    assert "双层指标" in report
     # P95 口径声明（§8-5）
     assert "method='inclusive'" in report
-    # 分层表（§1.3）
+    # 分层表（§1.3）与答案级列（§3.3 v2）
     assert "有同款示例（EV-001~011，§1.3）" in report
+    assert "SQL 级准确率" in report and "答案级准确率" in report
+    # 双层指标 overall 行（SQL 级 + 答案级 + 差值说明）
+    assert "（SQL 判过 1 ｜ 文本判过 0" in report
+    assert "（pass_via：sql 1 + text 0，共 3 次）" in report
+    assert "差值说明" in report
     # 错答模式统计可见 other（EV-002 无登记值）
     assert "| other | 1 |" in report
     # error 子码可见
@@ -419,7 +487,47 @@ def test_render_report_compare_table(tmp_path: Path):
         started_at="2026-10-09 12:00:00",
     )
     assert "对照（ut）" in report
-    assert "| overall |" in report
+    # 双层 overall 行（§3.3 v2：答案级 + SQL 级）
+    assert "| overall（答案级） |" in report
+    assert "| overall（SQL 级） |" in report
+
+
+def test_render_report_answer_level_section_counts_text_passes():
+    """答案级节（§3.3 v2）：pass_via 构成、差值说明、逐题表 pass_via 列可见；
+    SQL 级 overall 行把文本判过单列、不计入自身。"""
+    replayer = FakeReplayer({_CASE["gold_sql"]: _GOLD_ROWS, "SELECT GMV": [(16029955.34,)]})
+    record = run_eval._finalize_record(
+        case=_CASE,
+        run_idx=1,
+        replayer=replayer,
+        sql_calls=[{"seq": 1, "sql": "SELECT GMV"}],
+        injected_ids=[],
+        latency_s=1.0,
+        tokens={"input": 0, "output": 0, "total": 0, "cache_read": 0},
+        final_answer_text="净销售额为 14,787,925.19 元",
+    )
+    report = run_eval._render_report(
+        _make_args(multiturn=False),
+        Path("eval/dataset/eval_v1.jsonl"),
+        [record],
+        started_at="2026-10-09 12:00:00",
+    )
+    assert (
+        "- overall：**0.0%**（SQL 判过 0 ｜ 文本判过 1（计入答案级，见下节）｜ fail 0 ｜ error 0，共 1 次）"
+        in report
+    )
+    assert "- overall：**100.0%**（pass_via：sql 0 + text 1，共 1 次）" in report
+    assert "差值说明：答案级 − SQL 级 = 100.0%" in report
+    # 逐题结果表带 pass_via 列
+    assert "| r1 | EV-029 | pass | text |" in report
+
+
+def test_pass_via_counts_legacy_records_default_to_sql():
+    """--compare 读入的 v1 旧明细没有 pass_via 字段：judge=pass 一律按 SQL 级计数（不误判成 text）。"""
+    legacy = [{"judge": "pass"}, {"judge": "pass", "pass_via": "text"}, {"judge": "fail"}]
+    assert run_eval._pass_via_counts(legacy) == (1, 1)
+    assert run_eval._sql_acc(legacy) == pytest.approx(1 / 3)
+    assert run_eval._sql_acc([]) == 0.0
 
 
 # ---------------------------------------------------------------------------

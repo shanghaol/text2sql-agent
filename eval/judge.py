@@ -4,14 +4,19 @@
 MySQL / Chroma / embedding / API key 的任何加载——tests/test_eval_judge.py 在
 无 MySQL、无 key 的裸机上全绿（延续 W1/W2 的默认套件原则）。
 
-内容分四段：
+内容分五段：
 1. 结果集规范化与判定（§2.4 / §4.3）：normalize_rows / rows_equal / classify_failure /
    judge_case——金标与模型 SQL 都由评测器重放后比较两个结果集，不存死值金标；
-2. SQL 提取（§2.2）：extract_execute_calls（从消息链收集 execute_readonly_sql 结构化调用）
+2. 答案级回退（§2.4 判定规则 v2，2026-10-10 修订）：extract_number_candidates（文本抽数字
+   候选）/ text_contains_gold（金标标量按容差比对）/ extract_final_answer_text（取最后一条
+   AIMessage 文本）/ classify_failure_from_text（standard_wrong 的文本候选比对）——
+   SQL 级 fail 或无可用 SQL 时，单行单列数值金标可由最终回答文本的计算结果兜底判过
+   （pass_via="text"），与 SQL 级（pass_via="sql"）构成双层指标；
+3. SQL 提取（§2.2）：extract_execute_calls（从消息链收集 execute_readonly_sql 结构化调用）
    与 pick_sql（三级取用规则：最后一条重放成功 → 回退最后一条成功 → error）；
-3. 评测集加载与 schema 校验（§1.2 / §1.7）：load_dataset / load_multiturn_dataset
+4. 评测集加载与 schema 校验（§1.2 / §1.7）：load_dataset / load_multiturn_dataset
    ——全字段必填、无默认值，漏填在加载时报错而不是静默跳过；
-4. 指标小工具（§2.3 / §2.6 / §2.7）：join_retrieval_query（检索 query 拼接，与
+5. 指标小工具（§2.3 / §2.6 / §2.7）：join_retrieval_query（检索 query 拼接，与
    main.py 逐字符同款）、sum_usage（token 累加）、p95（P95 分位数口径）。
 
 容差规则（设计 §2.4 拍板，不开放调参）：两数值相等 ⇔
@@ -158,30 +163,205 @@ def classify_failure(model_rows: list[tuple], standard_wrong: list[dict]) -> str
     return None
 
 
+# ---------------------------------------------------------------------------
+# 2. 答案级回退（§2.4 判定规则 v2）：文本数字候选与金标标量比对
+# ---------------------------------------------------------------------------
+
+# 文本数字候选的两条形态（§2.4 v2）：千分位形态（要求至少一组 ,ddd）+ 普通形态兜底。
+# 设计给出的千分位正则写作 (?:,\d{3})*，但 * 允许零组逗号，会把普通整数
+# 16029955.34 掐成 "160"——两遍扫描方案下收紧为 + 才不互相误伤；
+# 与普通形态的并集与设计原意（两条正则都要匹配）等价。
+_THOUSANDS_NUM_RE = re.compile(r"-?\d{1,3}(?:,\d{3})+(?:\.\d+)?%?")
+_PLAIN_NUM_RE = re.compile(r"-?\d+(?:\.\d+)?%?")
+
+
+def extract_number_candidates(text: str) -> list[Decimal]:
+    """从文本抽取数字候选（§2.4 v2 规则 3），按出现位置保序：
+
+    - 先用千分位形态扫一遍（要求至少一组 ,ddd），把命中段挖掉后再用普通形态
+      扫剩余文本——两遍归并，普通整数与千分位数字互不误伤；
+    - 去千分位逗号后 Decimal 化；带 % 后缀的产生两个候选：原值与原值/100
+      （"7.75%" → 7.75 和 0.0775——模型文本里的百分数与金标的小数存法都要能对上）；
+    - 去重保序（同一数值多次出现只留第一个位置上的）。
+    """
+    hits: list[tuple[int, int, str]] = [
+        (match.start(), match.end(), match.group()) for match in _THOUSANDS_NUM_RE.finditer(text)
+    ]
+    masked = list(text)
+    for start, end, _ in hits:
+        for index in range(start, end):
+            masked[index] = " "
+    for match in _PLAIN_NUM_RE.finditer("".join(masked)):
+        hits.append((match.start(), match.end(), match.group()))
+
+    candidates: list[Decimal] = []
+    for _, _, raw in sorted(hits, key=lambda hit: hit[0]):
+        has_percent = raw.endswith("%")
+        try:
+            value = Decimal(raw[:-1].replace(",", "") if has_percent else raw.replace(",", ""))
+        except InvalidOperation:
+            continue
+        candidates.append(value)
+        if has_percent:
+            candidates.append(value / Decimal(100))
+    unique: list[Decimal] = []
+    seen: set[Decimal] = set()
+    for value in candidates:
+        if value not in seen:
+            seen.add(value)
+            unique.append(value)
+    return unique
+
+
+def text_contains_gold(text: str | None, gold_scalar) -> Decimal | None:
+    """答案级回退的命中判定（§2.4 v2 规则 3）：文本数字候选逐一与金标标量按同一
+    容差公式（max(0.005, 1e-3·max(|a|,|b|))，Decimal 运算）比对。
+
+    - 金标非数值（str / None / bool 的规范化产物）→ 不适用，返回 None——
+      DATE_FORMAT 输出的月份字符串等字符串金标不做文本回退（设计明文）；
+    - 文本无任何数字候选 → None；
+    - 命中 → 返回命中的候选值（调用方记入明细 text_matched），否则 None。
+    """
+    if not isinstance(gold_scalar, Decimal):
+        return None
+    for candidate in extract_number_candidates(text or ""):
+        if _cells_equal(gold_scalar, candidate):
+            return candidate
+    return None
+
+
+def _single_scalar(gold_rows: list[tuple]) -> Decimal | str | None:
+    """金标结果集为单行单列时取其规范化值，否则 None（多行/多列不走文本回退，§2.4 v2）。"""
+    normalized = normalize_rows(gold_rows)
+    if len(normalized) == 1 and len(normalized[0]) == 1:
+        return normalized[0][0]
+    return None
+
+
+def classify_failure_from_text(text: str | None, standard_wrong: list[dict]) -> str | None:
+    """standard_wrong 的文本候选比对（§2.4 v2 规则 5 / §4.3）：最终回答文本中的数字
+    候选命中某条登记值 → trap:<trap_id> / valid_alt_gloss（登记顺序优先）。
+
+    只做数值比对（字符串登记值如日期串不参与文本回退）；都不命中 → None。
+    """
+    if not standard_wrong or not text:
+        return None
+    candidates = extract_number_candidates(text)
+    if not candidates:
+        return None
+    for entry in standard_wrong:
+        value = _registered_value(entry.get("value", ""))
+        if not isinstance(value, Decimal):
+            continue
+        if any(_cells_equal(value, candidate) for candidate in candidates):
+            trap_id = str(entry.get("trap_id", ""))
+            if trap_id == "valid_alt_gloss":
+                return "valid_alt_gloss"
+            return f"trap:{trap_id}"
+    return None
+
+
+def extract_final_answer_text(messages: list) -> str:
+    """最后一条 AIMessage 的文本内容（§2.4 v2 答案级回退的取材面；明细落盘审计用）。
+
+    - 只看最后一条 AIMessage（type=="ai"）的 content：链路里更早的数字是中间量，
+      不扫全链路（§2.4 v2：只看最终回答）；
+    - content 为 str 原样返回；为多模态块 list 时逐块抽取 text 字段、其余块 str() 化
+      （ChatDeepSeek 正常返回 str，list 分支是防御）；其他类型一律 str() 化；
+    - 没有 AIMessage → 空串。
+    """
+    for msg in reversed(messages):
+        if getattr(msg, "type", None) != "ai":
+            continue
+        content = getattr(msg, "content", "")
+        if isinstance(content, str):
+            return content
+        if isinstance(content, list):
+            parts = []
+            for block in content:
+                if isinstance(block, dict) and isinstance(block.get("text"), str):
+                    parts.append(block["text"])
+                else:
+                    parts.append(str(block))
+            return "\n".join(parts)
+        return str(content)
+    return ""
+
+
 def judge_case(
     gold_rows: list[tuple] | None,
     model_rows: list[tuple] | None,
     ordered: bool = False,
     standard_wrong: list[dict] | None = None,
     error_msg: str | None = None,
+    final_answer_text: str | None = None,
 ) -> dict:
-    """单题判定主入口：返回 {"judge": pass|fail|error, "failure_mode", "error_msg"}。
+    """单题判定主入口（§2.4 判定规则 v2：SQL 级判定 + 答案级回退的双层指标）。
 
-    - model_rows 为 None → error（error_msg 由调用方给：no_usable_sql / replay_error /
-      invoke_exception 三子码之一；未给时按 no_usable_sql 处理）；
-    - 结果集一致（§2.4 规则 + 容差）→ pass；
-    - 不一致 → fail，failure_mode ∈ {trap:<id>, valid_alt_gloss, other}（§4.3）。
+    返回 {"judge", "failure_mode", "error_msg", "pass_via", "text_matched"}：
+    - pass_via="sql"：SQL 重放结果集与金标一致（严格口径，简历主数字）；
+    - pass_via="text"：SQL 级 fail 或无可用 SQL，但金标为单行单列数值标量、最后一条
+      AIMessage 文本中的数字候选按同一容差命中金标（文本计算兜底，答案级口径；
+      text_matched 记录命中的候选值，明细留痕）；
+    - model_rows 为 None 且文本回退不适用 → error（error_msg 由调用方给：
+      no_usable_sql / replay_error / invoke_exception 三子码之一；未给时按 no_usable_sql）；
+    - 结果集不一致且文本回退不适用或未命中 → fail，failure_mode ∈
+      {trap:<id>, valid_alt_gloss, other}（§4.3；standard_wrong 比对同样享受文本候选）；
+    - 多行/多列金标与 str 型金标（DATE_FORMAT 月份串）不走文本回退（设计明文）；
+      调用方未提供 final_answer_text 时行为与 v1 完全一致。
     """
+    wrong = standard_wrong or []
     if model_rows is None:
-        return {"judge": "error", "failure_mode": None, "error_msg": error_msg or "no_usable_sql"}
+        # 规则 1：无可用 SQL / 重放报错 → 先试答案级回退，不适用才 error（§2.4 v2）
+        text_matched = text_contains_gold(final_answer_text, _single_scalar(gold_rows or []))
+        if text_matched is not None:
+            return {
+                "judge": "pass",
+                "failure_mode": None,
+                "error_msg": None,
+                "pass_via": "text",
+                "text_matched": text_matched,
+            }
+        return {
+            "judge": "error",
+            "failure_mode": None,
+            "error_msg": error_msg or "no_usable_sql",
+            "pass_via": None,
+            "text_matched": None,
+        }
     if rows_equal(gold_rows, model_rows, ordered=ordered):
-        return {"judge": "pass", "failure_mode": None, "error_msg": None}
-    mode = classify_failure(model_rows, standard_wrong or [])
-    return {"judge": "fail", "failure_mode": mode or "other", "error_msg": None}
+        return {
+            "judge": "pass",
+            "failure_mode": None,
+            "error_msg": None,
+            "pass_via": "sql",
+            "text_matched": None,
+        }
+    # 规则 3：SQL 级 fail → 答案级回退（仅单行单列数值金标；规则 4：多行/多列不回退）
+    text_matched = text_contains_gold(final_answer_text, _single_scalar(gold_rows))
+    if text_matched is not None:
+        return {
+            "judge": "pass",
+            "failure_mode": None,
+            "error_msg": None,
+            "pass_via": "text",
+            "text_matched": text_matched,
+        }
+    # 规则 5：failure_mode 的 standard_wrong 比对享受文本候选（§4.3）
+    mode = classify_failure(model_rows, wrong) or classify_failure_from_text(
+        final_answer_text, wrong
+    )
+    return {
+        "judge": "fail",
+        "failure_mode": mode or "other",
+        "error_msg": None,
+        "pass_via": None,
+        "text_matched": None,
+    }
 
 
 # ---------------------------------------------------------------------------
-# 2. SQL 提取与三级取用规则（设计 §2.2）
+# 3. SQL 提取与三级取用规则（设计 §2.2）
 # ---------------------------------------------------------------------------
 
 
@@ -228,7 +408,7 @@ def pick_sql(calls: list[dict], replay) -> tuple[str | None, str]:
 
 
 # ---------------------------------------------------------------------------
-# 3. 评测集加载与 schema 校验（设计 §1.2 单轮 / §1.7 多轮）
+# 4. 评测集加载与 schema 校验（设计 §1.2 单轮 / §1.7 多轮）
 # ---------------------------------------------------------------------------
 
 _SINGLE_REQUIRED = (
@@ -393,7 +573,7 @@ def load_multiturn_dataset(path: str | Path, valid_chunk_ids: set[str] | None = 
 
 
 # ---------------------------------------------------------------------------
-# 4. 指标小工具（设计 §2.3 / §2.6 / §2.7）
+# 5. 指标小工具（设计 §2.3 / §2.6 / §2.7）
 # ---------------------------------------------------------------------------
 
 

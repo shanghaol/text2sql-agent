@@ -1,0 +1,1449 @@
+{
+  "tag": "no_rag_control",
+  "started_at": "2026-10-10 15:37:34",
+  "config": {
+    "dataset": "C:\\Users\\yhnt\\rg\\agent\\eval\\dataset\\eval_v1.jsonl",
+    "multiturn": false,
+    "top_n": 0,
+    "runs": 1,
+    "model": "deepseek-flash",
+    "temperature": 0,
+    "snapshot_anchor": "2026-09-30",
+    "retrieval": {
+      "top_k_each": 20,
+      "rrf_k": 60
+    },
+    "replay_max_rows": 5000
+  },
+  "cases": [
+    {
+      "id": "EV-001",
+      "run_idx": 1,
+      "question_type": "time_window",
+      "injected_chunks": [],
+      "expected_chunks": [
+        "schema:orders"
+      ],
+      "recall_hits": [],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT * FROM orders LIMIT 3"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT status, COUNT(*) AS cnt FROM orders GROUP BY status ORDER BY cnt DESC"
+        },
+        {
+          "seq": 3,
+          "sql": "SELECT DATE(created_at) AS dt,\n       COUNT(*) AS order_cnt,\n       SUM(status <> 'cancelled') AS valid_order_cnt,\n       SUM(status = 'cancelled') AS cancelled_cnt\nFROM orders\nWHERE created_at >= '2026-03-01' AND created_at < '2026-03-16'\nGROUP BY dt\nORDER BY dt"
+        }
+      ],
+      "sql_used": "SELECT DATE(created_at) AS dt,\n       COUNT(*) AS order_cnt,\n       SUM(status <> 'cancelled') AS valid_order_cnt,\n       SUM(status = 'cancelled') AS cancelled_cnt\nFROM orders\nWHERE created_at >= '2026-03-01' AND created_at < '2026-03-16'\nGROUP BY dt\nORDER BY dt",
+      "sql_source": "last",
+      "gold_row_count": 15,
+      "model_row_count": 15,
+      "judge": "fail",
+      "failure_mode": "other",
+      "error_msg": null,
+      "latency_s": 6.384,
+      "tokens": {
+        "input": 8171,
+        "output": 924,
+        "total": 9095,
+        "cache_read": 6912
+      },
+      "oversized": false,
+      "ended_with_failed_call": false
+    },
+    {
+      "id": "EV-002",
+      "run_idx": 1,
+      "question_type": "multi_join",
+      "injected_chunks": [],
+      "expected_chunks": [
+        "schema:payments",
+        "schema:orders",
+        "schema:users"
+      ],
+      "recall_hits": [],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT TABLE_NAME, COLUMN_NAME, DATA_TYPE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = 'mart' ORDER BY TABLE_NAME, ORDINAL_POSITION"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT COLUMN_NAME, DATA_TYPE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='mart' AND TABLE_NAME='users' ORDER BY ORDINAL_POSITION"
+        },
+        {
+          "seq": 3,
+          "sql": "SELECT status, COUNT(*) c FROM orders GROUP BY status"
+        },
+        {
+          "seq": 4,
+          "sql": "SELECT u.city, COUNT(DISTINCT o.id) AS paid_orders, ROUND(SUM(p.amount),2) AS gmv\nFROM payments p\nJOIN orders o ON o.id = p.order_id\nJOIN users u ON u.id = o.user_id\nGROUP BY u.city\nORDER BY gmv DESC\nLIMIT 5"
+        },
+        {
+          "seq": 5,
+          "sql": "SELECT u.city, ROUND(SUM(o.order_amount),2) AS amt\nFROM orders o JOIN users u ON u.id = o.user_id\nGROUP BY u.city ORDER BY amt DESC LIMIT 5"
+        }
+      ],
+      "sql_used": "SELECT u.city, ROUND(SUM(o.order_amount),2) AS amt\nFROM orders o JOIN users u ON u.id = o.user_id\nGROUP BY u.city ORDER BY amt DESC LIMIT 5",
+      "sql_source": "last",
+      "gold_row_count": 5,
+      "model_row_count": 5,
+      "judge": "fail",
+      "failure_mode": "other",
+      "error_msg": null,
+      "latency_s": 6.572,
+      "tokens": {
+        "input": 8648,
+        "output": 966,
+        "total": 9614,
+        "cache_read": 7424
+      },
+      "oversized": false,
+      "ended_with_failed_call": false
+    },
+    {
+      "id": "EV-003",
+      "run_idx": 1,
+      "question_type": "glossary_trap",
+      "injected_chunks": [],
+      "expected_chunks": [
+        "glossary:gmv",
+        "qa_pair:qa_003"
+      ],
+      "recall_hits": [],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT COLUMN_NAME, DATA_TYPE, COLUMN_COMMENT FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='mart' AND TABLE_NAME IN ('orders','payments') ORDER BY TABLE_NAME, ORDINAL_POSITION"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT status, COUNT(*) AS cnt, ROUND(SUM(total_amount),2) AS amt FROM orders GROUP BY status"
+        },
+        {
+          "seq": 3,
+          "sql": "SELECT status, COUNT(*) AS cnt, ROUND(SUM(order_amount),2) AS amt FROM orders WHERE created_at >= '2026-09-01' AND created_at < '2026-10-01' GROUP BY status"
+        },
+        {
+          "seq": 4,
+          "sql": "SELECT COUNT(*) AS pay_cnt, ROUND(SUM(amount),2) AS pay_amt FROM payments WHERE paid_at >= '2026-09-01' AND paid_at < '2026-10-01'"
+        },
+        {
+          "seq": 5,
+          "sql": "SELECT COUNT(*) AS order_cnt, ROUND(SUM(order_amount),2) AS gmv_excl_cancelled\nFROM orders\nWHERE created_at >= '2026-09-01' AND created_at < '2026-10-01' AND status <> 'cancelled'"
+        }
+      ],
+      "sql_used": "SELECT COUNT(*) AS order_cnt, ROUND(SUM(order_amount),2) AS gmv_excl_cancelled\nFROM orders\nWHERE created_at >= '2026-09-01' AND created_at < '2026-10-01' AND status <> 'cancelled'",
+      "sql_source": "last",
+      "gold_row_count": 1,
+      "model_row_count": 1,
+      "judge": "fail",
+      "failure_mode": "other",
+      "error_msg": null,
+      "latency_s": 8.664,
+      "tokens": {
+        "input": 9486,
+        "output": 1616,
+        "total": 11102,
+        "cache_read": 8192
+      },
+      "oversized": false,
+      "ended_with_failed_call": false
+    },
+    {
+      "id": "EV-004",
+      "run_idx": 1,
+      "question_type": "glossary_trap",
+      "injected_chunks": [],
+      "expected_chunks": [
+        "glossary:refund_rate",
+        "schema:refunds",
+        "schema:payments"
+      ],
+      "recall_hits": [],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT TABLE_NAME, COLUMN_NAME, DATA_TYPE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = 'mart' AND TABLE_NAME IN ('orders','payments','refunds') ORDER BY TABLE_NAME, ORDINAL_POSITION"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT (SELECT COUNT(*) FROM payments WHERE paid_at >= '2026-09-01' AND paid_at < '2026-10-01') AS pay_cnt, (SELECT ROUND(SUM(amount),2) FROM payments WHERE paid_at >= '2026-09-01' AND paid_at < '2026-10-01') AS pay_amt, (SELECT COUNT(*) FROM refunds WHERE refunded_at >= '2026-09-01' AND refunded_at < '2026-10-01') AS refund_cnt, (SELECT ROUND(SUM(amount),2) FROM refunds WHERE refunded_at >= '2026-09-01' AND refunded_at < '2026-10-01') AS refund_amt"
+        },
+        {
+          "seq": 3,
+          "sql": "SELECT DATE_FORMAT(paid_at,'%Y-%m') AS m, COUNT(*) AS pay_cnt, ROUND(SUM(amount),2) AS pay_amt FROM payments GROUP BY m ORDER BY m"
+        },
+        {
+          "seq": 4,
+          "sql": "SELECT DATE_FORMAT(r.refunded_at,'%Y-%m') AS m, COUNT(*) AS refund_cnt, ROUND(SUM(r.amount),2) AS refund_amt, ROUND(SUM(r.amount)/(SELECT SUM(p.amount) FROM payments p WHERE DATE_FORMAT(p.paid_at,'%Y-%m')=DATE_FORMAT(r.refunded_at,'%Y-%m'))*100,2) AS rate_pct FROM refunds r GROUP BY m ORDER BY m"
+        },
+        {
+          "seq": 5,
+          "sql": "SELECT r.m, r.refund_cnt, r.refund_amt, p.pay_amt, ROUND(r.refund_amt / p.pay_amt * 100, 2) AS refund_rate_pct FROM (SELECT DATE_FORMAT(refunded_at,'%Y-%m') AS m, COUNT(*) AS refund_cnt, SUM(amount) AS refund_amt FROM refunds GROUP BY m) r JOIN (SELECT DATE_FORMAT(paid_at,'%Y-%m') AS m, SUM(amount) AS pay_amt FROM payments GROUP BY m) p ON r.m = p.m ORDER BY r.m"
+        },
+        {
+          "seq": 6,
+          "sql": "SELECT r.reason, COUNT(*) AS cnt, ROUND(SUM(r.amount),2) AS amt FROM refunds r WHERE r.refunded_at >= '2026-09-01' AND r.refunded_at < '2026-10-01' GROUP BY r.reason ORDER BY amt DESC"
+        },
+        {
+          "seq": 7,
+          "sql": "SELECT ROUND(SUM(p.amount),2) AS sep_pay_amt, ROUND(SUM(COALESCE(r.amount,0)),2) AS refunded_amt, ROUND(SUM(COALESCE(r.amount,0))/SUM(p.amount)*100,2) AS rate_pct FROM payments p LEFT JOIN refunds r ON r.payment_id = p.id WHERE p.paid_at >= '2026-09-01' AND p.paid_at < '2026-10-01'"
+        }
+      ],
+      "sql_used": "SELECT ROUND(SUM(p.amount),2) AS sep_pay_amt, ROUND(SUM(COALESCE(r.amount,0)),2) AS refunded_amt, ROUND(SUM(COALESCE(r.amount,0))/SUM(p.amount)*100,2) AS rate_pct FROM payments p LEFT JOIN refunds r ON r.payment_id = p.id WHERE p.paid_at >= '2026-09-01' AND p.paid_at < '2026-10-01'",
+      "sql_source": "last",
+      "gold_row_count": 1,
+      "model_row_count": 1,
+      "judge": "fail",
+      "failure_mode": "other",
+      "error_msg": null,
+      "latency_s": 11.728,
+      "tokens": {
+        "input": 16222,
+        "output": 2318,
+        "total": 18540,
+        "cache_read": 14336
+      },
+      "oversized": false,
+      "ended_with_failed_call": false
+    },
+    {
+      "id": "EV-005",
+      "run_idx": 1,
+      "question_type": "multi_join",
+      "injected_chunks": [],
+      "expected_chunks": [
+        "schema:orders",
+        "schema:order_items",
+        "schema:products",
+        "schema:users"
+      ],
+      "recall_hits": [],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT TABLE_NAME, COLUMN_NAME, DATA_TYPE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='mart' AND TABLE_NAME IN ('users','products','orders','order_items') ORDER BY TABLE_NAME, ORDINAL_POSITION"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT DISTINCT category FROM products"
+        },
+        {
+          "seq": 3,
+          "sql": "SELECT gender, COUNT(*) FROM users GROUP BY gender"
+        },
+        {
+          "seq": 4,
+          "sql": "SELECT status, COUNT(*) FROM orders GROUP BY status"
+        },
+        {
+          "seq": 5,
+          "sql": "SELECT u.gender,\n       COUNT(DISTINCT u.id) AS all_users,\n       COUNT(DISTINCT CASE WHEN o.status IN ('paid','shipped','completed','refunded') THEN u.id END) AS valid_buyers,\n       COUNT(DISTINCT CASE WHEN o.status IN ('paid','shipped','completed') THEN u.id END) AS net_buyers\nFROM users u\nJOIN orders o ON o.user_id = u.id\nJOIN order_items oi ON oi.order_id = o.id\nJOIN products p ON p.id = oi.product_id\nWHERE p.category = '数码'\nGROUP BY u.gender"
+        },
+        {
+          "seq": 6,
+          "sql": "SELECT COLUMN_NAME, DATA_TYPE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='mart' AND TABLE_NAME='payments' ORDER BY ORDINAL_POSITION"
+        },
+        {
+          "seq": 7,
+          "sql": "SELECT u.gender, COUNT(DISTINCT u.id) AS paid_digital_buyers\nFROM payments pay\nJOIN orders o ON o.id = pay.order_id\nJOIN users u ON u.id = o.user_id\nJOIN order_items oi ON oi.order_id = o.id\nJOIN products p ON p.id = oi.product_id\nWHERE p.category = '数码'\nGROUP BY u.gender"
+        }
+      ],
+      "sql_used": "SELECT u.gender, COUNT(DISTINCT u.id) AS paid_digital_buyers\nFROM payments pay\nJOIN orders o ON o.id = pay.order_id\nJOIN users u ON u.id = o.user_id\nJOIN order_items oi ON oi.order_id = o.id\nJOIN products p ON p.id = oi.product_id\nWHERE p.category = '数码'\nGROUP BY u.gender",
+      "sql_source": "last",
+      "gold_row_count": 1,
+      "model_row_count": 2,
+      "judge": "fail",
+      "failure_mode": "other",
+      "error_msg": null,
+      "latency_s": 9.577,
+      "tokens": {
+        "input": 14225,
+        "output": 1480,
+        "total": 15705,
+        "cache_read": 12416
+      },
+      "oversized": false,
+      "ended_with_failed_call": false
+    },
+    {
+      "id": "EV-006",
+      "run_idx": 1,
+      "question_type": "single_table",
+      "injected_chunks": [],
+      "expected_chunks": [
+        "schema:users",
+        "schema:orders",
+        "schema:payments"
+      ],
+      "recall_hits": [],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT COLUMN_NAME, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA='mart' AND TABLE_NAME IN ('users','orders','payments') ORDER BY TABLE_NAME, ORDINAL_POSITION"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT\n  (SELECT COUNT(*) FROM users) AS total_users,\n  (SELECT COUNT(DISTINCT o.user_id) FROM orders o JOIN payments p ON p.order_id = o.id) AS paid_users,\n  (SELECT COUNT(*) FROM users u WHERE NOT EXISTS (\n      SELECT 1 FROM orders o JOIN payments p ON p.order_id = o.id WHERE o.user_id = u.id)) AS never_paid_users"
+        },
+        {
+          "seq": 3,
+          "sql": "SELECT\n  SUM(CASE WHEN o_cnt = 0 THEN 1 ELSE 0 END) AS no_order_users,\n  SUM(CASE WHEN o_cnt > 0 AND paid_cnt = 0 THEN 1 ELSE 0 END) AS order_but_never_paid,\n  SUM(CASE WHEN paid_cnt > 0 THEN 1 ELSE 0 END) AS paid_users\nFROM (\n  SELECT u.id,\n         COUNT(DISTINCT o.id) AS o_cnt,\n         COUNT(DISTINCT p.id) AS paid_cnt\n  FROM users u\n  LEFT JOIN orders o ON o.user_id = u.id\n  LEFT JOIN payments p ON p.order_id = o.id\n  GROUP BY u.id\n) t"
+        }
+      ],
+      "sql_used": "SELECT\n  SUM(CASE WHEN o_cnt = 0 THEN 1 ELSE 0 END) AS no_order_users,\n  SUM(CASE WHEN o_cnt > 0 AND paid_cnt = 0 THEN 1 ELSE 0 END) AS order_but_never_paid,\n  SUM(CASE WHEN paid_cnt > 0 THEN 1 ELSE 0 END) AS paid_users\nFROM (\n  SELECT u.id,\n         COUNT(DISTINCT o.id) AS o_cnt,\n         COUNT(DISTINCT p.id) AS paid_cnt\n  FROM users u\n  LEFT JOIN orders o ON o.user_id = u.id\n  LEFT JOIN payments p ON p.order_id = o.id\n  GROUP BY u.id\n) t",
+      "sql_source": "last",
+      "gold_row_count": 1,
+      "model_row_count": 1,
+      "judge": "fail",
+      "failure_mode": "other",
+      "error_msg": null,
+      "latency_s": 6.292,
+      "tokens": {
+        "input": 8133,
+        "output": 961,
+        "total": 9094,
+        "cache_read": 6912
+      },
+      "oversized": false,
+      "ended_with_failed_call": false
+    },
+    {
+      "id": "EV-007",
+      "run_idx": 1,
+      "question_type": "time_window",
+      "injected_chunks": [],
+      "expected_chunks": [
+        "schema:payments"
+      ],
+      "recall_hits": [],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT COLUMN_NAME, DATA_TYPE, COLUMN_COMMENT FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = 'mart' AND TABLE_NAME IN ('payments','orders') ORDER BY TABLE_NAME, ORDINAL_POSITION"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT DATE(paid_at) AS pay_date, COUNT(*) AS pay_cnt, ROUND(SUM(amount), 2) AS pay_amount FROM payments WHERE paid_at >= DATE_SUB('2026-09-30', INTERVAL 6 DAY) AND paid_at < DATE_ADD('2026-09-30', INTERVAL 1 DAY) GROUP BY pay_date ORDER BY pay_date"
+        },
+        {
+          "seq": 3,
+          "sql": "SELECT MIN(paid_at) AS min_paid, MAX(paid_at) AS max_paid FROM payments"
+        }
+      ],
+      "sql_used": "SELECT MIN(paid_at) AS min_paid, MAX(paid_at) AS max_paid FROM payments",
+      "sql_source": "last",
+      "gold_row_count": 7,
+      "model_row_count": 1,
+      "judge": "fail",
+      "failure_mode": "other",
+      "error_msg": null,
+      "latency_s": 6.67,
+      "tokens": {
+        "input": 9061,
+        "output": 1128,
+        "total": 10189,
+        "cache_read": 7808
+      },
+      "oversized": false,
+      "ended_with_failed_call": false
+    },
+    {
+      "id": "EV-008",
+      "run_idx": 1,
+      "question_type": "glossary_trap",
+      "injected_chunks": [],
+      "expected_chunks": [
+        "glossary:avg_order_value",
+        "schema:payments"
+      ],
+      "recall_hits": [],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SHOW COLUMNS FROM orders"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT status, COUNT(*) FROM orders GROUP BY status"
+        },
+        {
+          "seq": 3,
+          "sql": "SELECT COLUMN_NAME, DATA_TYPE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='mart' AND TABLE_NAME IN ('orders','payments') ORDER BY TABLE_NAME, ORDINAL_POSITION"
+        },
+        {
+          "seq": 4,
+          "sql": "SELECT * FROM orders LIMIT 3"
+        },
+        {
+          "seq": 5,
+          "sql": "SELECT DATE_FORMAT(created_at,'%Y-%m') AS m, COUNT(*) AS orders, SUM(order_amount) AS gmv, ROUND(SUM(order_amount)/COUNT(*),2) AS aov FROM orders WHERE created_at >= '2026-06-01' AND created_at < '2026-07-01' GROUP BY m"
+        },
+        {
+          "seq": 6,
+          "sql": "SELECT COUNT(*) AS paid_orders, SUM(amount) AS paid_gmv, ROUND(SUM(amount)/COUNT(*),2) AS aov_paid FROM payments WHERE paid_at >= '2026-06-01' AND paid_at < '2026-07-01'"
+        },
+        {
+          "seq": 7,
+          "sql": "SELECT status, COUNT(*) c, SUM(order_amount) s, ROUND(AVG(order_amount),2) aov FROM orders WHERE created_at >= '2026-06-01' AND created_at < '2026-07-01' GROUP BY status"
+        }
+      ],
+      "sql_used": "SELECT status, COUNT(*) c, SUM(order_amount) s, ROUND(AVG(order_amount),2) aov FROM orders WHERE created_at >= '2026-06-01' AND created_at < '2026-07-01' GROUP BY status",
+      "sql_source": "last",
+      "gold_row_count": 1,
+      "model_row_count": 6,
+      "judge": "fail",
+      "failure_mode": "other",
+      "error_msg": null,
+      "latency_s": 8.179,
+      "tokens": {
+        "input": 8790,
+        "output": 1327,
+        "total": 10117,
+        "cache_read": 7424
+      },
+      "oversized": false,
+      "ended_with_failed_call": false
+    },
+    {
+      "id": "EV-009",
+      "run_idx": 1,
+      "question_type": "aggregation",
+      "injected_chunks": [],
+      "expected_chunks": [
+        "schema:orders"
+      ],
+      "recall_hits": [],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT TABLE_NAME, COLUMN_NAME, DATA_TYPE, COLUMN_COMMENT FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = 'mart' ORDER BY TABLE_NAME, ORDINAL_POSITION"
+        },
+        {
+          "seq": 2,
+          "sql": "WITH u AS (\n  SELECT o.user_id, COUNT(DISTINCT p.order_id) AS pay_orders\n  FROM payments p\n  JOIN orders o ON o.id = p.order_id\n  WHERE p.paid_at >= '2026-01-01' AND p.paid_at < '2026-07-01'\n  GROUP BY o.user_id\n)\nSELECT COUNT(*) AS pay_users,\n       SUM(CASE WHEN pay_orders >= 2 THEN 1 ELSE 0 END) AS repeat_users,\n       ROUND(SUM(CASE WHEN pay_orders >= 2 THEN 1 ELSE 0 END) / COUNT(*) * 100, 2) AS repeat_rate_pct\nFROM u"
+        },
+        {
+          "seq": 3,
+          "sql": "WITH u AS (\n  SELECT user_id, COUNT(*) AS ord_cnt\n  FROM orders\n  WHERE created_at >= '2026-01-01' AND created_at < '2026-07-01'\n    AND status <> 'cancelled'\n  GROUP BY user_id\n)\nSELECT COUNT(*) AS order_users,\n       SUM(CASE WHEN ord_cnt >= 2 THEN 1 ELSE 0 END) AS repeat_users,\n       ROUND(SUM(CASE WHEN ord_cnt >= 2 THEN 1 ELSE 0 END) / COUNT(*) * 100, 2) AS repeat_rate_pct\nFROM u"
+        },
+        {
+          "seq": 4,
+          "sql": "WITH u AS (\n  SELECT o.user_id, COUNT(DISTINCT p.order_id) AS pay_orders\n  FROM payments p\n  JOIN orders o ON o.id = p.order_id\n  WHERE p.paid_at >= '2025-10-01' AND p.paid_at < '2026-10-01'\n  GROUP BY o.user_id\n)\nSELECT COUNT(*) AS pay_users,\n       SUM(CASE WHEN pay_orders >= 2 THEN 1 ELSE 0 END) AS repeat_users,\n       ROUND(SUM(CASE WHEN pay_orders >= 2 THEN 1 ELSE 0 END) / COUNT(*) * 100, 2) AS repeat_rate_pct\nFROM u"
+        }
+      ],
+      "sql_used": "WITH u AS (\n  SELECT o.user_id, COUNT(DISTINCT p.order_id) AS pay_orders\n  FROM payments p\n  JOIN orders o ON o.id = p.order_id\n  WHERE p.paid_at >= '2025-10-01' AND p.paid_at < '2026-10-01'\n  GROUP BY o.user_id\n)\nSELECT COUNT(*) AS pay_users,\n       SUM(CASE WHEN pay_orders >= 2 THEN 1 ELSE 0 END) AS repeat_users,\n       ROUND(SUM(CASE WHEN pay_orders >= 2 THEN 1 ELSE 0 END) / COUNT(*) * 100, 2) AS repeat_rate_pct\nFROM u",
+      "sql_source": "last",
+      "gold_row_count": 1,
+      "model_row_count": 1,
+      "judge": "fail",
+      "failure_mode": "other",
+      "error_msg": null,
+      "latency_s": 9.89,
+      "tokens": {
+        "input": 7865,
+        "output": 1922,
+        "total": 9787,
+        "cache_read": 6528
+      },
+      "oversized": false,
+      "ended_with_failed_call": false
+    },
+    {
+      "id": "EV-010",
+      "run_idx": 1,
+      "question_type": "single_table",
+      "injected_chunks": [],
+      "expected_chunks": [
+        "schema:refunds"
+      ],
+      "recall_hits": [],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT TABLE_NAME, COLUMN_NAME, DATA_TYPE, COLUMN_COMMENT FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='mart' AND TABLE_NAME IN ('refunds','orders','users','payments') ORDER BY TABLE_NAME, ORDINAL_POSITION"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT r.order_id, o.order_no, u.name AS user_name, o.status, o.order_amount, r.amount AS refund_amount, r.reason, r.refunded_at\nFROM refunds r\nJOIN orders o ON o.id = r.order_id\nLEFT JOIN users u ON u.id = o.user_id\nORDER BY r.amount DESC\nLIMIT 5"
+        }
+      ],
+      "sql_used": "SELECT r.order_id, o.order_no, u.name AS user_name, o.status, o.order_amount, r.amount AS refund_amount, r.reason, r.refunded_at\nFROM refunds r\nJOIN orders o ON o.id = r.order_id\nLEFT JOIN users u ON u.id = o.user_id\nORDER BY r.amount DESC\nLIMIT 5",
+      "sql_source": "last",
+      "gold_row_count": 3,
+      "model_row_count": 5,
+      "judge": "fail",
+      "failure_mode": "other",
+      "error_msg": null,
+      "latency_s": 5.05,
+      "tokens": {
+        "input": 6947,
+        "output": 715,
+        "total": 7662,
+        "cache_read": 5504
+      },
+      "oversized": false,
+      "ended_with_failed_call": false
+    },
+    {
+      "id": "EV-011",
+      "run_idx": 1,
+      "question_type": "aggregation",
+      "injected_chunks": [],
+      "expected_chunks": [
+        "schema:payments"
+      ],
+      "recall_hits": [],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT COLUMN_NAME, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA='mart' AND TABLE_NAME='payments'"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT method,\n       COUNT(*) AS order_cnt,\n       ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM payments), 2) AS order_pct,\n       ROUND(SUM(amount), 2) AS gmv\nFROM payments\nGROUP BY method\nORDER BY order_cnt DESC"
+        }
+      ],
+      "sql_used": "SELECT method,\n       COUNT(*) AS order_cnt,\n       ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM payments), 2) AS order_pct,\n       ROUND(SUM(amount), 2) AS gmv\nFROM payments\nGROUP BY method\nORDER BY order_cnt DESC",
+      "sql_source": "last",
+      "gold_row_count": 3,
+      "model_row_count": 3,
+      "judge": "fail",
+      "failure_mode": "other",
+      "error_msg": null,
+      "latency_s": 4.886,
+      "tokens": {
+        "input": 5814,
+        "output": 660,
+        "total": 6474,
+        "cache_read": 4864
+      },
+      "oversized": false,
+      "ended_with_failed_call": false
+    },
+    {
+      "id": "EV-012",
+      "run_idx": 1,
+      "question_type": "single_table",
+      "injected_chunks": [],
+      "expected_chunks": [
+        "schema:users"
+      ],
+      "recall_hits": [],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT MIN(created_at) AS min_time, MAX(created_at) AS max_time, COUNT(*) AS total FROM users"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT * FROM users LIMIT 3"
+        },
+        {
+          "seq": 3,
+          "sql": "SELECT COUNT(*) AS user_cnt FROM users WHERE registered_at >= '2025-01-01' AND registered_at < '2025-07-01'"
+        },
+        {
+          "seq": 4,
+          "sql": "SELECT MIN(registered_at) AS min_reg, MAX(registered_at) AS max_reg, COUNT(*) AS total FROM users"
+        },
+        {
+          "seq": 5,
+          "sql": "SELECT DATE_FORMAT(registered_at, '%Y-%m') AS month, COUNT(*) AS user_cnt\nFROM users\nWHERE registered_at >= '2025-01-01' AND registered_at < '2025-07-01'\nGROUP BY month ORDER BY month"
+        }
+      ],
+      "sql_used": "SELECT DATE_FORMAT(registered_at, '%Y-%m') AS month, COUNT(*) AS user_cnt\nFROM users\nWHERE registered_at >= '2025-01-01' AND registered_at < '2025-07-01'\nGROUP BY month ORDER BY month",
+      "sql_source": "last",
+      "gold_row_count": 1,
+      "model_row_count": 6,
+      "judge": "fail",
+      "failure_mode": "other",
+      "error_msg": null,
+      "latency_s": 5.711,
+      "tokens": {
+        "input": 8543,
+        "output": 784,
+        "total": 9327,
+        "cache_read": 7296
+      },
+      "oversized": false,
+      "ended_with_failed_call": false
+    },
+    {
+      "id": "EV-013",
+      "run_idx": 1,
+      "question_type": "single_table",
+      "injected_chunks": [],
+      "expected_chunks": [
+        "schema:products"
+      ],
+      "recall_hits": [],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT * FROM products LIMIT 5"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT DISTINCT category FROM products"
+        },
+        {
+          "seq": 3,
+          "sql": "SELECT id, name, brand, price, listed_at FROM products WHERE category = '图书' ORDER BY price DESC LIMIT 3"
+        },
+        {
+          "seq": 4,
+          "sql": "SELECT COUNT(*) AS book_cnt, MIN(price) AS min_price, MAX(price) AS max_price, AVG(price) AS avg_price FROM products WHERE category = '图书'"
+        }
+      ],
+      "sql_used": "SELECT COUNT(*) AS book_cnt, MIN(price) AS min_price, MAX(price) AS max_price, AVG(price) AS avg_price FROM products WHERE category = '图书'",
+      "sql_source": "last",
+      "gold_row_count": 3,
+      "model_row_count": 1,
+      "judge": "fail",
+      "failure_mode": "other",
+      "error_msg": null,
+      "latency_s": 5.206,
+      "tokens": {
+        "input": 8154,
+        "output": 584,
+        "total": 8738,
+        "cache_read": 6784
+      },
+      "oversized": false,
+      "ended_with_failed_call": false
+    },
+    {
+      "id": "EV-014",
+      "run_idx": 1,
+      "question_type": "single_table",
+      "injected_chunks": [],
+      "expected_chunks": [
+        "schema:orders"
+      ],
+      "recall_hits": [],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT * FROM orders LIMIT 3"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT status, COUNT(*) AS order_cnt, SUM(order_amount) AS amt\nFROM orders\nWHERE created_at >= '2026-05-01' AND created_at < '2026-06-01'\nGROUP BY status\nORDER BY order_cnt DESC"
+        }
+      ],
+      "sql_used": "SELECT status, COUNT(*) AS order_cnt, SUM(order_amount) AS amt\nFROM orders\nWHERE created_at >= '2026-05-01' AND created_at < '2026-06-01'\nGROUP BY status\nORDER BY order_cnt DESC",
+      "sql_source": "last",
+      "gold_row_count": 6,
+      "model_row_count": 6,
+      "judge": "fail",
+      "failure_mode": "other",
+      "error_msg": null,
+      "latency_s": 3.918,
+      "tokens": {
+        "input": 5876,
+        "output": 477,
+        "total": 6353,
+        "cache_read": 4864
+      },
+      "oversized": false,
+      "ended_with_failed_call": false
+    },
+    {
+      "id": "EV-015",
+      "run_idx": 1,
+      "question_type": "single_table",
+      "injected_chunks": [],
+      "expected_chunks": [
+        "schema:orders"
+      ],
+      "recall_hits": [],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SHOW COLUMNS FROM orders"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT COLUMN_NAME, DATA_TYPE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='mart' AND TABLE_NAME='orders' ORDER BY ORDINAL_POSITION"
+        },
+        {
+          "seq": 3,
+          "sql": "SELECT order_no, order_amount, status, item_count, created_at\nFROM orders\nWHERE created_at >= '2026-08-01' AND created_at < '2026-09-01'\nORDER BY order_amount DESC\nLIMIT 5"
+        },
+        {
+          "seq": 4,
+          "sql": "SELECT o.order_no, o.order_amount, p.amount AS paid_amount, p.paid_at\nFROM orders o LEFT JOIN payments p ON p.order_id = o.id\nWHERE o.order_no IN ('SO2026080800087193','SO2026083000092107','SO2026082300090388','SO2026082300090539','SO2026082600091079')\nORDER BY o.order_amount DESC"
+        }
+      ],
+      "sql_used": "SELECT o.order_no, o.order_amount, p.amount AS paid_amount, p.paid_at\nFROM orders o LEFT JOIN payments p ON p.order_id = o.id\nWHERE o.order_no IN ('SO2026080800087193','SO2026083000092107','SO2026082300090388','SO2026082300090539','SO2026082600091079')\nORDER BY o.order_amount DESC",
+      "sql_source": "last",
+      "gold_row_count": 5,
+      "model_row_count": 5,
+      "judge": "fail",
+      "failure_mode": "other",
+      "error_msg": null,
+      "latency_s": 6.872,
+      "tokens": {
+        "input": 10090,
+        "output": 957,
+        "total": 11047,
+        "cache_read": 8704
+      },
+      "oversized": false,
+      "ended_with_failed_call": false
+    },
+    {
+      "id": "EV-016",
+      "run_idx": 1,
+      "question_type": "multi_join",
+      "injected_chunks": [],
+      "expected_chunks": [
+        "schema:payments",
+        "schema:orders",
+        "schema:users"
+      ],
+      "recall_hits": [],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT TABLE_NAME, COLUMN_NAME, DATA_TYPE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='mart' AND TABLE_NAME IN ('users','orders','payments','refunds','order_items','products') ORDER BY TABLE_NAME, ORDINAL_POSITION"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT TABLE_NAME, COLUMN_NAME, DATA_TYPE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='mart' AND TABLE_NAME IN ('users','orders','refunds','products') ORDER BY TABLE_NAME, ORDINAL_POSITION"
+        },
+        {
+          "seq": 3,
+          "sql": "SELECT COLUMN_NAME, DATA_TYPE, COLUMN_TYPE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='mart' AND TABLE_NAME='users' ORDER BY ORDINAL_POSITION"
+        },
+        {
+          "seq": 4,
+          "sql": "SELECT u.city AS 城市, COUNT(*) AS 支付笔数, ROUND(SUM(p.amount),2) AS 支付金额\nFROM payments p\nJOIN orders o ON o.id = p.order_id\nJOIN users u ON u.id = o.user_id\nWHERE p.paid_at >= '2026-01-01' AND p.paid_at < '2026-02-01'\nGROUP BY u.city\nORDER BY 支付金额 DESC"
+        },
+        {
+          "seq": 5,
+          "sql": "SELECT COUNT(DISTINCT u.city) AS 城市数, COUNT(*) AS 支付笔数, ROUND(SUM(p.amount),2) AS 支付总额\nFROM payments p\nJOIN orders o ON o.id = p.order_id\nJOIN users u ON u.id = o.user_id\nWHERE p.paid_at >= '2026-01-01' AND p.paid_at < '2026-02-01'"
+        }
+      ],
+      "sql_used": "SELECT COUNT(DISTINCT u.city) AS 城市数, COUNT(*) AS 支付笔数, ROUND(SUM(p.amount),2) AS 支付总额\nFROM payments p\nJOIN orders o ON o.id = p.order_id\nJOIN users u ON u.id = o.user_id\nWHERE p.paid_at >= '2026-01-01' AND p.paid_at < '2026-02-01'",
+      "sql_source": "last",
+      "gold_row_count": 20,
+      "model_row_count": 1,
+      "judge": "fail",
+      "failure_mode": "other",
+      "error_msg": null,
+      "latency_s": 8.402,
+      "tokens": {
+        "input": 13735,
+        "output": 1387,
+        "total": 15122,
+        "cache_read": 11904
+      },
+      "oversized": false,
+      "ended_with_failed_call": false
+    },
+    {
+      "id": "EV-017",
+      "run_idx": 1,
+      "question_type": "multi_join",
+      "injected_chunks": [],
+      "expected_chunks": [
+        "schema:users",
+        "schema:orders",
+        "schema:order_items",
+        "schema:products"
+      ],
+      "recall_hits": [],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT TABLE_NAME, COLUMN_NAME, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA='mart' ORDER BY TABLE_NAME, ORDINAL_POSITION"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT TABLE_NAME, COLUMN_NAME, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA='mart' AND TABLE_NAME IN ('users','products','orders') ORDER BY TABLE_NAME, ORDINAL_POSITION"
+        },
+        {
+          "seq": 3,
+          "sql": "SELECT city, COUNT(*) AS user_count FROM users WHERE city LIKE '%武汉%' OR province LIKE '%湖北%' GROUP BY city ORDER BY user_count DESC"
+        },
+        {
+          "seq": 4,
+          "sql": "SELECT status, COUNT(*) c FROM orders GROUP BY status"
+        },
+        {
+          "seq": 5,
+          "sql": "SELECT p.category AS 类目,\n       COUNT(DISTINCT o.user_id) AS 购买用户数,\n       COUNT(DISTINCT o.id) AS 订单数,\n       SUM(oi.quantity) AS 购买件数,\n       ROUND(SUM(oi.sale_amount),2) AS 销售额\nFROM users u\nJOIN orders o ON o.user_id = u.id AND o.status IN ('paid','shipped','completed')\nJOIN order_items oi ON oi.order_id = o.id\nJOIN products p ON p.id = oi.product_id\nWHERE u.city = '武汉'\nGROUP BY p.category\nORDER BY 销售额 DESC"
+        }
+      ],
+      "sql_used": "SELECT p.category AS 类目,\n       COUNT(DISTINCT o.user_id) AS 购买用户数,\n       COUNT(DISTINCT o.id) AS 订单数,\n       SUM(oi.quantity) AS 购买件数,\n       ROUND(SUM(oi.sale_amount),2) AS 销售额\nFROM users u\nJOIN orders o ON o.user_id = u.id AND o.status IN ('paid','shipped','completed')\nJOIN order_items oi ON oi.order_id = o.id\nJOIN products p ON p.id = oi.product_id\nWHERE u.city = '武汉'\nGROUP BY p.category\nORDER BY 销售额 DESC",
+      "sql_source": "last",
+      "gold_row_count": 8,
+      "model_row_count": 8,
+      "judge": "fail",
+      "failure_mode": "other",
+      "error_msg": null,
+      "latency_s": 8.979,
+      "tokens": {
+        "input": 13381,
+        "output": 1337,
+        "total": 14718,
+        "cache_read": 11648
+      },
+      "oversized": false,
+      "ended_with_failed_call": false
+    },
+    {
+      "id": "EV-018",
+      "run_idx": 1,
+      "question_type": "multi_join",
+      "injected_chunks": [],
+      "expected_chunks": [
+        "schema:payments",
+        "schema:orders",
+        "schema:users"
+      ],
+      "recall_hits": [],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT * FROM payments LIMIT 3"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT * FROM users LIMIT 3"
+        },
+        {
+          "seq": 3,
+          "sql": "SELECT method, COUNT(*) AS cnt FROM payments GROUP BY method ORDER BY cnt DESC"
+        },
+        {
+          "seq": 4,
+          "sql": "SELECT u.city, COUNT(DISTINCT u.id) AS user_cnt\nFROM payments p\nJOIN orders o ON o.id = p.order_id\nJOIN users u ON u.id = o.user_id\nWHERE p.method = '银联'\nGROUP BY u.city\nORDER BY user_cnt DESC, u.city"
+        },
+        {
+          "seq": 5,
+          "sql": "SELECT COUNT(DISTINCT u.id) AS total_users, COUNT(DISTINCT u.city) AS city_cnt\nFROM payments p JOIN orders o ON o.id = p.order_id JOIN users u ON u.id = o.user_id\nWHERE p.method = '银联'"
+        },
+        {
+          "seq": 6,
+          "sql": "SELECT u.city, COUNT(DISTINCT u.id) AS user_cnt\nFROM payments p JOIN orders o ON o.id = p.order_id JOIN users u ON u.id = o.user_id\nWHERE p.method = '银联'\nGROUP BY u.city\nORDER BY user_cnt DESC, u.city\nLIMIT 100 OFFSET 20"
+        }
+      ],
+      "sql_used": "SELECT u.city, COUNT(DISTINCT u.id) AS user_cnt\nFROM payments p JOIN orders o ON o.id = p.order_id JOIN users u ON u.id = o.user_id\nWHERE p.method = '银联'\nGROUP BY u.city\nORDER BY user_cnt DESC, u.city\nLIMIT 100 OFFSET 20",
+      "sql_source": "last",
+      "gold_row_count": 20,
+      "model_row_count": 0,
+      "judge": "fail",
+      "failure_mode": "other",
+      "error_msg": null,
+      "latency_s": 8.965,
+      "tokens": {
+        "input": 10718,
+        "output": 1393,
+        "total": 12111,
+        "cache_read": 9344
+      },
+      "oversized": false,
+      "ended_with_failed_call": false
+    },
+    {
+      "id": "EV-019",
+      "run_idx": 1,
+      "question_type": "multi_join",
+      "injected_chunks": [],
+      "expected_chunks": [
+        "schema:refunds",
+        "schema:orders",
+        "schema:users"
+      ],
+      "recall_hits": [],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SHOW COLUMNS FROM refunds"
+        },
+        {
+          "seq": 2,
+          "sql": "SHOW COLUMNS FROM orders"
+        },
+        {
+          "seq": 3,
+          "sql": "SHOW COLUMNS FROM users"
+        },
+        {
+          "seq": 4,
+          "sql": "SELECT COLUMN_NAME, DATA_TYPE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='mart' AND TABLE_NAME IN ('refunds','orders','users') ORDER BY TABLE_NAME, ORDINAL_POSITION"
+        },
+        {
+          "seq": 5,
+          "sql": "SELECT u.id AS user_id, u.name AS user_name, ROUND(SUM(r.amount),2) AS refund_total, COUNT(*) AS refund_cnt\nFROM refunds r\nJOIN orders o ON o.id = r.order_id\nJOIN users u ON u.id = o.user_id\nGROUP BY u.id, u.name\nORDER BY refund_total DESC\nLIMIT 5"
+        },
+        {
+          "seq": 6,
+          "sql": "SELECT COUNT(*) AS refund_rows, ROUND(SUM(amount),2) AS total_refund_amount, ROUND(MAX(amount),2) AS max_single_refund FROM refunds"
+        }
+      ],
+      "sql_used": "SELECT COUNT(*) AS refund_rows, ROUND(SUM(amount),2) AS total_refund_amount, ROUND(MAX(amount),2) AS max_single_refund FROM refunds",
+      "sql_source": "last",
+      "gold_row_count": 5,
+      "model_row_count": 1,
+      "judge": "fail",
+      "failure_mode": "other",
+      "error_msg": null,
+      "latency_s": 6.681,
+      "tokens": {
+        "input": 10411,
+        "output": 950,
+        "total": 11361,
+        "cache_read": 9088
+      },
+      "oversized": false,
+      "ended_with_failed_call": false
+    },
+    {
+      "id": "EV-020",
+      "run_idx": 1,
+      "question_type": "multi_join",
+      "injected_chunks": [],
+      "expected_chunks": [
+        "schema:order_items",
+        "schema:products",
+        "schema:orders"
+      ],
+      "recall_hits": [],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT * FROM products LIMIT 5"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT category, COUNT(*) AS cnt FROM products GROUP BY category ORDER BY cnt DESC"
+        },
+        {
+          "seq": 3,
+          "sql": "SELECT * FROM order_items LIMIT 5"
+        },
+        {
+          "seq": 4,
+          "sql": "SELECT * FROM orders LIMIT 5"
+        },
+        {
+          "seq": 5,
+          "sql": "SELECT status, COUNT(*) AS cnt, SUM(order_amount) AS amt FROM orders GROUP BY status"
+        },
+        {
+          "seq": 6,
+          "sql": "SELECT o.status,\n       COUNT(*) AS rows_cnt,\n       SUM(oi.sale_amount) AS gmv,\n       SUM(oi.quantity) AS qty\nFROM order_items oi\nJOIN orders o ON o.id = oi.order_id\nJOIN products p ON p.id = oi.product_id\nWHERE p.category = '美妆'\n  AND o.created_at >= '2026-04-01' AND o.created_at < '2026-05-01'\nGROUP BY o.status WITH ROLLUP"
+        },
+        {
+          "seq": 7,
+          "sql": "SELECT * FROM payments LIMIT 5"
+        },
+        {
+          "seq": 8,
+          "sql": "SELECT COUNT(*) AS pay_rows, COUNT(DISTINCT order_id) AS orders, MIN(paid_at) AS min_t, MAX(paid_at) AS max_t FROM payments"
+        },
+        {
+          "seq": 9,
+          "sql": "SELECT\n  SUM(CASE WHEN o.status IN ('paid','shipped','completed') THEN oi.sale_amount ELSE 0 END) AS paid_like_amount,\n  SUM(CASE WHEN o.status <> 'cancelled' THEN oi.sale_amount ELSE 0 END) AS non_cancelled_amount,\n  SUM(oi.sale_amount) AS all_amount,\n  COUNT(DISTINCT o.id) AS orders_all\nFROM order_items oi\nJOIN orders o ON o.id = oi.order_id\nJOIN products p ON p.id = oi.product_id\nWHERE p.category = '美妆'\n  AND o.created_at >= '2026-04-01' AND o.created_at < '2026-05-01'"
+        },
+        {
+          "seq": 10,
+          "sql": "SELECT COUNT(DISTINCT o.id) AS paid_orders, SUM(oi.sale_amount) AS amount_via_payments\nFROM order_items oi\nJOIN orders o ON o.id = oi.order_id\nJOIN products p ON p.id = oi.product_id\nJOIN payments pay ON pay.order_id = o.id\nWHERE p.category = '美妆'\n  AND o.created_at >= '2026-04-01' AND o.created_at < '2026-05-01'"
+        },
+        {
+          "seq": 11,
+          "sql": "SELECT SUM(oi.sale_amount) AS amount_by_pay_time\nFROM order_items oi\nJOIN orders o ON o.id = oi.order_id\nJOIN products p ON p.id = oi.product_id\nJOIN payments pay ON pay.order_id = o.id\nWHERE p.category = '美妆'\n  AND pay.paid_at >= '2026-04-01' AND pay.paid_at < '2026-05-01'"
+        },
+        {
+          "seq": 12,
+          "sql": "SELECT SUM(r.refund_amount) AS refund_amount\nFROM refunds r\nJOIN orders o ON o.id = r.order_id\nWHERE o.created_at >= '2026-04-01' AND o.created_at < '2026-05-01'\n  AND o.id IN (\n    SELECT DISTINCT oi.order_id FROM order_items oi JOIN products p ON p.id=oi.product_id WHERE p.category='美妆'\n  )"
+        },
+        {
+          "seq": 13,
+          "sql": "SELECT * FROM refunds LIMIT 3"
+        }
+      ],
+      "sql_used": "SELECT * FROM refunds LIMIT 3",
+      "sql_source": "last",
+      "gold_row_count": 1,
+      "model_row_count": 3,
+      "judge": "fail",
+      "failure_mode": "other",
+      "error_msg": null,
+      "latency_s": 14.467,
+      "tokens": {
+        "input": 19422,
+        "output": 2597,
+        "total": 22019,
+        "cache_read": 17152
+      },
+      "oversized": false,
+      "ended_with_failed_call": false
+    },
+    {
+      "id": "EV-021",
+      "run_idx": 1,
+      "question_type": "aggregation",
+      "injected_chunks": [],
+      "expected_chunks": [
+        "schema:refunds"
+      ],
+      "recall_hits": [],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT * FROM refunds LIMIT 5"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT reason,\n       COUNT(*) AS cnt,\n       ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM refunds), 2) AS pct\nFROM refunds\nGROUP BY reason\nORDER BY cnt DESC"
+        }
+      ],
+      "sql_used": "SELECT reason,\n       COUNT(*) AS cnt,\n       ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM refunds), 2) AS pct\nFROM refunds\nGROUP BY reason\nORDER BY cnt DESC",
+      "sql_source": "last",
+      "gold_row_count": 5,
+      "model_row_count": 5,
+      "judge": "pass",
+      "failure_mode": null,
+      "error_msg": null,
+      "latency_s": 4.272,
+      "tokens": {
+        "input": 5912,
+        "output": 480,
+        "total": 6392,
+        "cache_read": 4992
+      },
+      "oversized": false,
+      "ended_with_failed_call": false
+    },
+    {
+      "id": "EV-022",
+      "run_idx": 1,
+      "question_type": "aggregation",
+      "injected_chunks": [],
+      "expected_chunks": [
+        "schema:orders"
+      ],
+      "recall_hits": [],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT COLUMN_NAME, DATA_TYPE, COLUMN_COMMENT FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA='mart' AND TABLE_NAME='orders'"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT DATE_FORMAT(created_at, '%Y-%m') AS month,\n       COUNT(*) AS order_count,\n       SUM(status = 'completed') AS completed_count\nFROM orders\nWHERE created_at >= '2026-04-01' AND created_at < '2026-07-01'\nGROUP BY month\nORDER BY month"
+        }
+      ],
+      "sql_used": "SELECT DATE_FORMAT(created_at, '%Y-%m') AS month,\n       COUNT(*) AS order_count,\n       SUM(status = 'completed') AS completed_count\nFROM orders\nWHERE created_at >= '2026-04-01' AND created_at < '2026-07-01'\nGROUP BY month\nORDER BY month",
+      "sql_source": "last",
+      "gold_row_count": 3,
+      "model_row_count": 3,
+      "judge": "pass",
+      "failure_mode": null,
+      "error_msg": null,
+      "latency_s": 3.563,
+      "tokens": {
+        "input": 4568,
+        "output": 575,
+        "total": 5143,
+        "cache_read": 3712
+      },
+      "oversized": false,
+      "ended_with_failed_call": false
+    },
+    {
+      "id": "EV-023",
+      "run_idx": 1,
+      "question_type": "aggregation",
+      "injected_chunks": [],
+      "expected_chunks": [
+        "schema:orders",
+        "schema:users"
+      ],
+      "recall_hits": [],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT * FROM users LIMIT 2"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT * FROM orders LIMIT 2"
+        },
+        {
+          "seq": 3,
+          "sql": "SELECT COUNT(*) AS total_users,\n       COUNT(DISTINCT o.user_id) AS ordered_users,\n       ROUND(COUNT(DISTINCT o.user_id) / COUNT(*) * 100, 2) AS pct\nFROM users u\nLEFT JOIN orders o ON o.user_id = u.id"
+        },
+        {
+          "seq": 4,
+          "sql": "SELECT (SELECT COUNT(*) FROM users) AS total_users,\n       (SELECT COUNT(DISTINCT user_id) FROM orders) AS distinct_ordered_users,\n       (SELECT COUNT(DISTINCT user_id) FROM orders WHERE status <> 'cancelled') AS ordered_users_excl_cancelled"
+        },
+        {
+          "seq": 5,
+          "sql": "SELECT COUNT(*) AS total_users,\n       SUM(CASE WHEN EXISTS (SELECT 1 FROM orders o WHERE o.user_id = u.id) THEN 1 ELSE 0 END) AS any_order_users,\n       ROUND(SUM(CASE WHEN EXISTS (SELECT 1 FROM orders o WHERE o.user_id = u.id) THEN 1 ELSE 0 END) / COUNT(*) * 100, 2) AS pct_any_order,\n       ROUND(SUM(CASE WHEN EXISTS (SELECT 1 FROM orders o WHERE o.user_id = u.id AND o.status <> 'cancelled') THEN 1 ELSE 0 END) / COUNT(*) * 100, 2) AS pct_valid_order\nFROM users u"
+        },
+        {
+          "seq": 6,
+          "sql": "SELECT status, COUNT(*) AS cnt, COUNT(DISTINCT user_id) AS users FROM orders GROUP BY status ORDER BY cnt DESC"
+        }
+      ],
+      "sql_used": "SELECT status, COUNT(*) AS cnt, COUNT(DISTINCT user_id) AS users FROM orders GROUP BY status ORDER BY cnt DESC",
+      "sql_source": "last",
+      "gold_row_count": 1,
+      "model_row_count": 6,
+      "judge": "fail",
+      "failure_mode": "other",
+      "error_msg": null,
+      "latency_s": 7.869,
+      "tokens": {
+        "input": 9025,
+        "output": 1242,
+        "total": 10267,
+        "cache_read": 7808
+      },
+      "oversized": false,
+      "ended_with_failed_call": false
+    },
+    {
+      "id": "EV-024",
+      "run_idx": 1,
+      "question_type": "aggregation",
+      "injected_chunks": [],
+      "expected_chunks": [
+        "schema:orders",
+        "schema:users"
+      ],
+      "recall_hits": [],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT TABLE_NAME, COLUMN_NAME, DATA_TYPE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='mart' AND TABLE_NAME IN ('users','orders') ORDER BY TABLE_NAME, ORDINAL_POSITION"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT u.city AS 城市,\n       COUNT(DISTINCT o.user_id) AS 下单用户数,\n       COUNT(*) AS 订单数,\n       ROUND(COUNT(*) / COUNT(DISTINCT o.user_id), 2) AS 人均下单次数\nFROM orders o\nJOIN users u ON u.id = o.user_id\nGROUP BY u.city\nORDER BY 人均下单次数 DESC"
+        },
+        {
+          "seq": 3,
+          "sql": "SELECT u.city AS 城市,\n       COUNT(DISTINCT o.user_id) AS 下单用户数,\n       COUNT(*) AS 订单数,\n       ROUND(COUNT(*) / COUNT(DISTINCT o.user_id), 2) AS 人均下单次数\nFROM orders o\nJOIN users u ON u.id = o.user_id\nGROUP BY u.city\nORDER BY 人均下单次数 ASC\nLIMIT 12"
+        },
+        {
+          "seq": 4,
+          "sql": "SELECT COUNT(DISTINCT u.city) AS 有下单城市数,\n       COUNT(DISTINCT o.user_id) AS 下单用户总数,\n       COUNT(*) AS 订单总数,\n       ROUND(COUNT(*) / COUNT(DISTINCT o.user_id), 2) AS 整体人均下单次数\nFROM orders o\nJOIN users u ON u.id = o.user_id"
+        }
+      ],
+      "sql_used": "SELECT COUNT(DISTINCT u.city) AS 有下单城市数,\n       COUNT(DISTINCT o.user_id) AS 下单用户总数,\n       COUNT(*) AS 订单总数,\n       ROUND(COUNT(*) / COUNT(DISTINCT o.user_id), 2) AS 整体人均下单次数\nFROM orders o\nJOIN users u ON u.id = o.user_id",
+      "sql_source": "last",
+      "gold_row_count": 20,
+      "model_row_count": 1,
+      "judge": "fail",
+      "failure_mode": "other",
+      "error_msg": null,
+      "latency_s": 10.561,
+      "tokens": {
+        "input": 9813,
+        "output": 2151,
+        "total": 11964,
+        "cache_read": 8448
+      },
+      "oversized": false,
+      "ended_with_failed_call": false
+    },
+    {
+      "id": "EV-025",
+      "run_idx": 1,
+      "question_type": "aggregation",
+      "injected_chunks": [],
+      "expected_chunks": [
+        "schema:orders",
+        "glossary:yoy_mom"
+      ],
+      "recall_hits": [],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT COLUMN_NAME, DATA_TYPE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='mart' AND TABLE_NAME='orders'"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT status, COUNT(*) AS cnt FROM orders GROUP BY status"
+        },
+        {
+          "seq": 3,
+          "sql": "SELECT DATE_FORMAT(created_at,'%Y-%m') AS month,\n       COUNT(*) AS order_cnt,\n       SUM(status IN ('paid','shipped','completed')) AS valid_cnt\nFROM orders\nWHERE created_at >= '2025-10-01' AND created_at < '2025-12-01'\nGROUP BY month ORDER BY month"
+        }
+      ],
+      "sql_used": "SELECT DATE_FORMAT(created_at,'%Y-%m') AS month,\n       COUNT(*) AS order_cnt,\n       SUM(status IN ('paid','shipped','completed')) AS valid_cnt\nFROM orders\nWHERE created_at >= '2025-10-01' AND created_at < '2025-12-01'\nGROUP BY month ORDER BY month",
+      "sql_source": "last",
+      "gold_row_count": 1,
+      "model_row_count": 2,
+      "judge": "fail",
+      "failure_mode": "other",
+      "error_msg": null,
+      "latency_s": 5.257,
+      "tokens": {
+        "input": 6095,
+        "output": 775,
+        "total": 6870,
+        "cache_read": 5120
+      },
+      "oversized": false,
+      "ended_with_failed_call": false
+    },
+    {
+      "id": "EV-026",
+      "run_idx": 1,
+      "question_type": "time_window",
+      "injected_chunks": [],
+      "expected_chunks": [
+        "schema:refunds"
+      ],
+      "recall_hits": [],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SHOW COLUMNS FROM refunds"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT COLUMN_NAME, DATA_TYPE, COLUMN_COMMENT FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='mart' AND TABLE_NAME='refunds' ORDER BY ORDINAL_POSITION"
+        },
+        {
+          "seq": 3,
+          "sql": "SELECT DATE_FORMAT(refunded_at, '%Y-%m-%d') AS refund_date,\n       COUNT(*) AS refund_cnt,\n       SUM(amount) AS refund_amount\nFROM refunds\nWHERE refunded_at >= '2026-09-24' AND refunded_at < '2026-10-01'\nGROUP BY refund_date\nORDER BY refund_date"
+        }
+      ],
+      "sql_used": "SELECT DATE_FORMAT(refunded_at, '%Y-%m-%d') AS refund_date,\n       COUNT(*) AS refund_cnt,\n       SUM(amount) AS refund_amount\nFROM refunds\nWHERE refunded_at >= '2026-09-24' AND refunded_at < '2026-10-01'\nGROUP BY refund_date\nORDER BY refund_date",
+      "sql_source": "last",
+      "gold_row_count": 7,
+      "model_row_count": 7,
+      "judge": "fail",
+      "failure_mode": "other",
+      "error_msg": null,
+      "latency_s": 6.404,
+      "tokens": {
+        "input": 7859,
+        "output": 961,
+        "total": 8820,
+        "cache_read": 6784
+      },
+      "oversized": false,
+      "ended_with_failed_call": false
+    },
+    {
+      "id": "EV-027",
+      "run_idx": 1,
+      "question_type": "time_window",
+      "injected_chunks": [],
+      "expected_chunks": [
+        "schema:orders"
+      ],
+      "recall_hits": [],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT * FROM orders LIMIT 3"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT * FROM payments LIMIT 3"
+        },
+        {
+          "seq": 3,
+          "sql": "SELECT DATE_FORMAT(created_at, '%Y-%m') AS month, COUNT(*) AS order_count, ROUND(SUM(order_amount),2) AS gmv, SUM(item_count) AS items FROM orders GROUP BY month ORDER BY month"
+        },
+        {
+          "seq": 4,
+          "sql": "SELECT status, COUNT(*) AS cnt FROM orders GROUP BY status ORDER BY cnt DESC"
+        },
+        {
+          "seq": 5,
+          "sql": "SELECT DATE_FORMAT(created_at,'%Y-%m') AS month,\n COUNT(*) AS total,\n SUM(CASE WHEN status IN ('completed','paid','shipped') THEN 1 ELSE 0 END) AS effective,\n SUM(CASE WHEN status='cancelled' THEN 1 ELSE 0 END) AS cancelled,\n SUM(CASE WHEN status='refunded' THEN 1 ELSE 0 END) AS refunded,\n SUM(CASE WHEN status='pending' THEN 1 ELSE 0 END) AS pending\nFROM orders GROUP BY month ORDER BY month"
+        }
+      ],
+      "sql_used": "SELECT DATE_FORMAT(created_at,'%Y-%m') AS month,\n COUNT(*) AS total,\n SUM(CASE WHEN status IN ('completed','paid','shipped') THEN 1 ELSE 0 END) AS effective,\n SUM(CASE WHEN status='cancelled' THEN 1 ELSE 0 END) AS cancelled,\n SUM(CASE WHEN status='refunded' THEN 1 ELSE 0 END) AS refunded,\n SUM(CASE WHEN status='pending' THEN 1 ELSE 0 END) AS pending\nFROM orders GROUP BY month ORDER BY month",
+      "sql_source": "last",
+      "gold_row_count": 12,
+      "model_row_count": 12,
+      "judge": "fail",
+      "failure_mode": "other",
+      "error_msg": null,
+      "latency_s": 9.181,
+      "tokens": {
+        "input": 9341,
+        "output": 1802,
+        "total": 11143,
+        "cache_read": 7680
+      },
+      "oversized": false,
+      "ended_with_failed_call": false
+    },
+    {
+      "id": "EV-028",
+      "run_idx": 1,
+      "question_type": "time_window",
+      "injected_chunks": [],
+      "expected_chunks": [
+        "schema:payments"
+      ],
+      "recall_hits": [],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT TABLE_NAME, COLUMN_NAME, DATA_TYPE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='mart' AND TABLE_NAME IN ('payments','orders') ORDER BY TABLE_NAME, ORDINAL_POSITION"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT COUNT(*) AS pay_cnt,\n       COUNT(DISTINCT order_id) AS order_cnt,\n       MIN(paid_at) AS min_t,\n       MAX(paid_at) AS max_t,\n       ROUND(SUM(amount),2) AS amt\nFROM payments\nWHERE paid_at >= DATE_SUB('2026-09-30', INTERVAL 29 DAY)\n  AND paid_at < DATE_SUB('2026-09-30', INTERVAL -1 DAY)"
+        },
+        {
+          "seq": 3,
+          "sql": "SELECT status, COUNT(*) AS cnt FROM orders WHERE created_at >= DATE_SUB('2026-09-30', INTERVAL 29 DAY) AND created_at < DATE_SUB('2026-09-30', INTERVAL -1 DAY) GROUP BY status"
+        }
+      ],
+      "sql_used": "SELECT status, COUNT(*) AS cnt FROM orders WHERE created_at >= DATE_SUB('2026-09-30', INTERVAL 29 DAY) AND created_at < DATE_SUB('2026-09-30', INTERVAL -1 DAY) GROUP BY status",
+      "sql_source": "last",
+      "gold_row_count": 1,
+      "model_row_count": 6,
+      "judge": "fail",
+      "failure_mode": "other",
+      "error_msg": null,
+      "latency_s": 7.009,
+      "tokens": {
+        "input": 6467,
+        "output": 1216,
+        "total": 7683,
+        "cache_read": 5504
+      },
+      "oversized": false,
+      "ended_with_failed_call": false
+    },
+    {
+      "id": "EV-029",
+      "run_idx": 1,
+      "question_type": "glossary_trap",
+      "injected_chunks": [],
+      "expected_chunks": [
+        "schema:payments",
+        "schema:refunds",
+        "glossary:net_sales"
+      ],
+      "recall_hits": [],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT TABLE_NAME, COLUMN_NAME, DATA_TYPE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='mart' AND TABLE_NAME IN ('orders','payments','refunds','order_items') ORDER BY TABLE_NAME, ORDINAL_POSITION"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT TABLE_NAME, COLUMN_NAME, DATA_TYPE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='mart' AND TABLE_NAME IN ('refunds') ORDER BY TABLE_NAME, ORDINAL_POSITION"
+        },
+        {
+          "seq": 3,
+          "sql": "SELECT status, COUNT(*) FROM orders GROUP BY status"
+        },
+        {
+          "seq": 4,
+          "sql": "SELECT (SELECT ROUND(SUM(amount),2) FROM payments WHERE paid_at >= '2026-09-01' AND paid_at < '2026-10-01') AS pay_amount, (SELECT COUNT(*) FROM payments WHERE paid_at >= '2026-09-01' AND paid_at < '2026-10-01') AS pay_cnt, (SELECT ROUND(SUM(amount),2) FROM refunds WHERE refunded_at >= '2026-09-01' AND refunded_at < '2026-10-01') AS refund_amount, (SELECT COUNT(*) FROM refunds WHERE refunded_at >= '2026-09-01' AND refunded_at < '2026-10-01') AS refund_cnt"
+        },
+        {
+          "seq": 5,
+          "sql": "SELECT DATE_FORMAT(paid_at,'%Y-%m') AS m, ROUND(SUM(amount),2) AS pay_amt FROM payments GROUP BY m ORDER BY m DESC LIMIT 5"
+        },
+        {
+          "seq": 6,
+          "sql": "SELECT ROUND(SUM(r.amount),2) AS refund_on_sep_paid_orders, COUNT(*) AS cnt FROM refunds r JOIN payments p ON p.id = r.payment_id WHERE p.paid_at >= '2026-09-01' AND p.paid_at < '2026-10-01'"
+        }
+      ],
+      "sql_used": "SELECT ROUND(SUM(r.amount),2) AS refund_on_sep_paid_orders, COUNT(*) AS cnt FROM refunds r JOIN payments p ON p.id = r.payment_id WHERE p.paid_at >= '2026-09-01' AND p.paid_at < '2026-10-01'",
+      "sql_source": "last",
+      "gold_row_count": 1,
+      "model_row_count": 1,
+      "judge": "fail",
+      "failure_mode": "other",
+      "error_msg": null,
+      "latency_s": 8.548,
+      "tokens": {
+        "input": 11621,
+        "output": 1438,
+        "total": 13059,
+        "cache_read": 10240
+      },
+      "oversized": false,
+      "ended_with_failed_call": false
+    },
+    {
+      "id": "EV-030",
+      "run_idx": 1,
+      "question_type": "glossary_trap",
+      "injected_chunks": [],
+      "expected_chunks": [
+        "schema:refunds",
+        "schema:payments",
+        "glossary:refund_rate"
+      ],
+      "recall_hits": [],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT COLUMN_NAME, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA='mart' AND TABLE_NAME='orders'"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT COLUMN_NAME, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA='mart' AND TABLE_NAME='refunds'"
+        },
+        {
+          "seq": 3,
+          "sql": "SELECT status, COUNT(*) AS cnt FROM orders GROUP BY status ORDER BY cnt DESC"
+        },
+        {
+          "seq": 4,
+          "sql": "SELECT MIN(refunded_at) AS min_t, MAX(refunded_at) AS max_t, COUNT(*) AS cnt FROM refunds"
+        },
+        {
+          "seq": 5,
+          "sql": "SELECT MIN(created_at) AS min_t, MAX(created_at) AS max_t FROM orders"
+        },
+        {
+          "seq": 6,
+          "sql": "SELECT COUNT(*) AS sep_orders\nFROM orders\nWHERE created_at >= '2026-09-01' AND created_at < '2026-10-01'"
+        },
+        {
+          "seq": 7,
+          "sql": "SELECT COUNT(DISTINCT r.order_id) AS refunded_orders_placed_sep\nFROM orders o\nJOIN refunds r ON r.order_id = o.id\nWHERE o.created_at >= '2026-09-01' AND o.created_at < '2026-10-01'"
+        },
+        {
+          "seq": 8,
+          "sql": "SELECT COUNT(*) AS refunds_completed_sep, COUNT(DISTINCT order_id) AS orders_refunded_sep\nFROM refunds\nWHERE refunded_at >= '2026-09-01' AND refunded_at < '2026-10-01'"
+        }
+      ],
+      "sql_used": "SELECT COUNT(*) AS refunds_completed_sep, COUNT(DISTINCT order_id) AS orders_refunded_sep\nFROM refunds\nWHERE refunded_at >= '2026-09-01' AND refunded_at < '2026-10-01'",
+      "sql_source": "last",
+      "gold_row_count": 1,
+      "model_row_count": 1,
+      "judge": "fail",
+      "failure_mode": "other",
+      "error_msg": null,
+      "latency_s": 11.7,
+      "tokens": {
+        "input": 9362,
+        "output": 2287,
+        "total": 11649,
+        "cache_read": 8320
+      },
+      "oversized": false,
+      "ended_with_failed_call": false
+    }
+  ]
+}

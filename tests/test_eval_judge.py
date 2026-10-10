@@ -17,7 +17,10 @@ import pytest
 
 from eval.judge import (
     classify_failure,
+    classify_failure_from_text,
     extract_execute_calls,
+    extract_final_answer_text,
+    extract_number_candidates,
     join_retrieval_query,
     judge_case,
     load_dataset,
@@ -27,6 +30,7 @@ from eval.judge import (
     pick_sql,
     rows_equal,
     sum_usage,
+    text_contains_gold,
 )
 
 # ---------------------------------------------------------------------------
@@ -221,7 +225,13 @@ def test_classify_failure_matches_within_tolerance():
 
 def test_judge_case_pass():
     verdict = judge_case([(1, "a")], [(1, "a")], ordered=True)
-    assert verdict == {"judge": "pass", "failure_mode": None, "error_msg": None}
+    assert verdict == {
+        "judge": "pass",
+        "failure_mode": None,
+        "error_msg": None,
+        "pass_via": "sql",
+        "text_matched": None,
+    }
 
 
 def test_judge_case_fail_with_trap_mode():
@@ -245,12 +255,260 @@ def test_judge_case_error_subcodes():
     """error 三子码由调用方传入（no_usable_sql / replay_error / invoke_exception）。"""
     for code in ("no_usable_sql", "replay_error", "invoke_exception"):
         verdict = judge_case([(1,)], None, error_msg=code)
-        assert verdict == {"judge": "error", "failure_mode": None, "error_msg": code}
+        assert verdict == {
+            "judge": "error",
+            "failure_mode": None,
+            "error_msg": code,
+            "pass_via": None,
+            "text_matched": None,
+        }
 
 
 def test_judge_case_error_defaults_to_no_usable_sql():
     verdict = judge_case([(1,)], None)
     assert verdict["error_msg"] == "no_usable_sql"
+
+
+# ---------------------------------------------------------------------------
+# ④' 答案级回退（§2.4 判定规则 v2）：文本数字候选 / 金标比对 / 主流程集成
+# ---------------------------------------------------------------------------
+
+
+def test_extract_number_candidates_thousands_commas():
+    """千分位去逗号："16,029,955.34" → 16029955.34。"""
+    assert extract_number_candidates("GMV 为 16,029,955.34 元") == [Decimal("16029955.34")]
+
+
+def test_extract_number_candidates_plain_number_not_truncated():
+    """回归锁：千分位形态不得把普通整数掐头去尾（16029955.34 ≠ 160）。"""
+    assert extract_number_candidates("16029955.34") == [Decimal("16029955.34")]
+    assert extract_number_candidates("-1234 与 5678") == [Decimal(-1234), Decimal(5678)]
+
+
+def test_extract_number_candidates_percent_produces_dual_candidates():
+    """带 % 后缀产生两个候选（原值与 /100）："7.75%" → [7.75, 0.0775]。"""
+    assert extract_number_candidates("退款率 7.75%") == [Decimal("7.75"), Decimal("0.0775")]
+
+
+def test_extract_number_candidates_negative_and_order():
+    """负号由文本携带；候选按出现位置保序。"""
+    assert extract_number_candidates("环比 -77.50，基期 100") == [
+        Decimal("-77.50"),
+        Decimal(100),
+    ]
+
+
+def test_extract_number_candidates_dedupe_preserves_first_occurrence():
+    assert extract_number_candidates("7.75% 或 0.0775 或 7.75%") == [
+        Decimal("7.75"),
+        Decimal("0.0775"),
+    ]
+
+
+def test_extract_number_candidates_no_numbers_returns_empty():
+    assert extract_number_candidates("抱歉，无法回答这个问题") == []
+    assert extract_number_candidates("") == []
+
+
+def test_text_contains_gold_percent_fraction_hit_via_div100_candidate():
+    """金标 0.0775 vs 文本 "7.75%"：经 /100 候选命中，返回命中的候选值。"""
+    assert text_contains_gold("9 月退款率约为 7.75%", Decimal("0.0775")) == Decimal("0.0775")
+
+
+def test_text_contains_gold_negative_hit():
+    """负数金标：负号由文本携带（"-0.83%" → [-0.83, -0.0083]）。
+
+    注：任务样例写的 "下降 0.83%" 无法按规格命中——"下降"是语义负号，
+    §2.4 v2 的抽取规则只认正则的 -? 前缀，不做词语级符号推断。
+    """
+    assert text_contains_gold("环比 -0.83%", Decimal("-0.83")) == Decimal("-0.83")
+    assert text_contains_gold("下降 0.83%", Decimal("-0.83")) is None
+
+
+def test_text_contains_gold_thousands_hit():
+    assert text_contains_gold("净销售额为 16,029,955.34 元", Decimal("16029955.34")) == Decimal(
+        "16029955.34"
+    )
+
+
+def test_text_contains_gold_miss_when_only_other_value_present():
+    """金标 0.0886 vs 只有 "7.75%" 的文本：/100 候选 0.0775 也不命中。"""
+    assert text_contains_gold("退款率为 7.75%", Decimal("0.0886")) is None
+
+
+def test_text_contains_gold_out_of_tolerance_miss():
+    """容差外不命中：10000 vs 10011（相对容差 1e-3 → 10.01 < 11）。"""
+    assert text_contains_gold("结果为 10011", Decimal(10000)) is None
+
+
+def test_text_contains_gold_non_numeric_text_or_gold():
+    """文本无数字候选、或金标非数值（str 月份串 / None）→ None（设计明文不回退）。"""
+    assert text_contains_gold("抱歉无法计算", Decimal("0.0775")) is None
+    assert text_contains_gold("2026-09 的答案是…", "2026-09") is None
+    assert text_contains_gold("答案是 123", None) is None
+    assert text_contains_gold(None, Decimal("0.0775")) is None
+
+
+def test_judge_sql_fail_text_hit_passes_via_text():
+    """EV-025 实测场景：最后一次 SQL 返回两个月数据行（行数不符 SQL 级 fail），
+    最终文本算出环比 77.50% 与金标一致 → pass 且 pass_via="text"。"""
+    gold = [(Decimal("77.50"),)]
+    model = [("2025-10", 62647), ("2025-11", 111168)]  # 金标 1 行 vs 模型 2 行
+    verdict = judge_case(
+        gold,
+        model,
+        ordered=False,
+        final_answer_text="2025 年 11 月订单量环比 10 月增长 77.50%。",
+    )
+    assert verdict["judge"] == "pass"
+    assert verdict["pass_via"] == "text"
+    assert verdict["failure_mode"] is None
+    assert verdict["text_matched"] == Decimal("77.50")
+
+
+def test_judge_no_usable_sql_text_hit_passes_via_text():
+    """规则一：无可用 SQL → 先试答案级回退，命中即 pass_via="text"（不判 error）。"""
+    verdict = judge_case(
+        [(Decimal("0.0775"),)],
+        None,
+        error_msg="no_usable_sql",
+        final_answer_text="9 月退款率约 7.75%",
+    )
+    assert verdict == {
+        "judge": "pass",
+        "failure_mode": None,
+        "error_msg": None,
+        "pass_via": "text",
+        "text_matched": Decimal("0.0775"),
+    }
+
+
+def test_judge_no_usable_sql_text_miss_stays_error():
+    verdict = judge_case(
+        [(Decimal("0.0775"),)], None, error_msg="no_usable_sql", final_answer_text="抱歉，无法回答"
+    )
+    assert verdict["judge"] == "error"
+    assert verdict["error_msg"] == "no_usable_sql"
+    assert verdict["pass_via"] is None
+
+
+def test_judge_sql_fail_text_miss_but_text_hits_standard_wrong_trap():
+    """SQL 结果与文本都不命中金标，但文本报出了登记的 GMV 陷阱值 → trap 模式（规则五）。"""
+    verdict = judge_case(
+        [(Decimal("14787925.19"),)],
+        [(Decimal(100),)],  # SQL 结果既非金标也非任何登记值
+        standard_wrong=_EV029_WRONG,
+        final_answer_text="净销售额为 16,029,955.34 元",
+    )
+    assert verdict["judge"] == "fail"
+    assert verdict["failure_mode"] == "trap:no_refund_deduction"
+
+
+def test_judge_sql_result_trap_match_takes_priority_over_text():
+    """failure_mode 优先级：模型 SQL 结果命中登记值（v1 路径）优先于文本候选。"""
+    wrong = [
+        {"trap_id": "refund_status_basis", "description": "状态口径陷阱", "value": "0.0565"},
+        {"trap_id": "valid_alt_gloss", "description": "金额口径（合法）但答非所问", "value": "0.0775"},
+    ]
+    verdict = judge_case(
+        [(Decimal("0.0886"),)],
+        [(Decimal("0.0565"),)],  # SQL 结果命中档一 trap；文本命中的是 valid_alt_gloss
+        standard_wrong=wrong,
+        final_answer_text="退款率约为 7.75%",
+    )
+    assert verdict["judge"] == "fail"
+    assert verdict["failure_mode"] == "trap:refund_status_basis"
+
+
+def test_judge_text_hit_valid_alt_gloss():
+    """文本命中"合法他口径"登记值 → valid_alt_gloss（§4.3 与 trap 分开统计）。"""
+    wrong = [{"trap_id": "valid_alt_gloss", "description": "金额口径（合法）但答非所问", "value": "0.0775"}]
+    verdict = judge_case(
+        [(Decimal("0.0886"),)],
+        [(Decimal("0.0565"),)],
+        standard_wrong=wrong,
+        final_answer_text="退款率约为 7.75%",
+    )
+    assert verdict["failure_mode"] == "valid_alt_gloss"
+
+
+def test_judge_multicolumn_gold_never_falls_back_to_text():
+    """规则四：多行/多列金标不走文本回退——即使文本含金标数字也维持 fail。
+
+    （模型第二个月的值须偏离出相对容差 1e-3，SQL 级才是真 fail：111168 vs 120000。）"""
+    gold = [("2025-10", Decimal(62647)), ("2025-11", Decimal(111168))]
+    verdict = judge_case(
+        gold,
+        [("2025-10", Decimal(62647)), ("2025-11", Decimal(120000))],
+        ordered=True,
+        final_answer_text="两个月订单量分别是 62,647 和 111,168",
+    )
+    assert verdict["judge"] == "fail"
+    assert verdict["pass_via"] is None
+    assert verdict["failure_mode"] == "other"
+
+
+def test_judge_str_gold_not_eligible_for_text_fallback():
+    """str 金标（DATE_FORMAT 输出的月份字符串）不适用文本回退。"""
+    verdict = judge_case([("2026-09",)], [("2026-08",)], final_answer_text="答案是 2026-09")
+    assert verdict["judge"] == "fail"
+    assert verdict["pass_via"] is None
+
+
+def test_judge_sql_level_pass_reports_pass_via_sql():
+    """SQL 级判定优先：结果集一致即 pass_via="sql"，不看文本。"""
+    verdict = judge_case([(Decimal("0.0775"),)], [(Decimal("0.0775"),)], final_answer_text="7.75%")
+    assert verdict == {
+        "judge": "pass",
+        "failure_mode": None,
+        "error_msg": None,
+        "pass_via": "sql",
+        "text_matched": None,
+    }
+
+
+def test_judge_without_final_answer_text_keeps_v1_semantics():
+    """调用方未提供 final_answer_text（旧调用方/存量用例）→ 与 v1 行为逐字段一致。"""
+    verdict = judge_case([(Decimal("14787925.19"),)], [(Decimal(2),)], standard_wrong=_EV029_WRONG)
+    assert verdict == {"judge": "fail", "failure_mode": "other", "error_msg": None,
+                       "pass_via": None, "text_matched": None}
+
+
+def test_classify_failure_from_text_matches_registered_value():
+    wrong = [{"trap_id": "month_shift_aug", "description": "把'上个月'答成 8 月", "value": "16164482.43"}]
+    assert classify_failure_from_text("8 月 GMV 为 16,164,482.43 元", wrong) == "trap:month_shift_aug"
+    assert classify_failure_from_text("GMV 是 20,280,681.72 元", wrong) is None
+    assert classify_failure_from_text("无法回答", wrong) is None
+    assert classify_failure_from_text("16,164,482.43", []) is None
+
+
+class _TypedMessage:
+    """duck-typed 消息：带 langchain 风格 type 属性（extract_final_answer_text 消费）。"""
+
+    def __init__(self, content, mtype="ai"):
+        self.content = content
+        self.type = mtype
+
+
+def test_extract_final_answer_text_takes_last_ai_message_only():
+    """只看最后一条 AIMessage（链路里更早的数字是中间量，§2.4 v2）。"""
+    messages = [
+        _TypedMessage("中间思考：先算基期 62647"),
+        _TypedMessage("工具结果", mtype="tool"),
+        _TypedMessage("最终答案：环比 77.50%"),
+    ]
+    assert extract_final_answer_text(messages) == "最终答案：环比 77.50%"
+
+
+def test_extract_final_answer_text_content_list_blocks_strified():
+    """content 为多模态块 list：text 块抽取、其余块 str() 化（防御分支）。"""
+    msg = _TypedMessage([{"type": "text", "text": "净销售额 "}, {"type": "image_url"}, "raw"])
+    assert extract_final_answer_text([msg]) == "净销售额 \n{'type': 'image_url'}\nraw"
+
+
+def test_extract_final_answer_text_empty_without_ai_message():
+    assert extract_final_answer_text([_TypedMessage("hi", mtype="human")]) == ""
+    assert extract_final_answer_text([]) == ""
 
 
 # ---------------------------------------------------------------------------

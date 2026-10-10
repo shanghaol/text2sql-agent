@@ -13,7 +13,7 @@ evaluate_single_case / evaluate_multiturn_case 内用 [§2.3-N] 注释标注。
     .venv/Scripts/python.exe -m eval.run_eval --tag vs_control --compare eval/reports/detail_xxx.json
 
 产物（eval/reports/，进 git——报告是简历证据链）：
-    report_<tag>_<ts>.md    Markdown 汇总（§3.3 固定结构，声明段四条写死在模板里）
+    report_<tag>_<ts>.md    Markdown 汇总（§3.3 固定结构，声明段五条写死在模板里）
     detail_<tag>_<ts>.json  逐题逐 run 全量明细（W6 消融复用的数据接口）
 """
 
@@ -43,6 +43,7 @@ from agent.core.agent import (
 from agent.tools.sql_tools import get_engine
 from eval.judge import (
     extract_execute_calls,
+    extract_final_answer_text,
     join_retrieval_query,
     judge_case,
     load_dataset,
@@ -71,15 +72,18 @@ FEWSHOT_LAYER_LAST_ID = "EV-011"
 
 _QUESTION_TYPE_ORDER = ("single_table", "multi_join", "aggregation", "time_window", "glossary_trap")
 
-# 声明段固定内容（§3.3：防数字被误读，四条写死在模板里）
+# 声明段固定内容（§3.3：防数字被误读，五条写死在模板里；⑤ 为判定规则 v2 增补）
 _DECLARATIONS = """\
-## 声明（固定四条，W3 设计 §3.3）
+## 声明（固定五条，W3 设计 §3.3）
 1. 本报告是**系统级数字**：评测对象为"混合检索注入 + Agent"完整链路，含 few-shot 自举
    （qa_pair 片参与检索，11 条评测题原题在示例库中），不得表述为"模型的 NL2SQL 能力"（§1.3）。
 2. temperature=0 仍存在服务端非确定性；主行（runs>1）为多次运行结果，W6 定稿前会复测（§3.2）。
 3. 延迟绝对值受评测时网络波动影响，仅横向（题型间）与纵向（W6 前后对比）相对可比（§2.6）。
 4. token 成本按当次实测累计（逐条 AIMessage.usage_metadata 累加；cache_read 单列，
    已含在 input 内不重复计）；人民币估算按当期牌价手填旁注，不写死单价（§2.6）。
+5. 双层指标分列：SQL 级执行准确率只认重放结果集一致（pass_via=sql），答案级回答准确率
+   额外计入最终回答文本计算命中金标的题（pass_via=text）；两者差值 = Agent 文本计算弥补
+   SQL 单查询表达局限的部分，W6 消融时分别跟踪（§2.4 判定规则 v2）。
 """
 
 
@@ -195,6 +199,8 @@ def evaluate_single_case(case: dict, run_idx: int, top_n: int, retriever, replay
         injected_ids=[chunk.id for chunk in chunks],
         latency_s=latency_s,
         tokens=sum_usage(messages),
+        # §2.4 v2 答案级回退的取材面：最后一条 AIMessage 的文本（明细落盘审计用）
+        final_answer_text=extract_final_answer_text(messages),
     )
 
 
@@ -248,7 +254,8 @@ def evaluate_multiturn_case(case: dict, run_idx: int, top_n: int, retriever, rep
         key: sum(turn["tokens"][key] for turn in turn_records)
         for key in ("input", "output", "total", "cache_read")
     }
-    # 判定只吃最后一轮的 SQL（§2.7）；最终轮无可用 SQL → error no_usable_sql（三级规则内处理）
+    # 判定只吃最后一轮的 SQL 与最终回答（§2.7 / §2.4 v2）；
+    # 最终轮无可用 SQL → 先试答案级回退，不适用才 error no_usable_sql（三级规则 + v2 规则一）
     return _finalize_record(
         case=case,
         run_idx=run_idx,
@@ -258,6 +265,7 @@ def evaluate_multiturn_case(case: dict, run_idx: int, top_n: int, retriever, rep
         latency_s=total_latency,
         tokens=tokens,
         turn_records=turn_records,
+        final_answer_text=extract_final_answer_text(messages),  # messages 即最后一轮的消息链
     )
 
 
@@ -270,8 +278,13 @@ def _finalize_record(
     latency_s: float,
     tokens: dict,
     turn_records: list[dict] | None = None,
+    final_answer_text: str | None = None,
 ) -> dict:
-    """从一轮（多轮即最后一轮）的调用序列走到判定结果，组装 §3.3 明细记录。"""
+    """从一轮（多轮即最后一轮）的调用序列走到判定结果，组装 §3.3 明细记录。
+
+    §2.4 判定规则 v2 的明细字段扩展：final_answer_text（最后一条 AIMessage 全文，审计用）、
+    pass_via（"sql" / "text" / null）、text_matched（文本回退命中的候选值，字符串形式）。
+    """
     is_multiturn = "turns" in case
     gold_sql = case["final_gold_sql"] if is_multiturn else case["gold_sql"]
     record: dict = {
@@ -287,6 +300,9 @@ def _finalize_record(
         "gold_row_count": None,
         "model_row_count": None,
         "judge": "error",
+        "pass_via": None,
+        "text_matched": None,
+        "final_answer_text": final_answer_text,
         "failure_mode": None,
         "error_msg": None,
         "latency_s": round(latency_s, 3),
@@ -306,7 +322,21 @@ def _finalize_record(
     # SQL 提取三级规则（§2.2）：最后成功 → 回退更早成功 → no_usable_sql
     used_sql, sql_source = pick_sql(sql_calls, replayer)
     if used_sql is None:
-        record["error_msg"] = "no_usable_sql"
+        # §2.4 v2 规则一：无可用 SQL 先试答案级回退（文本命中单行单列金标 → pass_via=text），
+        # 不适用才 error；gold_row_count 已知，一并记录
+        verdict = judge_case(
+            gold_rows, None, error_msg="no_usable_sql", final_answer_text=final_answer_text
+        )
+        record.update(
+            {
+                "gold_row_count": len(gold_rows),
+                "judge": verdict["judge"],
+                "pass_via": verdict["pass_via"],
+                "text_matched": _text_matched_str(verdict["text_matched"]),
+                "failure_mode": verdict["failure_mode"],
+                "error_msg": verdict["error_msg"],
+            }
+        )
         return record
     model_rows = replayer(used_sql)  # pick_sql 已保证非 None（重放有缓存）
 
@@ -315,6 +345,7 @@ def _finalize_record(
         model_rows,
         ordered=case["ordered"],
         standard_wrong=case["standard_wrong"],
+        final_answer_text=final_answer_text,
     )
     record.update(
         {
@@ -323,6 +354,8 @@ def _finalize_record(
             "gold_row_count": len(gold_rows),
             "model_row_count": len(model_rows),
             "judge": verdict["judge"],
+            "pass_via": verdict["pass_via"],
+            "text_matched": _text_matched_str(verdict["text_matched"]),
             "failure_mode": verdict["failure_mode"],
             # §2.2：以失败调用收尾（自我修正失败）单独留痕统计
             "ended_with_failed_call": sql_source == "fallback_to_earlier",
@@ -330,6 +363,11 @@ def _finalize_record(
         }
     )
     return record
+
+
+def _text_matched_str(text_matched) -> str | None:
+    """text_matched（Decimal 候选值）的明细存储形式：str 化以便 JSON 序列化。"""
+    return str(text_matched) if text_matched is not None else None
 
 
 def _invoke_exception_record(case: dict, run_idx: int, exc: Exception) -> dict:
@@ -347,6 +385,9 @@ def _invoke_exception_record(case: dict, run_idx: int, exc: Exception) -> dict:
         "gold_row_count": None,
         "model_row_count": None,
         "judge": "error",
+        "pass_via": None,
+        "text_matched": None,
+        "final_answer_text": None,
         "failure_mode": None,
         "error_msg": "invoke_exception",
         "error_detail": str(exc)[:500],
@@ -363,12 +404,39 @@ def _invoke_exception_record(case: dict, run_idx: int, exc: Exception) -> dict:
 
 
 def _split_accuracy(records: list[dict]) -> tuple[int, int, int, float]:
-    """执行准确率（errors 计入失败，不藏分）：返回 (pass, fail, error, 准确率)。"""
+    """回答准确率·答案级（errors 计入失败，不藏分）：返回 (pass, fail, error, 准确率)。
+
+    §2.4 判定规则 v2：judge=="pass" 含 SQL 级（pass_via=sql）与文本计算兜底
+    （pass_via=text）两种途径；SQL 级严格口径见 _pass_via_counts / _sql_acc。
+    """
     passed = sum(1 for r in records if r["judge"] == "pass")
     failed = sum(1 for r in records if r["judge"] == "fail")
     errored = sum(1 for r in records if r["judge"] == "error")
     total = len(records)
     return passed, failed, errored, (passed / total if total else 0.0)
+
+
+def _pass_via_counts(records: list[dict]) -> tuple[int, int]:
+    """pass_via 构成：返回 (sql 判过数, text 判过数)（§2.4 v2 双层指标）。
+
+    兼容 v1 旧明细（--compare 读入的对照行 detail 可能没有 pass_via 字段）：
+    judge=pass 且无该字段的一律按 SQL 级计数（v1 判定即 SQL 级）。
+    """
+    sql = text = 0
+    for record in records:
+        if record["judge"] != "pass":
+            continue
+        if record.get("pass_via") == "text":
+            text += 1
+        else:  # "sql" 或 v1 明细缺字段
+            sql += 1
+    return sql, text
+
+
+def _sql_acc(records: list[dict]) -> float:
+    """执行准确率·SQL 级：pass_via=sql 的题数 ÷ 总数（严格口径，简历主数字）。"""
+    sql_pass, _ = _pass_via_counts(records)
+    return sql_pass / len(records) if records else 0.0
 
 
 def _fmt_pct(value: float) -> str:
@@ -393,17 +461,28 @@ def _is_fewshot_layer(record: dict) -> bool:
 
 
 def _accuracy_table(records: list[dict], groups: list[tuple[str, list[dict]]]) -> list[str]:
-    lines = ["| 分组 | pass | fail | error | 准确率 |", "| --- | --- | --- | --- | --- |"]
+    """分组准确率表（§3.3 v2）：SQL 级 pass/fail/error 计数 + SQL 级与答案级双列准确率。"""
+    lines = [
+        "| 分组 | SQL 判过 | 文本判过 | fail | error | SQL 级准确率 | 答案级准确率 |",
+        "| --- | --- | --- | --- | --- | --- | --- |",
+    ]
     for label, group in groups:
-        passed, failed, errored, acc = _split_accuracy(group)
-        lines.append(f"| {label} | {passed} | {failed} | {errored} | {_fmt_pct(acc)} |")
+        total = len(group)
+        sql_pass, text_pass = _pass_via_counts(group)
+        failed = sum(1 for r in group if r["judge"] == "fail")
+        errored = sum(1 for r in group if r["judge"] == "error")
+        sql_acc = sql_pass / total if total else 0.0
+        answer_acc = (sql_pass + text_pass) / total if total else 0.0
+        lines.append(
+            f"| {label} | {sql_pass} | {text_pass} | {failed} | {errored} | {_fmt_pct(sql_acc)} | {_fmt_pct(answer_acc)} |"
+        )
     return lines
 
 
 def _render_report(args: argparse.Namespace, dataset_path: Path, records: list[dict], started_at: str) -> str:
     """§3.3 固定结构的 Markdown 汇总报告。"""
     n_records = len(records)
-    passed, failed, errored, acc = _split_accuracy(records)
+    _, failed, errored, acc = _split_accuracy(records)
     is_multiturn = bool(args.multiturn)
 
     lines: list[str] = []
@@ -423,16 +502,21 @@ def _render_report(args: argparse.Namespace, dataset_path: Path, records: list[d
     )
     lines.append("")
 
-    # —— 四指标汇总 · 执行准确率 ——
+    # —— 四指标汇总 · 执行准确率（SQL 级）——
+    sql_pass, text_pass = _pass_via_counts(records)
+    sql_acc = _sql_acc(records)
     lines.append("## 四指标汇总")
     lines.append("")
-    lines.append("### 执行准确率（比较重放结果集，不看 SQL 文本）")
-    lines.append(f"- overall：**{_fmt_pct(acc)}**（pass {passed} / fail {failed} / error {errored}，共 {n_records} 次）")
+    lines.append("### 执行准确率（SQL 级：比较重放结果集，不看 SQL 文本）")
+    lines.append(
+        f"- overall：**{_fmt_pct(sql_acc)}**（SQL 判过 {sql_pass} ｜ 文本判过 {text_pass}"
+        f"（计入答案级，见下节）｜ fail {failed} ｜ error {errored}，共 {n_records} 次）"
+    )
     if args.runs > 1:
         per_run = []
         for run_idx in range(1, args.runs + 1):
             run_records = [r for r in records if r["run_idx"] == run_idx]
-            per_run.append(f"r{run_idx}={_fmt_pct(_split_accuracy(run_records)[3])}")
+            per_run.append(f"r{run_idx}={_fmt_pct(_sql_acc(run_records))}")
         lines.append(f"- 各 run：{' ｜ '.join(per_run)}（三次结果不一致的题见 flaky 节，§3.2 不机械取众数）")
     if is_multiturn:
         lines.append("- 多轮题不设题型/分层维度（MT schema 无 question_type，§1.7 独立报告节）")
@@ -446,6 +530,18 @@ def _render_report(args: argparse.Namespace, dataset_path: Path, records: list[d
             ("泛化题（EV-012 起）", [r for r in records if not _is_fewshot_layer(r)]),
         ]
         lines.extend(_accuracy_table(records, layer_groups))
+    lines.append("")
+
+    # —— 四指标汇总 · 回答准确率（答案级，§2.4 判定规则 v2）——
+    lines.append("### 回答准确率（答案级，含文本计算）")
+    lines.append(
+        f"- overall：**{_fmt_pct(acc)}**（pass_via：sql {sql_pass} + text {text_pass}，共 {n_records} 次）"
+    )
+    lines.append(
+        f"- 差值说明：答案级 − SQL 级 = {_fmt_pct(acc - sql_acc)}"
+        f"（文本判过 {text_pass} 题）= Agent 文本计算弥补单条 SQL 表达局限的部分，"
+        "W6 消融时分别跟踪（§2.4 v2 / 声明⑤）"
+    )
     lines.append("")
 
     # —— 四指标汇总 · Recall@8 ——
@@ -543,13 +639,18 @@ def _render_report(args: argparse.Namespace, dataset_path: Path, records: list[d
         lines.append("| --- | --- | --- | --- |")
         mine_overall = _split_accuracy(records)[3]
         theirs_overall = _split_accuracy(compare_records)[3]
+        mine_sql = _sql_acc(records)
+        theirs_sql = _sql_acc(compare_records)
         lines.append(
-            f"| overall | {_fmt_pct(mine_overall)} | {_fmt_pct(theirs_overall)} | {(mine_overall - theirs_overall) * 100:+.1f} |"
+            f"| overall（答案级） | {_fmt_pct(mine_overall)} | {_fmt_pct(theirs_overall)} | {(mine_overall - theirs_overall) * 100:+.1f} |"
+        )
+        lines.append(
+            f"| overall（SQL 级） | {_fmt_pct(mine_sql)} | {_fmt_pct(theirs_sql)} | {(mine_sql - theirs_sql) * 100:+.1f} |"
         )
         if not is_multiturn:
             for qtype in _QUESTION_TYPE_ORDER:
-                mine = _split_accuracy([r for r in records if r["question_type"] == qtype])[3]
-                theirs = _split_accuracy([r for r in compare_records if r["question_type"] == qtype])[3]
+                mine = _sql_acc([r for r in records if r["question_type"] == qtype])
+                theirs = _sql_acc([r for r in compare_records if r["question_type"] == qtype])
                 lines.append(f"| {qtype} | {_fmt_pct(mine)} | {_fmt_pct(theirs)} | {(mine - theirs) * 100:+.1f} |")
     else:
         lines.append("（本次运行未提供 --compare 明细文件；对照行对比由 T3 汇主行与对照行两份 detail JSON 后生成。）")
@@ -655,11 +756,12 @@ def _render_report(args: argparse.Namespace, dataset_path: Path, records: list[d
 
     # —— 逐题结果表（md 汇总含逐题结果，明细 JSON 可不单独提交，§7-3）——
     lines.append("## 逐题结果")
-    lines.append("| run | id | 判定 | failure_mode | sql_source | 行数(金/模) | 延迟s | tokens(total) |")
-    lines.append("| --- | --- | --- | --- | --- | --- | --- | --- |")
+    lines.append("| run | id | 判定 | pass_via | failure_mode | sql_source | 行数(金/模) | 延迟s | tokens(total) |")
+    lines.append("| --- | --- | --- | --- | --- | --- | --- | --- | --- |")
     for record in records:
         lines.append(
-            f"| r{record['run_idx']} | {record['id']} | {record['judge']} | {record['failure_mode'] or record.get('error_msg') or '-'}"
+            f"| r{record['run_idx']} | {record['id']} | {record['judge']} | {record.get('pass_via') or '-'}"
+            f" | {record['failure_mode'] or record.get('error_msg') or '-'}"
             f" | {record['sql_source'] or '-'} | {record['gold_row_count'] if record['gold_row_count'] is not None else '-'}/"
             f"{record['model_row_count'] if record['model_row_count'] is not None else '-'}"
             f" | {record['latency_s'] if record['latency_s'] is not None else '-'} | {record['tokens']['total']} |"
@@ -778,8 +880,12 @@ def main() -> None:
     detail_path.write_text(json.dumps(detail, ensure_ascii=False, indent=2), encoding="utf-8")
     report_path.write_text(_render_report(args, dataset_path, records, started_at), encoding="utf-8")
 
-    passed, failed, errored, acc = _split_accuracy(records)
-    print(f"完成：执行准确率 {_fmt_pct(acc)}（pass {passed} / fail {failed} / error {errored}）")
+    _, failed, errored, acc = _split_accuracy(records)
+    sql_pass, text_pass = _pass_via_counts(records)
+    print(
+        f"完成：SQL 级执行准确率 {_fmt_pct(_sql_acc(records))}（sql {sql_pass} / fail {failed} / error {errored}）"
+        f" ｜ 答案级回答准确率 {_fmt_pct(acc)}（+ 文本判过 {text_pass}，§2.4 v2）"
+    )
     print(f"报告：{report_path}")
     print(f"明细：{detail_path}")
 
