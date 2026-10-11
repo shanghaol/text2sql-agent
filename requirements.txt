@@ -11,6 +11,12 @@ sqlalchemy>=2.0,<3         # 连接池 + 统一异常体系，角色等同 Java 
 pymysql>=1.2               # MySQL 纯 Python 驱动，Windows 零编译（实测 1.2.3）
 cryptography>=42           # PyMySQL 处理 caching_sha2_password 认证必需（实测 50.0.2）
 
+# SQL 安全守卫（W5）：sqlglot AST 白名单校验（agent/tools/sql_guard.py）。
+# 纯 Python、零运行时依赖；区间锁 30.x——sqlglot 大版本升级时 parse 结构/节点
+# 行为可能漂移，升级须知：先改区间、跑 pytest（拒绝/放行/追加三类行为锁定用例
+# 是升级回归闸，见 W5 设计 §1.1/§6 风险 5），全绿再上线。
+sqlglot>=30.20,<31         # SQL 方言解析/AST（实测 30.22.0）
+
 # 检索层（W2）
 chromadb>=1.5.5,<2         # 嵌入式向量库；1.5.4 已被官方撤回禁用（实测 1.5.9）
 fastembed>=0.9             # 本地 ONNX Embedding BAAI/bge-small-zh-v1.5（实测 0.9.0）

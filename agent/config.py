@@ -80,3 +80,18 @@ MAX_QUESTION_CHARS: int = int(os.environ.get("MAX_QUESTION_CHARS", "2000"))
 # LLM 客户端缓存容量（§1.6）：按 key 指纹缓存的 ChatDeepSeek 实例数上限，
 # LRU 逐出。演示规模并发个位数，16 个 httpx 连接池在 2G 预算内可忽略。
 LLM_CLIENT_CACHE_SIZE: int = int(os.environ.get("LLM_CLIENT_CACHE_SIZE", "16"))
+
+# ---------------------------------------------------------------------------
+# W5 新增：SQL 安全守卫模式 + 执行超时（W5 设计 §1.2 / §2.2）
+# ---------------------------------------------------------------------------
+
+# SQL 代码层校验的实现选择（第三道防线，见 sql_guard.py）：
+# - ast（默认）：sqlglot AST 白名单（R1-R5 + R6 LIMIT 判定）；
+# - legacy：W1 正则实现逃生门——新校验上线后若线上出现设计未预料的误杀，
+#   环境变量 TEXT2SQL_SQLGUARD=legacy 一键切回正则实现恢复服务（W6 删除）。
+SQLGUARD_MODE: str = os.environ.get("TEXT2SQL_SQLGUARD", "ast")
+
+# SELECT 执行超时（毫秒）：会话级 max_execution_time（主防线，服务端终止查询）；
+# 驱动层 read_timeout 取其秒数 + 5 兜底（结果传输卡死/服务器假死，见 sql_tools）。
+# 默认 10 秒 ≈ 合法查询上界（W3 实测最重金标毫秒级）的 10 倍，误杀风险极低。
+MYSQL_MAX_EXECUTION_MS: int = int(os.environ.get("MYSQL_MAX_EXECUTION_MS", "10000"))

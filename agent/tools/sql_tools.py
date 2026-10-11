@@ -1,36 +1,77 @@
 """SQL 工具：Text-to-SQL 助手的"手"，负责安全地查询 MySQL 分析库（mart 库）。
 
-这是 W2 阶段的核心文件。两个供 Agent 调用的工具：
+两个供 Agent 调用的工具：
 - execute_readonly_sql：执行只读 SELECT 查询，返回表格文本
 - list_tables：列出 mart 库里有哪几张表、各多少行
 
-安全设计是"三层防线"（设计 §1.3，从代码外到代码内）：
+安全设计是"四层防线"（W5 设计 §1.3/§2，从代码外到代码内）：
 1. 只读账号（主防线）：Agent 用 text2sql_ro 连接，仅 SELECT ON mart.*，
    权限在 DBMS 内核层执行，代码任何 bug 都绕不过；
-2. 会话只读（辅助防线）：SQLAlchemy Engine 挂 connect 事件，每个池化连接
-   建立时执行一次 SET SESSION TRANSACTION READ ONLY——就算将来有人误把
-   高权限账号配进 .env，会话级只读仍拦住普通表写入；
-3. 代码层校验（保留 W1）：validate_readonly_sql 黑名单 + 首关键字检查，
-   在 SQL 出手前给出中文可读拒绝原因，让模型自我修正（前两层只会报英文）。
+2. 会话只读 + 执行超时（辅助防线）：SQLAlchemy Engine 挂 connect 事件，每个池化
+   连接建立时执行一次 SET SESSION TRANSACTION READ ONLY（拦住普通表写入）+
+   SET SESSION max_execution_time（SELECT 超时由服务端主动终止，保护 2G 内存机器）；
+3. 代码层校验（W5 升级为 sqlglot AST 白名单）：validate_readonly_sql 在 SQL 出手前
+   给出中文可读拒绝原因，让模型自我修正（前两层只会报英文）——实现见
+   agent/tools/sql_guard.py，本模块按 config.SQLGUARD_MODE 二选一导入
+   （ast=默认 / legacy=W1 正则逃生门）；
+4. 驱动层读超时 read_timeout（兜底）：覆盖结果传输卡死、服务器假死等
+   服务端 max_execution_time 管不到的边角。
 
 连接层：SQLAlchemy 2.x Engine + PyMySQL 驱动，模块级懒加载单例
 （import 本模块不需要 MySQL 在跑，纯函数测试零依赖）；
 测试用 set_engine() 注入（延续 W1 set_db_path 的注入模式，只是注入对象换成了 Engine）。
 
-已知局限（W1 故意的保守策略，W5 会换成 sqlglot 做 AST 级解析）：
-- 黑名单用整词匹配，写在字符串字面量里的关键字（如 WHERE status = 'update'）
-  会被误拒——宁可错杀，不可放过；
-- enforce_limit 无法识别子查询里的 LIMIT，会误判为"已有 LIMIT"而不追加。
-"""
+W5 已解决的 W1 已知局限（AST 校验，设计 §1）：
+- 字符串字面量里的关键字误杀（WHERE status = 'update'）——AST 只看结构，
+  字面量是 exp.Literal 节点，不再误拒；
+- 子查询里的 LIMIT 令外层漏追加——AST 只看根节点的 limit 参数，
+  外层缺失必追加（`/* LIMIT 5 */` 注释场景同修复）。
 
-import re
+新边界（W5 已知的精度损失，设计 §1.5）：
+- SELECT ... INTO OUTFILE / DUMPFILE 在 MySQL 方言下 sqlglot 直接解析报错，
+  用户看到的是"语法错误"文案而非专门的"写文件"提示——两种路径都拒绝成功，
+  只是拒绝理由的针对性不同；SELECT ... INTO @var 有专门的 INTO 拒绝文案。
+"""
 
 from langchain.tools import tool
 from sqlalchemy import URL, create_engine, event, text
 from sqlalchemy.engine import Engine
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.exc import OperationalError, SQLAlchemyError
 
-from agent.config import MYSQL_DB, MYSQL_HOST, MYSQL_PASSWORD, MYSQL_PORT, MYSQL_USER
+from agent.config import (
+    MYSQL_DB,
+    MYSQL_HOST,
+    MYSQL_MAX_EXECUTION_MS,
+    MYSQL_PASSWORD,
+    MYSQL_PORT,
+    MYSQL_USER,
+    SQLGUARD_MODE,
+)
+
+# ---------------------------------------------------------------------------
+# 代码层校验（第三道防线）：按 SQLGUARD_MODE 二选一导入（W5 设计 §1.2/§1.4）
+# ---------------------------------------------------------------------------
+# ast（默认）：sqlglot AST 白名单（R1-R5 + R6 LIMIT 判定），见 sql_guard.py；
+# legacy：W1 正则实现逃生门——线上出现设计未预料的误杀时，
+# 环境变量 TEXT2SQL_SQLGUARD=legacy 一键切回正则实现恢复服务（W6 删除）。
+# 两套实现的公共签名一致（validate_readonly_sql / enforce_limit / _prepare），
+# 调用点零分支。
+if SQLGUARD_MODE == "legacy":
+    # 注：三条分开写是 ruff isort 的规范形态（as 导入默认不合并且受行宽约束），
+    # 不要"顺手"合并成括号多行——会被 I001 打回。
+    from agent.tools.sql_guard import _legacy_enforce_limit as enforce_limit
+    from agent.tools.sql_guard import _legacy_prepare as _prepare
+    from agent.tools.sql_guard import (
+        _legacy_validate_readonly_sql as validate_readonly_sql,
+    )
+else:
+    from agent.tools.sql_guard import _prepare, enforce_limit, validate_readonly_sql
+
+# 公共兼容面：validate_readonly_sql / enforce_limit 自 W1 起就定义在本模块，
+# 评测与测试一直按 sql_tools.<名字> 调用；W5 实现迁入 sql_guard 后在此保持
+# 同名再导出（enforce_limit 在执行链里不再被本模块调用，故进 __all__ 声明
+# "导出是有意的"，同时安抚 ruff F401）。
+__all__ = ["enforce_limit", "execute_readonly_sql", "list_tables", "validate_readonly_sql"]
 
 # ---------------------------------------------------------------------------
 # 连接管理：模块级懒加载单例 + 测试注入点
@@ -46,6 +87,10 @@ def _build_engine() -> Engine:
     用 URL.create 而不是手拼连接串：密码里的 @ / : 等特殊字符会被正确转义
     （手拼 f"...{password}@..." 遇到特殊字符密码会连错主机）。
     - connect_timeout=5：MySQL 不在时 5 秒内失败，不吊死用户；
+    - read_timeout：驱动层读超时（第四层防线，W5 设计 §2.1 兜底）——socket 级，
+      覆盖结果集传输卡死、服务器假死等服务端 max_execution_time 管不到的边角；
+      取值 = 服务端超时秒数 + 5 的余量，让 errno 3024 的可读文案
+      优先于驱动层超时出现（服务端先超时，客户端后放弃）。
     - pool_pre_ping=True：每次借连接前先 ping 一下，容器重启后旧连接自动换新。
     """
     url = URL.create(
@@ -59,23 +104,32 @@ def _build_engine() -> Engine:
     )
     return create_engine(
         url,
-        connect_args={"connect_timeout": 5},
+        connect_args={
+            "connect_timeout": 5,
+            "read_timeout": MYSQL_MAX_EXECUTION_MS / 1000 + 5,
+        },
         pool_pre_ping=True,
     )
 
 
 def _attach_session_read_only(engine: Engine) -> Engine:
-    """第二层防线：每个池化连接建立时执行一次会话只读（设计 §1.3）。
+    """第二层防线：每个池化连接建立时执行一次会话加固（W5 设计 §1.3/§2.1）。
 
-    SET SESSION TRANSACTION READ ONLY 作用于该连接的整个生命周期，
-    随连接池复用，成本为零。挂在 _build_engine 产物上，
-    这样无论引擎从哪条路径创建，防线都不会缺席。
+    两条 SET 都作用于该连接的整个生命周期，随连接池复用，成本为零：
+    - SET SESSION TRANSACTION READ ONLY：会话只读（W2 起）；
+    - SET SESSION max_execution_time：SELECT 执行超时（W5 新增，主防线）——
+      服务端主动终止超时查询、释放 DB 资源，而非客户端单方面放弃；
+      R2 白名单已限定纯 SELECT，"仅 SELECT 生效"的限制恰好不构成覆盖缺口。
+    挂在 _build_engine 产物上，这样无论引擎从哪条路径创建，防线都不会缺席。
     """
 
     @event.listens_for(engine, "connect")
-    def _set_session_read_only(dbapi_connection, _connection_record):
+    def _harden_session(dbapi_connection, _connection_record):
         cursor = dbapi_connection.cursor()
         try:
+            # 先设超时再设只读：两条都是会话级 SET，顺序无硬约束，
+            # 把"会话属性"的设置集中放在只读生效之前，读代码时不易误读
+            cursor.execute(f"SET SESSION max_execution_time={MYSQL_MAX_EXECUTION_MS}")
             cursor.execute("SET SESSION TRANSACTION READ ONLY")
         finally:
             cursor.close()
@@ -100,132 +154,19 @@ def set_engine(engine: Engine | None) -> None:
 
 
 # ---------------------------------------------------------------------------
-# 第一道代码防线：SQL 只读校验
-# ---------------------------------------------------------------------------
-
-# 写操作关键字黑名单。用 \b 词边界匹配，大小写不敏感。
-# 说明：\b 是"单词字符与非单词字符的边界"，下划线属于单词字符，
-# 所以 created_at / updated_at 这类列名不会被 \bUPDATE\b 误伤；
-# 但字符串字面量 'update' 里的 update 会被误拒——W1 就接受这种保守误杀。
-# 排序注意：多词短语放最前——FOR UPDATE 里含单词 UPDATE，先匹配短语
-# 才能给模型报出最具体的原因（"检测到 FOR UPDATE"而不是笼统的 UPDATE）。
-# W2 新增 6 个 MySQL 特有词（设计 §1.3）：
-# - SELECT ... FOR UPDATE / FOR SHARE 是 MySQL 合法的锁读，SQLite 没有这语法；
-# - SELECT ... INTO OUTFILE / DUMPFILE 能以 SELECT 开头写服务器文件系统；
-# - LOCK IN SHARE MODE 同为锁读；CALL 调用存储过程（库里有未知代码）。
-_BLACKLIST_KEYWORDS = (
-    "FOR UPDATE",
-    "FOR SHARE",
-    "LOCK IN SHARE MODE",
-    "INTO OUTFILE",
-    "INTO DUMPFILE",
-    "CALL",
-    "INSERT",
-    "UPDATE",
-    "DELETE",
-    "DROP",
-    "ALTER",
-    "CREATE",
-    "REPLACE",
-    "TRUNCATE",
-    "ATTACH",
-    "DETACH",
-    "PRAGMA",
-    "VACUUM",
-    "REINDEX",
-    "GRANT",
-    "REVOKE",
-)
-
-
-def _strip_comments(sql: str) -> str:
-    """剥掉 SQL 注释，返回处理后的文本。
-
-    先删 /* ... */ 块注释（re.DOTALL 让 . 也能匹配换行），
-    再删 -- 开头到行尾的行注释。
-    校验、LIMIT 判断都必须基于剥完注释的文本，
-    否则注释里的关键字/分号/LIMIT 会造成误判。
-    """
-    cleaned = re.sub(r"/\*.*?\*/", " ", sql, flags=re.DOTALL)
-    cleaned = re.sub(r"--[^\n]*", " ", cleaned)
-    return cleaned
-
-
-def validate_readonly_sql(sql: str) -> tuple[bool, str]:
-    """校验一段 SQL 是否是安全的只读查询。
-
-    检查顺序：剥注释 → 空检查 → 多语句检查 → 首关键字检查 → 黑名单检查。
-
-    返回:
-        (是否通过, 拒绝原因)。通过时第二个元素是空字符串；
-        拒绝原因写成中文完整句子，让模型能看懂并自己改 SQL 重试。
-    """
-    # 1) 剥掉注释，避免"注释里藏关键字"或"注释里藏分号"造成误判
-    cleaned = _strip_comments(sql).strip()
-
-    # 2) 剥完注释后为空 → 没有可执行的 SQL
-    if not cleaned:
-        return False, "拒绝执行：SQL 为空或只包含注释。请提供一条 SELECT 查询语句。"
-
-    # 3) 多语句检查：只允许结尾一个分号（MySQL 一次 execute 本来也只跑一条），
-    #    内部再出现分号说明想一次跑多条语句，直接拒绝。
-    body = cleaned[:-1].strip() if cleaned.endswith(";") else cleaned
-    if ";" in body:
-        return False, "拒绝执行：一次只能执行一条 SQL 语句（检测到语句中间的分号）。请去掉多余的语句，一次只执行一条查询。"
-
-    # 4) 首个关键字必须是 SELECT 或 WITH（CTE 查询也允许），大小写不敏感
-    first_word = re.match(r"[A-Za-z]+", body)
-    if first_word is None or first_word.group(0).upper() not in ("SELECT", "WITH"):
-        return False, "拒绝执行：SQL 必须以 SELECT 或 WITH 开头。本工具只允许只读查询。"
-
-    # 5) 黑名单整词检查：命中任何写操作关键字即拒绝。
-    #    用 \b 词边界避免把 created_at 这类下划线词误判成 UPDATE；
-    #    FOR UPDATE / LOCK IN SHARE MODE 等多词短语同样按 \b... 整体匹配，
-    #    结尾 \b 能正确落在 UPDATE/SHARE/OUTFILE 这类词的词尾。
-    for keyword in _BLACKLIST_KEYWORDS:
-        if re.search(rf"\b{keyword}\b", body, flags=re.IGNORECASE):
-            return False, f"拒绝执行：检测到非只读关键字 {keyword}。本工具只允许 SELECT 查询。请改写为只读查询后重试。"
-
-    return True, ""
-
-
-def enforce_limit(sql: str, default_limit: int = 20) -> str:
-    """给没有 LIMIT 的查询追加 ` LIMIT 20`，防止一次捞回全表。
-
-    简化实现：只要 SQL 里出现 `LIMIT <数字>` 就认为用户已经限制了行数。
-    判断基于剥掉注释后的文本——否则 `/* LIMIT 5 */` 这种注释会骗过检查。
-    局限：无法区分 LIMIT 写在主查询还是子查询里——
-    子查询里写了 LIMIT 时主查询会被误判为"已有 LIMIT"而不追加。
-    W5 换 sqlglot 后会按 AST 精确判断最外层查询的 LIMIT。
-    """
-    stripped = _strip_comments(sql).strip()
-    # 先摘掉结尾的分号，避免拼出 "...; LIMIT 20" 这种语法错误
-    if stripped.endswith(";"):
-        stripped = stripped[:-1].rstrip()
-
-    if re.search(r"\bLIMIT\s+\d+\b", stripped, flags=re.IGNORECASE):
-        return stripped  # 已有 LIMIT，原样返回
-    return f"{stripped} LIMIT {default_limit}"
-
-
-# ---------------------------------------------------------------------------
 # 工具一：执行只读 SQL 查询
 # ---------------------------------------------------------------------------
 
 # 单次最多返回给模型的行数：结果太长会挤占上下文、模型也读不过来
 MAX_ROWS_SHOWN = 20
 
-# W5 预留（W2 只留占位说明，不实现）：执行超时将用 MySQL 原生
-# SET SESSION max_execution_time（毫秒，仅作用于 SELECT）实现，
-# 可挂在 get_engine() 的 connect 事件里与"会话只读"一起设置。
-
 
 def _humanize_db_error(exc: Exception) -> str:
     """把数据库异常翻译成"中文提示 + 原始报错"的可读信息。
 
     pymysql 的错误码在异常链最内层（exc.orig），按 errno 做中文映射
-    （设计 §4.1 映射表）；映射后仍拼接原始 message（截 300 字符）——
-    模型靠原文里的表名/列名自我修正 SQL。
+    （W2 设计 §4.1 映射表 + W5 设计 §2.3 超时两条）；映射后仍拼接原始 message
+    （截 300 字符）——模型靠原文里的表名/列名自我修正 SQL。
     """
     orig = getattr(exc, "orig", None)
     raw = str(orig) if orig is not None else str(exc)
@@ -247,6 +188,25 @@ def _humanize_db_error(exc: Exception) -> str:
         return f"SQL 错误：GROUP BY 查询中出现了既未聚合也未出现在 GROUP BY 里的列（MySQL 默认 ONLY_FULL_GROUP_BY），请为该列套聚合函数或加入 GROUP BY。原始报错：{raw}"
     if errno in (1142, 1144):
         return f"SQL 错误：只读账号权限不足，该操作被数据库拒绝。请确认这是纯 SELECT 查询。原始报错：{raw}"
+    # W5 §2.3：服务端执行超时（max_execution_time 命中，pymysql errno 3024）。
+    # 秒数取自 config：默认 10000ms → 文案即设计原文的"超过 10 秒"，env 调大后文案同步。
+    if errno == 3024:
+        seconds = max(MYSQL_MAX_EXECUTION_MS // 1000, 1)
+        return (
+            f"SQL 执行超时（超过 {seconds} 秒被数据库终止）。"
+            "请缩小时间范围（如把全年改查最近 30 天）、减少聚合粒度或增加过滤条件后重试。"
+        )
+    # W5 §2.3：驱动层读超时（read_timeout 命中）。§8-⑩ 实测（2026-10-11，pymysql 1.2.3）：
+    # socket 超时被 pymysql 包装成 OperationalError(2013, "Lost connection ... (timed out)")，
+    # errno 不为 None；识别条件取 errno ∈ {None, 2013} 且 message 含 timed out，
+    # 同时覆盖"无 errno 的裸形态"（设计原判据）与实测形态。
+    # 文案不承诺服务端已终止——终止语义留给服务端 max_execution_time 防线。
+    if (
+        isinstance(exc, OperationalError)
+        and errno in (None, 2013)
+        and "timed out" in raw.lower()
+    ):
+        return "查询等待超时，请缩小时间范围或增加过滤条件后重试。"
     return f"SQL 错误：{raw}。请检查表名、列名和语法后修正 SQL 重试。"
 
 
@@ -273,11 +233,10 @@ def execute_readonly_sql(sql: str) -> str:
         return reason
 
     # 第二步：补 LIMIT，防止一条 SQL 捞回全表。
-    # 先记录用户 SQL 里是否本来就写了 LIMIT（基于剥注释后的文本判断，
-    # 避免 /* LIMIT 5 */ 这种注释造成误判）：自动追加 LIMIT 的情况，
+    # safe_sql（执行用原文，只摘尾分号）与 had_explicit_limit 一并来自 _prepare
+    # （W5：AST 判定最外层 LIMIT，旧的正则二次判断删除）。自动追加 LIMIT 的情况，
     # 若恰好返回 20 行，按"可能被截断"处理（见下面第四步）。
-    had_explicit_limit = bool(re.search(r"\bLIMIT\s+\d+\b", _strip_comments(sql), flags=re.IGNORECASE))
-    safe_sql = enforce_limit(sql)
+    safe_sql, had_explicit_limit = _prepare(sql)
 
     # 第三步：从连接池取连接执行（账号只读 + 会话只读两道防线已就位）。
     try:
