@@ -27,10 +27,10 @@ if [ -z "$MYSQL_PASSWORD" ]; then
   exit 1
 fi
 
-# 密码经 MYSQL_PWD 环境变量传给客户端（避免命令行 -p 进 ps/历史）
-export MYSQL_PWD="$MYSQL_PASSWORD"
+# 密码经 -p 命令行传给客户端（MYSQL_PWD 实测对该账号 1045，见 experiment-log）
+
 mysql_client() {
-  mysql -h"$MYSQL_HOST" -P"$MYSQL_PORT" -u"$MYSQL_USER" "$@"
+  mysql -h"$MYSQL_HOST" -P"$MYSQL_PORT" -u"$MYSQL_USER" -p"$MYSQL_PASSWORD" "$@" 2>/dev/null
 }
 
 echo "[w5-migrate] 检查 ${DB_NAME}.${TABLE_NAME}.${COLUMN_NAME} ..."
