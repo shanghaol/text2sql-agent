@@ -3,6 +3,7 @@
  * BYOK 设置页（W4 设计 §1.2 五步流程 + §4.1 三态）：
  * 未配置（密码框+明文切换+提交）/ 已配置（掩码+指纹+上次校验时间+重新校验+删除）/ 校验失败红字。
  * 前端格式预检 ^sk-[0-9a-zA-Z]{20,}$ 只挡手滑，权威校验在 Java → DeepSeek /models。
+ * W5 增量：「SQL 执行前人工确认」开关（§3.7/§3.8，GET/PUT /api/user/settings）。
  */
 import { onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -23,6 +24,37 @@ const form = reactive({ key: '' })
 
 const KEY_PATTERN = /^sk-[0-9a-zA-Z]{20,}$/
 
+// ---- W5 HITL 开关（§3.8）----
+const hitlEnabled = ref(false)
+const settingsLoading = ref(true)
+const settingsSaving = ref(false)
+
+async function loadSettings() {
+  settingsLoading.value = true
+  try {
+    const body = await api.get('/user/settings')
+    hitlEnabled.value = !!body.data?.hitlEnabled
+  } catch (e) {
+    ElMessage.error(e.message)
+  } finally {
+    settingsLoading.value = false
+  }
+}
+
+async function saveSettings(value) {
+  settingsSaving.value = true
+  try {
+    const body = await api.put('/user/settings', { hitlEnabled: value })
+    hitlEnabled.value = !!body.data?.hitlEnabled // 以后端回显为准
+    ElMessage.success(value ? '已开启：每条 SQL 都会先给你确认' : '已关闭：SQL 将自动执行')
+  } catch (e) {
+    hitlEnabled.value = !value // 失败回拨开关
+    ElMessage.error(e.message)
+  } finally {
+    settingsSaving.value = false
+  }
+}
+
 async function loadStatus() {
   loading.value = true
   try {
@@ -34,7 +66,10 @@ async function loadStatus() {
   }
 }
 
-onMounted(loadStatus)
+onMounted(() => {
+  loadStatus()
+  loadSettings()
+})
 
 async function submitKey() {
   localError.value = ''
@@ -143,6 +178,22 @@ async function removeKey() {
       <el-alert v-if="localError" :title="localError" type="error" show-icon :closable="false" class="err" />
       <el-alert v-if="serverError" :title="serverError" type="error" show-icon :closable="false" class="err" />
     </el-card>
+
+    <!-- W5 HITL：对话偏好（§3.7） -->
+    <el-card class="card" v-loading="settingsLoading">
+      <template #header><b>对话偏好</b></template>
+      <div class="pref-row">
+        <div class="pref-text">
+          <div>SQL 执行前人工确认</div>
+          <div class="hint">开启后，每条要执行的 SQL 都会先展示给你，确认后才会查询数据库（默认自动执行）</div>
+        </div>
+        <el-switch
+          v-model="hitlEnabled"
+          :loading="settingsSaving"
+          @change="saveSettings"
+        />
+      </div>
+    </el-card>
   </div>
 </template>
 
@@ -150,13 +201,25 @@ async function removeKey() {
 .settings-page {
   height: 100%;
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
   padding: 32px 24px;
   overflow-y: auto;
 }
 .card {
   width: 560px;
   height: fit-content;
+  flex-shrink: 0;
+}
+.pref-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.pref-text > div:first-child {
+  font-size: 14px;
 }
 .hint {
   color: var(--el-text-color-secondary);

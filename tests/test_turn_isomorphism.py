@@ -108,8 +108,8 @@ def gate_env(monkeypatch):
     captured: list[dict] = []
     checkpointer = FakeCheckpointer()
 
-    def fake_build_agent(system_prompt: str, api_key: str | None = None):
-        captured.append({"system_prompt": system_prompt, "api_key": api_key})
+    def fake_build_agent(system_prompt: str, api_key: str | None = None, hitl: bool = False):
+        captured.append({"system_prompt": system_prompt, "api_key": api_key, "hitl": hitl})
         return object()  # agent 本体不被本层消费
 
     monkeypatch.setattr(turn_mod, "get_retriever", lambda: retriever_holder["retriever"])

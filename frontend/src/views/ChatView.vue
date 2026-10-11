@@ -16,6 +16,12 @@ let controller = null // AbortController：停止按钮 → 标记"已停止"
 
 const canSend = computed(() => !chat.streaming && draft.value.trim().length > 0)
 
+// W5 §3.7：存在待决策的审批卡（未过期/未处理/非请求中）→ 停止=拒绝、新对话禁用、新提问拦截
+const pendingMsg = computed(() =>
+  chat.messages.find((m) => m.role === 'assistant' && m.pending && !m.pending.resolved && !m.pending.expired && !m.pending.busy),
+)
+const hasPending = computed(() => !!pendingMsg.value)
+
 // 流式输出时自动滚到底部
 const lastTextLen = computed(() => {
   const m = chat.messages[chat.messages.length - 1]
@@ -31,6 +37,11 @@ function scrollToBottom() {
 async function send() {
   const question = draft.value.trim()
   if (!question || chat.streaming) return
+  if (hasPending.value) {
+    // 后端本也会 409 pending_approval_exists——本地先拦，交互更顺（§3.10）
+    ElMessage.warning('当前会话有等待确认的 SQL，请先处理审批卡片')
+    return
+  }
   if (!auth.hasKey) {
     ElMessage.warning('请先到设置页配置 DeepSeek Key')
     return
@@ -71,7 +82,52 @@ async function send() {
   }
 }
 
+/** W5 §3.7：批准/拒绝 → POST /api/chat/approval → 复用 sse.js 解析器消费恢复流，同气泡续写。 */
+async function decide(msg, decision) {
+  const p = msg.pending
+  if (!p || p.busy || p.expired || p.resolved) return
+  if (p.historyId == null) return // pending_saved 未到（卡片按钮此时本已禁用，防御兜底）
+  p.busy = true
+  chat.streaming = true
+  controller = new AbortController()
+  try {
+    await auth.ensureFreshToken()
+    await chatSSE({
+      path: '/api/chat/approval',
+      body: {
+        threadId: chat.threadId,
+        approvalId: p.approvalId,
+        decision,
+        historyId: p.historyId,
+      },
+      token: auth.accessToken,
+      signal: controller.signal,
+      onEvent: (ev) => chat.applyEvent(msg, ev),
+    })
+  } catch (e) {
+    if (e && e.name === 'AbortError') {
+      chat.markStopped(msg) // 恢复流中途停止（Java 按 status=3 落库）
+    } else if (e.code === 'approval_not_found' || e.code === 'approval_expired') {
+      p.expired = true // 审批已消费/过期 → 卡片置灰（双击批准的第二击走这里）
+      ElMessage.warning(e.message)
+    } else {
+      chat.markInterrupted(msg)
+      ElMessage.error(e.message)
+    }
+  } finally {
+    chat.streaming = false
+    controller = null
+    chat.armFeedbackWindow(msg)
+    nextTick(scrollToBottom)
+  }
+}
+
 function stop() {
+  // W5 §3.7：pending 期间「停止」= 发送 reject（通知后端取消，模型收尾询问意图）
+  if (pendingMsg.value && !chat.streaming) {
+    decide(pendingMsg.value, 'reject')
+    return
+  }
   controller?.abort()
 }
 
@@ -102,7 +158,14 @@ onBeforeUnmount(() => controller?.abort())
 
     <div ref="listRef" class="msg-list">
       <el-empty v-if="chat.messages.length === 0" description="输入自然语言问题，查询 mart 业务库" />
-      <MessageBubble v-for="(m, i) in chat.messages" :key="i" :msg="m" @feedback="sendFeedback" />
+      <MessageBubble
+        v-for="(m, i) in chat.messages"
+        :key="i"
+        :msg="m"
+        @feedback="sendFeedback"
+        @approve="(mm) => decide(mm, 'approve')"
+        @reject="(mm) => decide(mm, 'reject')"
+      />
     </div>
 
     <div class="composer">
@@ -117,9 +180,10 @@ onBeforeUnmount(() => controller?.abort())
         @keydown.enter.exact.prevent="send"
       />
       <div class="composer-actions">
-        <el-button @click="newThread" :disabled="chat.streaming">新对话</el-button>
-        <el-button v-if="!chat.streaming" type="primary" :disabled="!canSend" @click="send">发送</el-button>
-        <el-button v-else type="danger" @click="stop">停止</el-button>
+        <!-- pending 期间禁用新对话：避免新旧 thread 状态交叉（§3.7） -->
+        <el-button :disabled="chat.streaming || hasPending" @click="newThread">新对话</el-button>
+        <el-button v-if="chat.streaming || hasPending" type="danger" @click="stop">停止</el-button>
+        <el-button v-else type="primary" :disabled="!canSend" @click="send">发送</el-button>
       </div>
     </div>
   </div>

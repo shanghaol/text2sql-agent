@@ -25,10 +25,13 @@ import com.baomidou.mybatisplus.core.metadata.TableInfoHelper;
 import com.shanghl.text2sql.common.BizException;
 import com.shanghl.text2sql.common.ErrorCode;
 import com.shanghl.text2sql.config.AppProperties;
+import com.shanghl.text2sql.dto.ApprovalRequest;
 import com.shanghl.text2sql.entity.ApiKey;
 import com.shanghl.text2sql.entity.QueryHistory;
+import com.shanghl.text2sql.entity.User;
 import com.shanghl.text2sql.mapper.ApiKeyMapper;
 import com.shanghl.text2sql.mapper.QueryHistoryMapper;
+import com.shanghl.text2sql.mapper.UserMapper;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sun.net.httpserver.HttpExchange;
@@ -51,10 +54,12 @@ import static org.mockito.Mockito.verify;
 class ChatProxyServiceTest {
 
     private static final String PLAINTEXT_KEY = "sk-unit-test-key-0123456789abcdef";
+    private static final String TEST_THREAD_ID = "550e8400-e29b-41d4-a716-446655440000";
 
     private HttpServer upstream;
     private ApiKeyMapper apiKeyMapper;
     private QueryHistoryMapper historyMapper;
+    private UserMapper userMapper;
     private ChatProxyService service;
     private ConcurrencyGate gate;
     private AppProperties props;
@@ -63,6 +68,7 @@ class ChatProxyServiceTest {
     private final AtomicReference<String> upstreamKeyHeader = new AtomicReference<>();
     private final AtomicReference<String> upstreamUserIdHeader = new AtomicReference<>();
     private final AtomicReference<String> upstreamTokenHeader = new AtomicReference<>();
+    private final AtomicReference<String> upstreamHitlHeader = new AtomicReference<>();
 
     @BeforeEach
     void setUp() throws IOException {
@@ -71,6 +77,8 @@ class ChatProxyServiceTest {
                 new MybatisConfiguration(), ""), ApiKey.class);
         TableInfoHelper.initTableInfo(new org.apache.ibatis.builder.MapperBuilderAssistant(
                 new MybatisConfiguration(), ""), QueryHistory.class);
+        TableInfoHelper.initTableInfo(new org.apache.ibatis.builder.MapperBuilderAssistant(
+                new MybatisConfiguration(), ""), User.class);
 
         upstream = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
         upstream.createContext("/agent/chat", this::defaultHandler);
@@ -98,9 +106,12 @@ class ChatProxyServiceTest {
             return 1;
         }).when(historyMapper).insert(any(QueryHistory.class));
 
+        userMapper = Mockito.mock(UserMapper.class);
+        doReturn(null).when(userMapper).selectById(Mockito.anyLong()); // 默认无设置行 → HITL 关
+
         gate = new ConcurrencyGate(4);
         HttpClient httpClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2)).build();
-        service = new ChatProxyService(apiKeyMapper, historyMapper, cipher, new RateLimiter(),
+        service = new ChatProxyService(apiKeyMapper, historyMapper, userMapper, cipher, new RateLimiter(),
                 gate, httpClient, new ObjectMapper(), props);
     }
 
@@ -110,6 +121,7 @@ class ChatProxyServiceTest {
         upstreamKeyHeader.set(exchange.getRequestHeaders().getFirst("X-User-LLM-Key"));
         upstreamUserIdHeader.set(exchange.getRequestHeaders().getFirst("X-User-Id"));
         upstreamTokenHeader.set(exchange.getRequestHeaders().getFirst("X-Internal-Token"));
+        upstreamHitlHeader.set(exchange.getRequestHeaders().getFirst("X-User-HITL"));
         byte[] body = String.join("\n",
                 "event: meta",
                 "data: {\"threadKey\":\"u42:t\",\"model\":\"deepseek-flash\"}",
@@ -137,7 +149,7 @@ class ChatProxyServiceTest {
     }
 
     private void upstreamRespond(int status, String contentType, byte[] body) {
-        upstream.removeContext("/agent/chat"); // JDK HttpServer 不允许同路径重复注册，先移除默认处理器
+        removeContextIfPresent("/agent/chat"); // JDK HttpServer 不允许同路径重复注册，先移除默认处理器
         upstream.createContext("/agent/chat", exchange -> {
             upstreamRequestBody.set(exchange.getRequestBody().readAllBytes());
             upstreamKeyHeader.set(exchange.getRequestHeaders().getFirst("X-User-LLM-Key"));
@@ -152,7 +164,7 @@ class ChatProxyServiceTest {
     }
 
     private void upstreamRespondStream(byte[] body) {
-        upstream.removeContext("/agent/chat");
+        removeContextIfPresent("/agent/chat");
         upstream.createContext("/agent/chat", exchange -> {
             exchange.getResponseHeaders().add("Content-Type", "text/event-stream");
             exchange.sendResponseHeaders(200, 0);
@@ -325,7 +337,7 @@ class ChatProxyServiceTest {
     void concurrencyFull() {
         ConcurrencyGate tightGate = new ConcurrencyGate(1);
         KeyCipherService cipher = new KeyCipherService(new SecretKeySpec(new byte[32], "AES"));
-        ChatProxyService tight = new ChatProxyService(apiKeyMapper, historyMapper, cipher,
+        ChatProxyService tight = new ChatProxyService(apiKeyMapper, historyMapper, userMapper, cipher,
                 new RateLimiter(), tightGate, HttpClient.newHttpClient(), new ObjectMapper(), props);
 
         ChatSession session = tight.open(42L, "q", UUID.randomUUID().toString());
@@ -353,6 +365,276 @@ class ChatProxyServiceTest {
                     BizException biz = (BizException) e;
                     assertThat(biz.httpStatus()).isEqualTo(502);
                     assertThat(biz.code()).isEqualTo("upstream_unreachable");
+                });
+        assertThat(gate.inFlight()).isEqualTo(0);
+    }
+
+    // ------------------------------------------------------------------ W5 HITL（§3.6）
+
+    private void setUserHitl(Integer hitlEnabled) {
+        User user = new User();
+        user.setId(42L);
+        user.setHitlEnabled(hitlEnabled);
+        doReturn(user).when(userMapper).selectById(Mockito.anyLong());
+    }
+
+    private QueryHistory pendingRow(long historyId) {
+        QueryHistory h = new QueryHistory();
+        h.setId(historyId);
+        h.setUserId(42L);
+        h.setThreadId(TEST_THREAD_ID);
+        h.setQuestion("上个月的GMV");
+        h.setAnswerText("让我查一下");
+        h.setGeneratedSql("SELECT SUM(amount) FROM payments");
+        h.setStatus(QueryHistory.STATUS_PENDING);
+        h.setLatencyMs(100);
+        h.setTokenIn(10);
+        h.setTokenOut(2);
+        return h;
+    }
+
+    /** JDK HttpServer removeContext 对不存在的路径抛 IllegalArgumentException——幂等封装。 */
+    private void removeContextIfPresent(String path) {
+        try {
+            upstream.removeContext(path);
+        } catch (IllegalArgumentException ignore) {
+            // 上下文已被本测试的前一步移除
+        }
+    }
+
+    private void upstreamApprovalStream(byte[] body) {
+        removeContextIfPresent("/agent/chat");
+        removeContextIfPresent("/agent/chat/approval"); // 同一测试两段上游流时防重复注册
+        upstream.createContext("/agent/chat/approval", exchange -> {
+            upstreamRequestBody.set(exchange.getRequestBody().readAllBytes());
+            upstreamKeyHeader.set(exchange.getRequestHeaders().getFirst("X-User-LLM-Key"));
+            upstreamUserIdHeader.set(exchange.getRequestHeaders().getFirst("X-User-Id"));
+            upstreamTokenHeader.set(exchange.getRequestHeaders().getFirst("X-Internal-Token"));
+            upstreamHitlHeader.set(exchange.getRequestHeaders().getFirst("X-User-HITL"));
+            exchange.getResponseHeaders().add("Content-Type", "text/event-stream");
+            exchange.sendResponseHeaders(200, 0);
+            try (OutputStream out = exchange.getResponseBody()) {
+                out.write(body);
+                out.flush();
+            }
+        });
+    }
+
+    private ApprovalRequest approvalReq(String decision) {
+        return new ApprovalRequest(TEST_THREAD_ID, "approval-1", decision, 77L);
+    }
+
+    @Test
+    @DisplayName("W5：pending_approval 事件 → status=4 落库 + pending_saved 注入（无 saved）")
+    void pendingApprovalPersistsStatus4AndInjectsPendingSaved() {
+        upstreamRespondStream(String.join("\n",
+                "event: delta",
+                "data: {\"text\":\"让我查一下\"}",
+                "",
+                "event: tool",
+                "data: {\"name\":\"execute_readonly_sql\",\"sql\":\"SELECT SUM(amount) FROM payments\"}",
+                "",
+                "event: pending_approval",
+                "data: {\"approvalId\":\"a1\",\"sql\":\"SELECT SUM(amount) FROM payments\",\"latencyMs\":800,\"tokens\":{\"input\":90,\"output\":12}}",
+                "").getBytes(StandardCharsets.UTF_8));
+        ChatSession session = service.open(42L, "q", UUID.randomUUID().toString());
+        CapturingSink sink = new CapturingSink();
+        service.streamAndPersist(session, sink);
+
+        ArgumentCaptor<QueryHistory> captor = ArgumentCaptor.forClass(QueryHistory.class);
+        verify(historyMapper).insert(captor.capture());
+        QueryHistory saved = captor.getValue();
+        assertThat(saved.getStatus()).isEqualTo(QueryHistory.STATUS_PENDING);
+        assertThat(saved.getGeneratedSql()).isEqualTo("SELECT SUM(amount) FROM payments");
+        assertThat(saved.getLatencyMs()).isEqualTo(800);          // additive 字段：停车前耗时
+        assertThat(saved.getTokenIn()).isEqualTo(90);
+        assertThat(saved.getTokenOut()).isEqualTo(12);
+        assertThat(saved.getAnswerText()).isEqualTo("让我查一下");
+        // 事件注入：pending_saved 携带 historyId；普通 saved 不出现
+        assertThat(sink.lines.subList(sink.lines.size() - 3, sink.lines.size()))
+                .containsExactly("event: pending_saved", "data: {\"historyId\":123}", "");
+        assertThat(sink.lines).noneMatch("event: saved"::equals);
+        assertThat(gate.inFlight()).isEqualTo(0); // 审批等待期间不占用并发额度（§3.4）
+    }
+
+    @Test
+    @DisplayName("W5：用户开 HITL → open() 注入 X-User-HITL: 1；关 → 不注入")
+    void hitlHeaderInjectedPerUserSetting() {
+        setUserHitl(1);
+        ChatSession session = service.open(42L, "q", UUID.randomUUID().toString());
+        service.streamAndPersist(session, new CapturingSink());
+        assertThat(upstreamHitlHeader.get()).isEqualTo("1");
+
+        setUserHitl(0);
+        ChatSession session2 = service.open(42L, "q", UUID.randomUUID().toString());
+        service.streamAndPersist(session2, new CapturingSink());
+        assertThat(upstreamHitlHeader.get()).isNull(); // 仅开启时注入（§3.6）
+    }
+
+    @Test
+    @DisplayName("W5：批准 → 转发 /agent/chat/approval（头四件+HITL:1）→ 原行 UPDATE status=1 累加")
+    void approvalApproveUpdatesHistoryRow() {
+        QueryHistory original = pendingRow(77L);
+        doReturn(original).when(historyMapper).selectById(77L);
+        upstreamApprovalStream(String.join("\n",
+                "event: delta",
+                "data: {\"text\":\"，上月 GMV 为 1603 万元。\"}",
+                "",
+                "event: done",
+                "data: {\"tokens\":{\"input\":50,\"output\":5},\"latencyMs\":200}",
+                "").getBytes(StandardCharsets.UTF_8));
+        ChatSession session = service.openApproval(42L, approvalReq("approve"));
+        CapturingSink sink = new CapturingSink();
+        service.streamAndPersistForApproval(session, sink, "approve");
+
+        // 转发头四件 + 恒开 HITL
+        assertThat(upstreamKeyHeader.get()).isEqualTo(PLAINTEXT_KEY);
+        assertThat(upstreamUserIdHeader.get()).isEqualTo("42");
+        assertThat(upstreamHitlHeader.get()).isEqualTo("1");
+        assertThat(upstreamRequestBody.get()).asString(StandardCharsets.UTF_8)
+                .contains("approvalId").contains("\"decision\":\"approve\"");
+        // UPDATE（非 INSERT）：读原行累加——latency 100+200=300，token 10+50=60 / 2+5=7
+        verify(historyMapper, never()).insert(any(QueryHistory.class));
+        ArgumentCaptor<QueryHistory> captor = ArgumentCaptor.forClass(QueryHistory.class);
+        verify(historyMapper).updateById(captor.capture());
+        QueryHistory updated = captor.getValue();
+        assertThat(updated.getId()).isEqualTo(77L);
+        assertThat(updated.getStatus()).isEqualTo(QueryHistory.STATUS_SUCCESS);
+        assertThat(updated.getAnswerText()).isEqualTo("让我查一下，上月 GMV 为 1603 万元。"); // 两段之和
+        assertThat(updated.getLatencyMs()).isEqualTo(300);
+        assertThat(updated.getTokenIn()).isEqualTo(60);
+        assertThat(updated.getTokenOut()).isEqualTo(7);
+        assertThat(updated.getErrorCode()).isNull();
+        // saved 事件注入 historyId=77（前端续写气泡 + 反馈解锁）
+        assertThat(sink.lines.subList(sink.lines.size() - 3, sink.lines.size()))
+                .containsExactly("event: saved", "data: {\"historyId\":77}", "");
+        assertThat(gate.inFlight()).isEqualTo(0);
+    }
+
+    @Test
+    @DisplayName("W5：拒绝 → UPDATE status=3 + error_code=approval_rejected；resume 流 delta 照常透传")
+    void approvalRejectPersistsRejected() {
+        QueryHistory original = pendingRow(77L);
+        doReturn(original).when(historyMapper).selectById(77L);
+        upstreamApprovalStream(String.join("\n",
+                "event: delta",
+                "data: {\"text\":\"好的，请告诉我您希望如何调整？\"}",
+                "",
+                "event: done",
+                "data: {\"tokens\":{\"input\":40,\"output\":8},\"latencyMs\":150}",
+                "").getBytes(StandardCharsets.UTF_8));
+        ChatSession session = service.openApproval(42L, approvalReq("reject"));
+        CapturingSink sink = new CapturingSink();
+        service.streamAndPersistForApproval(session, sink, "reject");
+
+        ArgumentCaptor<QueryHistory> captor = ArgumentCaptor.forClass(QueryHistory.class);
+        verify(historyMapper).updateById(captor.capture());
+        QueryHistory updated = captor.getValue();
+        assertThat(updated.getStatus()).isEqualTo(QueryHistory.STATUS_ABORTED);
+        assertThat(updated.getErrorCode()).isEqualTo("approval_rejected");
+        assertThat(updated.getAnswerText()).isEqualTo("让我查一下好的，请告诉我您希望如何调整？");
+        assertThat(updated.getLatencyMs()).isEqualTo(250); // 100+150
+        assertThat(updated.getTokenIn()).isEqualTo(50);    // 10+40
+        assertThat(updated.getTokenOut()).isEqualTo(10);   // 2+8
+        assertThat(sink.lines).anyMatch(l -> l.contains("请告诉我您希望如何调整")); // 透传照常
+    }
+
+    @Test
+    @DisplayName("W5：审批流中途客户端断连 → status=3（§3.10）；恢复流出错事件 → status=2")
+    void approvalAbortAndErrorSemantics() {
+        QueryHistory original = pendingRow(77L);
+        doReturn(original).when(historyMapper).selectById(77L);
+        upstreamApprovalStream(String.join("\n",
+                "event: delta",
+                "data: {\"text\":\"第一段\"}",
+                "",
+                "event: delta",
+                "data: {\"text\":\"第二段\"}",
+                "").getBytes(StandardCharsets.UTF_8));
+        ChatSession session = service.openApproval(42L, approvalReq("approve"));
+        service.streamAndPersistForApproval(session, new AbortAfterLines(3), "approve");
+        ArgumentCaptor<QueryHistory> captor = ArgumentCaptor.forClass(QueryHistory.class);
+        verify(historyMapper).updateById(captor.capture());
+        assertThat(captor.getValue().getStatus()).isEqualTo(QueryHistory.STATUS_ABORTED);
+        assertThat(gate.inFlight()).isEqualTo(0);
+
+        // 恢复流出错事件（余额不足）→ status=2 + 原样 error_code
+        Mockito.clearInvocations(historyMapper);
+        QueryHistory original2 = pendingRow(78L);
+        doReturn(original2).when(historyMapper).selectById(78L);
+        upstreamApprovalStream(String.join("\n",
+                "event: error",
+                "data: {\"code\":\"llm_insufficient_balance\",\"message\":\"DeepSeek 余额不足\"}",
+                "").getBytes(StandardCharsets.UTF_8));
+        ChatSession session2 = service.openApproval(42L,
+                new ApprovalRequest(TEST_THREAD_ID, "approval-2", "approve", 78L));
+        service.streamAndPersistForApproval(session2, new CapturingSink(), "approve");
+        ArgumentCaptor<QueryHistory> captor2 = ArgumentCaptor.forClass(QueryHistory.class);
+        verify(historyMapper).updateById(captor2.capture());
+        assertThat(captor2.getValue().getStatus()).isEqualTo(QueryHistory.STATUS_FAILED);
+        assertThat(captor2.getValue().getErrorCode()).isEqualTo("llm_insufficient_balance");
+    }
+
+    @Test
+    @DisplayName("W5 §8-⑰ 链式审批：恢复轮又停在新 interrupt → 行保持 status=4 + pending_saved 续接")
+    void approvalChainedInterruptKeepsPending() {
+        QueryHistory original = pendingRow(79L);
+        doReturn(original).when(historyMapper).selectById(79L);
+        upstreamApprovalStream(String.join("\n",
+                "event: delta",
+                "data: {\"text\":\"第一条已执行\"}",
+                "",
+                "event: pending_approval",
+                "data: {\"approvalId\":\"a2\",\"sql\":\"SELECT 2\",\"latencyMs\":600,\"tokens\":{\"input\":20,\"output\":4}}",
+                "").getBytes(StandardCharsets.UTF_8));
+        ChatSession session = service.openApproval(42L,
+                new ApprovalRequest(TEST_THREAD_ID, "approval-1", "approve", 79L));
+        CapturingSink sink = new CapturingSink();
+        service.streamAndPersistForApproval(session, sink, "approve");
+
+        ArgumentCaptor<QueryHistory> captor = ArgumentCaptor.forClass(QueryHistory.class);
+        verify(historyMapper).updateById(captor.capture());
+        QueryHistory updated = captor.getValue();
+        assertThat(updated.getStatus()).isEqualTo(QueryHistory.STATUS_PENDING); // 保持待审批
+        assertThat(updated.getErrorCode()).isNull();
+        assertThat(updated.getLatencyMs()).isEqualTo(700); // 100+600 照常累加
+        // pending_saved 续接下一张审批卡（historyId 不变），普通 saved 不出现
+        assertThat(sink.lines.subList(sink.lines.size() - 3, sink.lines.size()))
+                .containsExactly("event: pending_saved", "data: {\"historyId\":79}", "");
+        assertThat(sink.lines).noneMatch("event: saved"::equals);
+    }
+
+    @Test
+    @DisplayName("W5：openApproval 前置校验——decision 白名单/归属 404/状态幂等 409/限流并发复用")
+    void openApprovalValidations() {
+        // decision 白名单（@Valid 正则外的服务端兜底）
+        assertThatThrownBy(() -> service.openApproval(42L, new ApprovalRequest(TEST_THREAD_ID, "a", "edit", 77L)))
+                .isInstanceOf(BizException.class)
+                .satisfies(e -> {
+                    BizException biz = (BizException) e;
+                    assertThat(biz.code()).isEqualTo("approval_bad_decision");
+                    assertThat(biz.httpStatus()).isEqualTo(422);
+                });
+        assertThat(gate.inFlight()).isEqualTo(0);
+
+        // 归属：非本人行一律 404（越权红线 §1.7，不泄露存在性）
+        QueryHistory others = pendingRow(77L);
+        others.setUserId(43L);
+        doReturn(others).when(historyMapper).selectById(77L);
+        assertThatThrownBy(() -> service.openApproval(42L, approvalReq("approve")))
+                .isInstanceOf(BizException.class)
+                .satisfies(e -> assertThat(((BizException) e).code()).isEqualTo("history_not_found"));
+
+        // 幂等：行不在待审批态 → 409 approval_not_found（双击批准在 Java 侧的第二击兜底）
+        QueryHistory done = pendingRow(77L);
+        done.setStatus(QueryHistory.STATUS_SUCCESS);
+        doReturn(done).when(historyMapper).selectById(77L);
+        assertThatThrownBy(() -> service.openApproval(42L, approvalReq("approve")))
+                .isInstanceOf(BizException.class)
+                .satisfies(e -> {
+                    BizException biz = (BizException) e;
+                    assertThat(biz.code()).isEqualTo("approval_not_found");
+                    assertThat(biz.httpStatus()).isEqualTo(409);
                 });
         assertThat(gate.inFlight()).isEqualTo(0);
     }

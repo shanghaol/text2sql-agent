@@ -3,11 +3,13 @@ import { computed } from 'vue'
 import { marked } from 'marked'
 import DOMPurify from 'dompurify'
 import ToolIndicator from './ToolIndicator.vue'
+import ApprovalCard from './ApprovalCard.vue'
 
 const props = defineProps({
   msg: { type: Object, required: true },
 })
-defineEmits(['feedback'])
+// feedback：点赞/点踩；approve/reject：HITL 审批决策（W5 §3.7，ChatView 决定如何发请求）
+defineEmits(['feedback', 'approve', 'reject'])
 
 const html = computed(() => {
   try {
@@ -21,9 +23,16 @@ const html = computed(() => {
 <template>
   <div class="bubble-row" :class="msg.role">
     <div class="bubble" :class="msg.role">
-      <!-- 助手消息：工具指示行 → markdown 正文 → 状态/反馈区 -->
+      <!-- 助手消息：工具指示行 → 审批卡 → markdown 正文 → 状态/反馈区 -->
       <template v-if="msg.role === 'assistant'">
         <ToolIndicator v-for="(t, i) in msg.tools" :key="i" :tool="t" />
+        <!-- W5 HITL：待确认 SQL 的审批卡（done 后 resolved → 退场） -->
+        <ApprovalCard
+          v-if="msg.pending && !msg.pending.resolved"
+          :pending="msg.pending"
+          @approve="$emit('approve', msg)"
+          @reject="$emit('reject', msg)"
+        />
         <div v-if="msg.text" class="md" v-html="html" />
         <div v-if="msg.streaming" class="cursor">▍</div>
 

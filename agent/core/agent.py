@@ -18,6 +18,13 @@ get_chat_model 按 sha256(key)[:16]+模型名 LRU 缓存 ChatDeepSeek 实例—�
 **绝不改为"全局单例 client、每请求换 api_key"**：openai SDK 的 api_key 在
 client 构造时绑定，并发下换 key 是数据竞争，两个用户的请求可能带上对方的
 key——那是安全事故不是性能问题。
+
+W5 改造（HITL 设计 §3.3）：build_agent 增加 hitl 参数（默认 False）。hitl=True 时
+注入 HumanInTheLoopMiddleware——只有 execute_readonly_sql 需要审批
+（interrupt_on 名单外如 list_tables 自动放行），停车点在工具执行前，
+resume 用 Command({"resume": {"decisions": [...]}}) 原地续跑（§3.5）。
+hitl=False 时**不传 middleware 参数**，构造路径与 W4 逐字节等价
+（CLI / 评测 / W4 行为回归零变化，条件传参模式与 api_key 同款）。
 """
 
 import hashlib
@@ -26,6 +33,7 @@ from collections import OrderedDict
 from collections.abc import Sequence
 
 from langchain.agents import create_agent
+from langchain.agents.middleware import HumanInTheLoopMiddleware
 from langchain_core.messages import HumanMessage
 from langchain_deepseek import ChatDeepSeek
 from langgraph.checkpoint.memory import InMemorySaver
@@ -195,7 +203,19 @@ def get_chat_model(api_key: str | None) -> ChatDeepSeek:
     return model
 
 
-def build_agent(system_prompt: str, api_key: str | None = None):
+def _hitl_sql_description(tool_call: dict, state, runtime) -> str:
+    """interrupt 载荷里 action_request 的 description（前端审批卡/审计用）。
+
+    2026-10-11 实测（langchain 1.4.3）：description 是 interrupt_on 每工具配置里的字段
+    （str 或 callable），callable 签名 (tool_call, state, runtime)——不是 middleware
+    构造器的 kwarg（构造器只有 description_prefix）。
+    """
+    args = tool_call.get("args") or {}
+    sql = args.get("sql") if isinstance(args, dict) else None
+    return f"Agent 请求执行 SQL，等待人工确认：\n{sql if isinstance(sql, str) and sql else '（未提供 SQL）'}"
+
+
+def build_agent(system_prompt: str, api_key: str | None = None, hitl: bool = False):
     """组装并返回一个带会话记忆的 Text-to-SQL Agent。
 
     组成部分：
@@ -206,12 +226,30 @@ def build_agent(system_prompt: str, api_key: str | None = None):
     - system_prompt：调用方传入（静态骨架 + 本轮动态检索注入）
     - checkpointer：模块级单例，保存对话历史让 Agent 记住上下文；
       调用时通过 config={"configurable": {"thread_id": ...}} 区分不同会话
+    - middleware（hitl=True 才传，W5 §3.3）：HumanInTheLoopMiddleware 在
+      execute_readonly_sql 执行前中断等人工批准/拒绝；list_tables 不在名单
+      自动放行。不给 edit/respond 决策——编辑 SQL 超出 W5 范围（§9-1 备选）。
+      hitl=False 时绝不传 middleware 参数（与 W4 构造路径逐字节等价）。
     """
     model = get_chat_model(api_key)
+    kwargs: dict = {}
+    if hitl:
+        kwargs["middleware"] = [
+            HumanInTheLoopMiddleware(
+                interrupt_on={
+                    "execute_readonly_sql": {
+                        # allowed_decisions 必须非空（middleware 构造器校验，空列表 ValueError）
+                        "allowed_decisions": ["approve", "reject"],
+                        "description": _hitl_sql_description,
+                    }
+                }
+            )
+        ]
     agent = create_agent(
         model=model,
         tools=[execute_readonly_sql, list_tables],
         system_prompt=system_prompt,
         checkpointer=get_checkpointer(),
+        **kwargs,
     )
     return agent

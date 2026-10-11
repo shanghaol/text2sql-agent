@@ -33,7 +33,7 @@ class PreparedTurn:
 
 
 def prepare_turn(
-    question: str, thread_key: str, api_key: str | None = None, top_n: int | None = None
+    question: str, thread_key: str, api_key: str | None = None, top_n: int | None = None, hitl: bool = False
 ) -> PreparedTurn:
     """一轮对话的公共前半程：检索 query 拼接 → 混合检索 → prompt 组装 → build_agent。
 
@@ -52,10 +52,15 @@ def prepare_turn(
     top_n：检索注入条数，None（默认）用 config.RETRIEVER_TOP_N——CLI 与
     FastAPI 都不传此参；仅评测 runner 把 --top-n 消融入口透传进来
     （W3 的 --top-n 0 对照行 / W6 消融依赖它，属 runner 既有能力非新行为）。
+
+    hitl：W5 §3.8——开关是请求域的（FastAPI 从 X-User-HITL 头读出后透传），
+    默认 False 时 build_agent 不传 middleware 参数，CLI/评测组装路径零变化。
+    注意：resume 轮不走本函数（W5 §3.5 恢复轮组装口径——不重跑检索，
+    直接 build_agent(build_system_prompt(entry.context_block)) 后 Command(resume)）。
     """
     checkpointer = get_checkpointer()
     previous_question = previous_human_message(checkpointer, {"configurable": {"thread_id": thread_key}})
     retrieval_query = f"{previous_question}\n{question}".strip() if previous_question else question
     chunks = get_retriever().search(retrieval_query, top_n=top_n if top_n is not None else RETRIEVER_TOP_N)
-    agent = build_agent(build_system_prompt(format_context_block(chunks)), api_key=api_key)
+    agent = build_agent(build_system_prompt(format_context_block(chunks)), api_key=api_key, hitl=hitl)
     return PreparedTurn(agent, {"configurable": {"thread_id": thread_key}}, chunks, retrieval_query)

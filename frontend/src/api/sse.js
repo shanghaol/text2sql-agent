@@ -76,17 +76,20 @@ function adaptEvent({ event, data }) {
  * - 用户停止：AbortError 原样上抛，由调用方标记"已停止"
  * - 网络中断：抛 BizError('network_error')，已收文本由调用方保留
  * - baseUrl 供 node 脚本直连后端联调使用，浏览器内为默认同源 ''
+ * - path/body：W5 §3.7——审批恢复流复用同一解析器：path='/api/chat/approval' +
+ *   body={threadId, approvalId, decision, historyId}；缺省时按 /api/chat 的
+ *   {question, threadId} 组包（解析器与事件适配零变化）
  */
-export async function chatSSE({ question, threadId, token, onEvent, signal, baseUrl = '' }) {
+export async function chatSSE({ question, threadId, token, onEvent, signal, baseUrl = '', path = '/api/chat', body = null }) {
   let res
   try {
-    res = await fetch(`${baseUrl}/api/chat`, {
+    res = await fetch(`${baseUrl}${path}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({ question, threadId }),
+      body: JSON.stringify(body ?? { question, threadId }),
       signal,
     })
   } catch (e) {

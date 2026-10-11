@@ -4,6 +4,8 @@ import java.io.InputStream;
 import java.net.http.HttpResponse;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import com.shanghl.text2sql.entity.QueryHistory;
+
 /**
  * 一次对话代理的会话句柄：持有上游 SSE 流与并发闸名额。
  * close() 幂等（AtomicBoolean 防重）：关上游 InputStream（TCP 层向 Python 传 FIN/RST，
@@ -17,16 +19,19 @@ public final class ChatSession implements AutoCloseable {
     private final long startMs;
     private final HttpResponse<InputStream> upstream;
     private final ConcurrencyGate gate;
+    /** W5 HITL：审批流的原 query_history 行（status=4，openApproval 已校验归属）；普通对话流为 null。 */
+    private final QueryHistory pendingHistory;
     private final AtomicBoolean closed = new AtomicBoolean(false);
 
     ChatSession(long userId, String threadId, String question, long startMs,
-                HttpResponse<InputStream> upstream, ConcurrencyGate gate) {
+                HttpResponse<InputStream> upstream, ConcurrencyGate gate, QueryHistory pendingHistory) {
         this.userId = userId;
         this.threadId = threadId;
         this.question = question;
         this.startMs = startMs;
         this.upstream = upstream;
         this.gate = gate;
+        this.pendingHistory = pendingHistory;
     }
 
     public long userId() { return userId; }
@@ -34,6 +39,7 @@ public final class ChatSession implements AutoCloseable {
     public String question() { return question; }
     public long startMs() { return startMs; }
     HttpResponse<InputStream> upstream() { return upstream; }
+    QueryHistory pendingHistory() { return pendingHistory; }
 
     @Override
     public void close() {

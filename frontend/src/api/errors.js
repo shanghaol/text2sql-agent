@@ -25,6 +25,11 @@ export const ERROR_MESSAGES = {
   llm_insufficient_balance: 'DeepSeek 余额不足，请充值后重试',
   llm_rate_limited: '请求过于频繁，请稍后再试',
   llm_upstream_error: '模型服务暂时不可用，请重试',
+  // HITL 审批（W5 §3.4，与 Java ErrorCode/Python server 同码同语义）
+  approval_not_found: '审批不存在或已被处理（可能服务已重启），请重新提问',
+  approval_expired: '审批已超过 5 分钟未处理，请重新提问',
+  pending_approval_exists: '当前会话有等待确认的 SQL，请先处理审批卡片',
+  approval_bad_decision: '审批操作不合法',
   // 兜底
   bad_request: '请求参数不合法',
   forbidden: '无权执行该操作',

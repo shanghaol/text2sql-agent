@@ -100,6 +100,84 @@ describe('applyChatEvent：SSE 事件 → 消息状态（§3.2 契约）', () =>
   })
 })
 
+// W5 HITL（§3.7）：pending_approval / pending_saved 的登记与卡片生命周期
+describe('applyChatEvent：HITL 审批事件（W5 §3.7）', () => {
+  it('pending_approval：登记 msg.pending，streaming 保持 true（UI 显示"等待确认"）', () => {
+    let m = newAssistantMsg()
+    m = applyChatEvent(m, ev('tool', { name: 'execute_readonly_sql' }))
+    m = applyChatEvent(m, ev('delta', { text: '让我查一下' }))
+    m = applyChatEvent(m, ev('pending_approval', { approvalId: 'a-1', sql: 'SELECT SUM(amount) FROM payments' }))
+    expect(m.streaming).toBe(true) // 卡片渲染期间气泡仍处"进行中"
+    expect(m.pending).toEqual({
+      approvalId: 'a-1',
+      sql: 'SELECT SUM(amount) FROM payments',
+      historyId: null,
+      expired: false,
+      busy: false,
+      resolved: false,
+    })
+    expect(m.text).toBe('让我查一下') // 已收前言不清除
+  })
+
+  it('pending_saved：historyId 绑进 pending（批准请求原地 UPDATE 的依据）', () => {
+    let m = newAssistantMsg()
+    m = applyChatEvent(m, ev('pending_approval', { approvalId: 'a-1', sql: 'SELECT 1' }))
+    m = applyChatEvent(m, ev('pending_saved', { historyId: 77 }))
+    expect(m.pending.historyId).toBe(77)
+  })
+
+  it('恢复流 delta/done：气泡续写，done 后 pending 置 resolved（卡片退场）', () => {
+    let m = newAssistantMsg()
+    for (const e of [
+      ev('pending_approval', { approvalId: 'a-1', sql: 'SELECT 1' }),
+      ev('pending_saved', { historyId: 77 }),
+      ev('delta', { text: '，结果是 1。' }),
+      ev('done', { tokens: { input: 50, output: 5 }, latencyMs: 200 }),
+    ]) {
+      m = applyChatEvent(m, e)
+    }
+    expect(m.text).toBe('，结果是 1。')
+    expect(m.streaming).toBe(false)
+    expect(m.pending.resolved).toBe(true)
+    expect(m.pending.historyId).toBe(77)
+  })
+
+  it('恢复流 error：审批已消费无法重试 → pending 置 expired', () => {
+    let m = newAssistantMsg()
+    m = applyChatEvent(m, ev('pending_approval', { approvalId: 'a-1', sql: 'SELECT 1' }))
+    m = applyChatEvent(m, ev('error', { code: 'llm_insufficient_balance', message: 'DeepSeek 余额不足' }))
+    expect(m.pending.expired).toBe(true)
+    expect(m.errorCode).toBe('llm_insufficient_balance')
+  })
+
+  it('pending_saved 在无 pending 时安全忽略（异常序列防御）', () => {
+    const before = newAssistantMsg()
+    const snapshot = JSON.stringify(before)
+    const after = applyChatEvent(before, ev('pending_saved', { historyId: 1 }))
+    expect(JSON.stringify(after)).toBe(snapshot) // 纯函数：不修改入参
+  })
+
+  it('全流程串跑（HITL）：提问 → 停车 → 审批卡 → 批准 → 续写 → done → saved', () => {
+    let m = newAssistantMsg()
+    for (const e of [
+      ev('meta', { threadKey: 'u42:t1', model: 'deepseek-flash' }),
+      ev('delta', { text: '让我查一下' }),
+      ev('tool', { name: 'execute_readonly_sql' }),
+      ev('pending_approval', { approvalId: 'a-1', sql: "SELECT SUM(amount) FROM payments WHERE paid_at >= '2026-09-01'" }),
+      ev('pending_saved', { historyId: 7 }),
+      ev('delta', { text: '，上月 GMV 为 1603 万元。' }),
+      ev('done', { tokens: { input: 150, output: 15 }, latencyMs: 500 }),
+      ev('saved', { historyId: 7 }),
+    ]) {
+      m = applyChatEvent(m, e)
+    }
+    expect(m.text).toBe('让我查一下，上月 GMV 为 1603 万元。')
+    expect(m.historyId).toBe(7) // saved 与 pending_saved 同值：反馈按钮解锁
+    expect(m.pending.resolved).toBe(true)
+    expect(m.streaming).toBe(false)
+  })
+})
+
 // 线上 bug 回归锁（2026-10-11）：pushAssistant 必须返回 store 数组内的响应式代理，
 // 而非 push 进去的原始对象——原始引用上的 Object.assign 绕过 Pinia reactive 拦截，
 // 导致流式文本不渲染（光标闪烁直到流结束）。

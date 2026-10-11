@@ -11,11 +11,14 @@ CREATE TABLE IF NOT EXISTS `user` (
     id            BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '用户 ID',
     username      VARCHAR(32)     NOT NULL COMMENT '用户名（唯一登录标识，[A-Za-z0-9_]{4,32}）',
     password_hash VARCHAR(100)    NOT NULL COMMENT 'BCrypt 哈希（strength 10 产出 60 字符，留余量）',
+    hitl_enabled  TINYINT         NOT NULL DEFAULT 0 COMMENT 'SQL 执行前人工确认开关（W5 §3.8：0 关 / 1 开）',
     created_at    DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '注册时间',
     updated_at    DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
     UNIQUE KEY uk_user_username (username)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='用户表';
+-- 已存在库的补列走 deploy/w5_migrate_user_settings.sh 守护迁移（CREATE IF NOT EXISTS 不补列，
+-- MySQL 8.0 无 ADD COLUMN IF NOT EXISTS，W5 设计 §3.8 / §8-⑮）。
 
 -- 2. BYOK 密钥表（一人一行；列设计依据 §1.3/§1.4/§1.5）
 CREATE TABLE IF NOT EXISTS api_key (

@@ -9,7 +9,7 @@ import com.baomidou.mybatisplus.annotation.TableName;
 
 /**
  * 查询历史表实体（Java 代理流结束时写入，设计 §2.5 步骤 6）。
- * status：1 成功 / 2 失败 / 3 用户中断。
+ * status：1 成功 / 2 失败 / 3 用户中断 / 4 待审批（W5 HITL，§3.6；TINYINT 语义枚举，无 DDL 变更）。
  */
 @TableName("query_history")
 public class QueryHistory {
@@ -17,6 +17,8 @@ public class QueryHistory {
     public static final int STATUS_SUCCESS = 1;
     public static final int STATUS_FAILED = 2;
     public static final int STATUS_ABORTED = 3;
+    /** W5 HITL：轮次停在 interrupt 等待人工审批（pending_approval 事件分支落库，§3.6）。 */
+    public static final int STATUS_PENDING = 4;
 
     @TableId(type = IdType.AUTO)
     private Long id;

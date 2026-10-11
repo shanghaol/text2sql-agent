@@ -4,6 +4,9 @@
  * 工具事件规则（与 agent/server.py 事件契约对齐）：
  * - 起始 tool 事件 {"name"}：同名只保留一条"正在查询…"指示行（去重，后端同轮本就只发一次）
  * - 完成 tool 事件 {"name","sql"}：更新同名指示行为可折叠"已执行 SQL"（默认收起）
+ * HITL 事件（W5 §3.7）：
+ * - pending_approval {approvalId, sql}：登记 msg.pending（审批卡渲染），streaming 保持 true
+ * - pending_saved {historyId}：把 historyId 绑进 pending（批准/拒绝时随请求带回原地 UPDATE）
  */
 import { defineStore } from 'pinia'
 import { messageFor } from '../api/errors'
@@ -28,6 +31,7 @@ export function newAssistantMsg() {
     historyId: null, // saved 事件注入；有值才显示点赞/点踩
     feedbackExpired: false, // 60s 窗口内未收到 saved
     feedback: null, // 1 赞 / 0 踩 / null 未评
+    pending: null, // W5 HITL：{approvalId, sql, historyId, expired, busy, resolved}
   }
 }
 
@@ -59,16 +63,34 @@ export function applyChatEvent(prev, ev) {
       }
       break
     }
+    case 'pending_approval':
+      // W5 §3.7：登记审批卡；streaming 保持 true（气泡仍处"进行中"，等用户决策）
+      m.pending = {
+        approvalId: d.approvalId ?? '',
+        sql: d.sql ?? '',
+        historyId: null, // pending_saved 到达后绑定
+        expired: false, // 409/410 或恢复流出错后置灰
+        busy: false, // 审批请求进行中（按钮 loading + 防双击）
+        resolved: false, // 恢复流 done 后置 true → 卡片隐藏（SQL 由工具指示行/历史页承载）
+      }
+      break
+    case 'pending_saved':
+      if (m.pending) m.pending = { ...m.pending, historyId: d.historyId ?? null }
+      break
     case 'done':
       m.streaming = false
       m.tokens = d.tokens || m.tokens
       m.latencyMs = d.latencyMs ?? m.latencyMs
       if (d.generatedSql) m.generatedSql = d.generatedSql
+      // 恢复轮收尾：审批已消费 → 卡片退场（工具指示行已展示"已执行 SQL"）
+      if (m.pending) m.pending = { ...m.pending, resolved: true }
       break
     case 'error':
       m.streaming = false
       m.errorCode = d.code || 'internal_error'
       m.errorMessage = messageFor(d.code, d.message)
+      // 恢复流出错（审批已被消费，无法重试）→ 卡片置灰引导重新提问
+      if (m.pending) m.pending = { ...m.pending, expired: true }
       break
     case 'saved':
       m.historyId = d.historyId ?? m.historyId

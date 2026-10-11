@@ -22,6 +22,7 @@ const STATUS_META = {
   1: { label: '成功', type: 'success' },
   2: { label: '失败', type: 'danger' },
   3: { label: '已中断', type: 'info' },
+  4: { label: '待审批', type: 'info' }, // W5 §9-5：灰标签；批准后正常化 / 拒绝后沿用 status=3 文案族
 }
 
 async function load() {
