@@ -185,6 +185,70 @@ def test_none_cells_equal_each_other():
 
 
 # ---------------------------------------------------------------------------
+# ③' 判定器 v2.1 回归（W6 设计 §1.1：无序比较排序键数值化分桶）
+# ---------------------------------------------------------------------------
+
+
+def test_v21_sort_key_numeric_order_fixes_false_negative():
+    """设计 §1.1 可复现假阴性用例（W3 审查 P2-1 的实锤）：
+
+    金标 {9.996, 11} vs 模型 {10, 11}（9.996 与 10 满足容差 max(0.005, 1e-3×10)=0.01）。
+    v2.0 两侧 str 排序 → 金标 [11, 9.996] vs 模型 [10, 11]，首对 (11 vs 10) 错配 →
+    误判 fail；v2.1 数值序为主键 → [9.996, 11] vs [10, 11] 逐位容差内相等 → pass。
+    """
+    gold = [(Decimal("9.996"),), (Decimal(11),)]
+    model = [(Decimal(10),), (Decimal(11),)]
+    assert rows_equal(gold, model, ordered=False)
+    verdict = judge_case(gold, model, ordered=False)
+    assert verdict["judge"] == "pass"
+    assert verdict["pass_via"] == "sql"
+
+
+def test_v21_sort_key_is_numeric_not_lexicographic():
+    """排序键形态自检：数值桶内 (0, Decimal, str)——数值序为主、str 仅在数值相等时
+    决胜（Decimal('1.0') 与 Decimal('1.00') 数值相等，str 决胜保证顺序确定）。
+    _row_sort_key 返回逐 cell 键组成的外层元组（一行一元组）。"""
+    from eval.judge import _row_sort_key
+
+    assert _row_sort_key([Decimal("9.996")]) == ((0, Decimal("9.996"), "9.996"),)
+    assert _row_sort_key([Decimal("1.0")])[0] < _row_sort_key([Decimal("1.00")])[0]  # str 决胜
+    assert _row_sort_key([Decimal(11)])[0] > _row_sort_key([Decimal("9.996")])[0]  # 数值序而非字典序
+    assert _row_sort_key(["武汉"]) == ((1, "武汉"),)
+    assert _row_sort_key([None]) == ((2, ""),)
+
+
+def test_v21_sort_key_nonfinite_does_not_raise():
+    """NaN/Infinity 不进数值序（Decimal 排序会抛 InvalidOperation），按 str 决胜——
+    含非有限值的多行结果集排序与无序比较不抛错（W6 §8-3 验证项）。"""
+    from eval.judge import _row_sort_key
+
+    rows = [[Decimal("NaN")], [Decimal(5)], [Decimal("-Infinity")], [Decimal("Infinity")]]
+    sorted_rows = sorted(rows, key=_row_sort_key)  # 不抛 InvalidOperation
+    assert len(sorted_rows) == 4
+    # 无序比较含 NaN 行：NaN 走恒等比较（_cells_equal 的非有限分支），判不等不炸
+    assert not rows_equal(
+        [(Decimal("NaN"),), (Decimal(1),)], [(Decimal(1),), (Decimal(2),)], ordered=False
+    )
+
+
+def test_v21_tolerance_rule_itself_unchanged():
+    """修复只动排序键，逐位比较仍走 _cells_equal 的容差公式（设计 §1.1 红线）：
+    0.0775 vs 0.0886（陷阱间距）依然判不等，容差不放行陷阱值。"""
+    assert not rows_equal([(Decimal("0.0775"),)], [(Decimal("0.0886"),)], ordered=False)
+    assert not rows_equal(
+        [(Decimal("0.0886"),), (Decimal(1),)], [(Decimal("0.0775"),), (Decimal(2),)], ordered=False
+    )
+
+
+def test_v21_multiset_with_mixed_formats_passes():
+    """等值不同格式的多行无序集合（v2.0 假阴性的泛化形态）：金标带小数尾、
+    模型整数值（容差内相等）+ 共同行，修复后判 pass。"""
+    gold = [(Decimal("100.004"),), (Decimal(7),), (Decimal("-2.5"),)]
+    model = [(Decimal("-2.5"),), (Decimal(100),), (Decimal("7.003"),)]
+    assert rows_equal(gold, model, ordered=False)
+
+
+# ---------------------------------------------------------------------------
 # ④ classify_failure / judge_case：错答模式三档 + error（§4.3 / §2.2）
 # ---------------------------------------------------------------------------
 
@@ -698,6 +762,48 @@ def test_load_dataset_standard_wrong_value_must_be_string(tmp_path: Path):
     path = _write_jsonl(tmp_path / "d.jsonl", [_valid_case(standard_wrong=[bad_entry])])
     with pytest.raises(ValueError, match="value"):
         load_dataset(path)
+
+
+# ---------------------------------------------------------------------------
+# ⑦' generalize_layer 可选字段的兼容与枚举校验（W6 §2.3 / §8-10）
+# ---------------------------------------------------------------------------
+
+
+def test_load_dataset_without_generalize_layer_still_loads(tmp_path: Path):
+    """旧格式文件（无该字段）加载不报错——向后兼容，缺失 = 不细分（旧行为）。"""
+    path = _write_jsonl(tmp_path / "d.jsonl", [_valid_case()])
+    assert "generalize_layer" not in load_dataset(path)[0]
+
+
+def test_load_dataset_generalize_layer_valid_enum_passes(tmp_path: Path):
+    path = _write_jsonl(
+        tmp_path / "d.jsonl",
+        [
+            _valid_case(generalize_layer="hit"),
+            _valid_case(id="EV-002", ordered=False, generalize_layer="near"),
+            _valid_case(id="EV-003", ordered=False, generalize_layer="far"),
+        ],
+    )
+    cases = load_dataset(path)
+    assert [c["generalize_layer"] for c in cases] == ["hit", "near", "far"]
+
+
+def test_load_dataset_generalize_layer_bad_enum_raises(tmp_path: Path):
+    path = _write_jsonl(tmp_path / "d.jsonl", [_valid_case(generalize_layer="middle")])
+    with pytest.raises(ValueError, match="generalize_layer"):
+        load_dataset(path)
+
+
+def test_load_multiturn_dataset_ignores_generalize_layer(tmp_path: Path):
+    """多轮数据集不带该字段（W6 §2.3 只约束单轮 EV 题）：无字段加载不受影响；
+    万一写了也按同一枚举校验（共享校验路径）。"""
+    path = _write_jsonl(tmp_path / "mt.jsonl", [_valid_mt_case()])
+    assert "generalize_layer" not in load_multiturn_dataset(path)[0]
+    bad = _write_jsonl(
+        tmp_path / "mt2.jsonl", [_valid_mt_case(generalize_layer="layer-x")]
+    )
+    with pytest.raises(ValueError, match="generalize_layer"):
+        load_multiturn_dataset(bad)
 
 
 def test_load_dataset_empty_file_raises(tmp_path: Path):

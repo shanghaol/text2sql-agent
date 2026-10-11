@@ -1,5 +1,11 @@
 """W3 评测管线的纯函数层：结果集判定、SQL 提取、评测集加载、指标小工具。
 
+判定器版本记号：**v2.1**（W6 设计 §1，2026-10-11）——v2（答案级回退）之上修复
+无序比较排序键的数值化分桶（`_row_sort_key`）：v2.0 对 Decimal 单元格用 str(cell)
+排序，字符串序与数值序不一致（'11' < '9.996'），金标与模型两侧等值数值格式不同
+（9.996 vs 10，容差内相等）且集合内还有其他行时两侧排序错位 → 假阴性。v2.1 起数值
+序为主键、str 仅做数值相等时的稳定决胜；此后所有 W6 数字均为 v2.1 口径。
+
 模块纪律（W3 设计 §2.1 / §2.4）：本模块 **不 import 任何 agent 包**，因此不触发
 MySQL / Chroma / embedding / API key 的任何加载——tests/test_eval_judge.py 在
 无 MySQL、无 key 的裸机上全绿（延续 W1/W2 的默认套件原则）。
@@ -84,17 +90,28 @@ def _cells_equal(a, b) -> bool:
 
 
 def _row_sort_key(row: list) -> tuple:
-    """无序比较的排序键：给混合类型（Decimal/str/None）一个确定性全序。
+    """无序比较的排序键（v2.1，W6 设计 §1.1）：给混合类型（Decimal/str/None）一个
+    确定性全序，且 Decimal 桶内以**数值序**为主键。
 
-    等值不同格式（如 Decimal('1.0') vs Decimal('1.00')）的字符串形式不同、
-    排序位置可能错开，但逐位比较走 _cells_equal 的容差，等值仍会判等——
-    多重集合相等的判定不受排序键形态影响。类型标签分桶避免 Decimal 与 str
-    之间的 TypeError（同一列金标是 Decimal、模型是 str 时仍能排序）。
+    v2.0 假阴性缺陷：Decimal 分支返回 (0, str(cell))，字符串序 ≠ 数值序——
+    金标 {9.996, 11} str 排序为 [11, 9.996]、模型 {10, 11} 数值与 str 序同为
+    [10, 11]，首对错配 (11 vs 10) → 把容差内等值的多重集合判 fail。v2.1 修复为
+    (0, cell, str(cell))：数值序为主，str 仅在数值相等（Decimal('1.0') vs
+    Decimal('1.00')）时保证顺序确定。
+
+    语义注释（设计 §1.1 被否备选二的拍板结论）：容差"相等"不满足传递性，容差意义下
+    的多重集合相等在数学上没有良定义；数值排序后逐位配对即该语义下的规范操作
+    （greedy matching）。本项目陷阱值与金标差异 ≥20%、容差 1e-3 相对量级，greedy
+    即最优。类型标签分桶（0/1/2）保持不变——同一列金标是 Decimal、模型是 str 时
+    仍能排序不抛 TypeError（NaN/Inf 不进数值序，Decimal 排序会抛 InvalidOperation，
+    按 str 决胜）。
     """
 
     def key(cell):
         if isinstance(cell, Decimal):
-            return (0, str(cell))
+            if cell.is_finite():
+                return (0, cell, str(cell))  # 数值序为主；str 只在数值相等时做稳定决胜
+            return (0, Decimal(0), str(cell))  # NaN/Inf 按决胜，恒相等键避免比较抛错
         if isinstance(cell, str):
             return (1, cell)
         return (2, "" if cell is None else str(cell))
@@ -433,6 +450,10 @@ _MULTITURN_REQUIRED = (
 _QUESTION_TYPES = frozenset(
     {"single_table", "multi_join", "aggregation", "time_window", "glossary_trap"}
 )
+# W6 §2.3 分层字段：示例层（hit，EV-001~011 有同款示例）/ 近示例（near，可"改窗口/
+# 改维度"直接套某条 QA 的结构）/ 远示例（far，须靠 schema+glossary 组合推理）。
+# 可选字段——旧格式文件（无该字段）加载不报错；出现时必须是三枚举之一。
+_GENERALIZE_LAYERS = frozenset({"hit", "near", "far"})
 _SINGLE_ID_RE = re.compile(r"^EV-\d{3}$")
 _MULTITURN_ID_RE = re.compile(r"^MT-\d{2}$")
 
@@ -467,7 +488,8 @@ def _load_jsonl(path: Path) -> list[dict]:
 
 
 def _validate_common_fields(case: dict, where: str, required: tuple[str, ...]) -> None:
-    """两类评测集共享的校验：必填字段 / ordered 布尔 / expected_chunks / standard_wrong。"""
+    """两类评测集共享的校验：必填字段 / ordered 布尔 / expected_chunks / standard_wrong /
+    generalize_layer 枚举（W6 §2.3，可选字段）。"""
     missing = [field for field in required if field not in case]
     if missing:
         raise DatasetSchemaError(
@@ -476,6 +498,14 @@ def _validate_common_fields(case: dict, where: str, required: tuple[str, ...]) -
 
     if not isinstance(case["ordered"], bool):
         raise DatasetSchemaError(f"{where} 的 ordered 必须是布尔值 true/false（人工标注的结果集有序标志）")
+
+    # W6 §2.3：generalize_layer 可选（缺失 = 不细分，旧行为）；出现时枚举校验 hit/near/far
+    layer = case.get("generalize_layer")
+    if layer is not None and layer not in _GENERALIZE_LAYERS:
+        legal = " / ".join(sorted(_GENERALIZE_LAYERS))
+        raise DatasetSchemaError(
+            f"{where} 的 generalize_layer 非法枚举：{layer!r}（合法值：{legal}；W6 §2.3 分层字段）"
+        )
 
     expected = case["expected_chunks"]
     if not isinstance(expected, list) or not expected:

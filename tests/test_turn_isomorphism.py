@@ -68,14 +68,41 @@ def _chunks_from_ids(ids: list[str]) -> list[RetrievedChunk]:
 
 
 class FakeRetriever:
-    """按预播种顺序返回 chunks，并记录每次 search 的 (query, top_n)。"""
+    """按预播种顺序返回 chunks，并记录每次 search 的 (query, top_n)。
+
+    签名带 W6 消融新参（默认值与真实 search 同款）——参数化分支的透传测试
+    复用本类时不会 TypeError；默认分支的既有断言仍只看 (query, top_n)。
+    """
 
     def __init__(self, chunks: list[RetrievedChunk]):
         self._chunks = chunks
         self.calls: list[tuple[str, int]] = []
+        self.kwargs_calls: list[dict] = []  # 全量 kwargs（参数化分支断言面）
 
-    def search(self, query: str, doc_types=None, top_k_each: int = 20, top_n: int = 8):
+    def search(
+        self,
+        query: str,
+        doc_types=None,
+        top_k_each: int = 20,
+        top_n: int = 8,
+        enable_bm25: bool = True,
+        enable_dense: bool = True,
+        reranker=None,
+        rerank_pool: int = 0,
+    ):
         self.calls.append((query, top_n))
+        self.kwargs_calls.append(
+            {
+                "query": query,
+                "doc_types": doc_types,
+                "top_k_each": top_k_each,
+                "top_n": top_n,
+                "enable_bm25": enable_bm25,
+                "enable_dense": enable_dense,
+                "reranker": reranker,
+                "rerank_pool": rerank_pool,
+            }
+        )
         return list(self._chunks)
 
 
@@ -248,3 +275,113 @@ def test_prompt_snapshot_against_committed_file():
     expected = SNAPSHOT_FILE.read_text(encoding="utf-8")
     actual = build_system_prompt(format_context_block(_SNAPSHOT_CHUNKS))
     assert actual == expected
+
+
+# ---------------------------------------------------------------------------
+# W6 消融入口（设计 §3.4）：retrieval_opts 透传 + 默认路径同构 + get_retriever(k) 缓存
+# ---------------------------------------------------------------------------
+
+
+def test_retrieval_opts_none_calls_bare_get_retriever(monkeypatch, gate_env):
+    """同构红线的显式锁：opts=None 时 get_retriever 必须无参调用——
+    本测试的替身函数签名一个参数都不收，带参调用立刻 TypeError。"""
+    def bare_get_retriever():  # 无参签名：retrieval_opts 分支若误入，这里直接炸
+        return gate_env["retriever_holder"]["retriever"]
+
+    monkeypatch.setattr(turn_mod, "get_retriever", bare_get_retriever)
+    gate_env["retriever_holder"]["retriever"] = FakeRetriever([])
+    pt = turn_mod.prepare_turn("问题", "t-iso")
+    assert pt.retrieval_query == "问题"
+    assert gate_env["retriever_holder"]["retriever"].calls == [("问题", RETRIEVER_TOP_N)]
+
+
+def test_retrieval_opts_passthrough_full_kwargs(monkeypatch, gate_env):
+    """参数化分支：opts 逐字段透传 search；rrf_k 透传 get_retriever（§3.4）。"""
+    k_seen: list = []
+
+    def get_retriever_with_k(k=None):  # 与真实签名同款（k=None 默认）
+        k_seen.append(k)
+        return gate_env["retriever_holder"]["retriever"]
+
+    monkeypatch.setattr(turn_mod, "get_retriever", get_retriever_with_k)
+    retriever = FakeRetriever([])
+    gate_env["retriever_holder"]["retriever"] = retriever
+
+    reranker = object()  # 透传即可见，钩子行为由 test_rag_retriever.py 覆盖
+    opts = turn_mod.RetrievalOptions(
+        rrf_k=10,
+        doc_types=["schema", "glossary"],
+        enable_bm25=False,
+        enable_dense=True,
+        rerank_pool=16,
+        reranker=reranker,
+    )
+    turn_mod.prepare_turn("问题", "t-ablation", retrieval_opts=opts)
+
+    assert k_seen == [10]
+    kwargs = retriever.kwargs_calls[-1]
+    assert kwargs == {
+        "query": "问题",
+        "doc_types": ["schema", "glossary"],
+        "top_k_each": 20,  # 未透传 → search 默认值（与线上同款）
+        "top_n": RETRIEVER_TOP_N,
+        "enable_bm25": False,
+        "enable_dense": True,
+        "reranker": reranker,
+        "rerank_pool": 16,
+    }
+
+
+def test_retrieval_opts_respects_explicit_top_n(monkeypatch, gate_env):
+    """opts 与 top_n 并用：--top-n 0（A 行）+ 消融开关的组合下 top_n 优先透传。"""
+    monkeypatch.setattr(turn_mod, "get_retriever", lambda k=None: gate_env["retriever_holder"]["retriever"])
+    retriever = FakeRetriever([])
+    gate_env["retriever_holder"]["retriever"] = retriever
+    opts = turn_mod.RetrievalOptions(rrf_k=10)
+    turn_mod.prepare_turn("问题", "t-mix", top_n=0, retrieval_opts=opts)
+    assert retriever.kwargs_calls[-1]["top_n"] == 0
+
+
+def test_retrieval_opts_defaults_are_online_defaults(monkeypatch, gate_env):
+    """RetrievalOptions 裸构造 = 线上默认（rrf_k=None/双路开/不重排）——
+    dataclass 默认值与 hybrid_retriever.search 默认值的一致性锁。"""
+    opts = turn_mod.RetrievalOptions()
+    assert opts.rrf_k is None
+    assert opts.doc_types is None
+    assert opts.enable_bm25 is True
+    assert opts.enable_dense is True
+    assert opts.rerank_pool == 0
+    assert opts.reranker is None
+
+
+def test_get_retriever_caches_by_k(monkeypatch):
+    """get_retriever(k=) 单例缓存（设计 §8-7）：None=默认 60 实例；异 k 另建、
+    同 k 复用。假 collection/embedder 隔离 fastembed 与 Chroma。"""
+    import agent.core.agent as agent_mod
+
+    built: list = []
+
+    class FakeHybridRetriever:
+        def __init__(self, collection, embedder, k: int = 60) -> None:
+            self.collection, self.embedder, self.k = collection, embedder, k
+            built.append(self)
+
+    monkeypatch.setattr(agent_mod, "HybridRetriever", FakeHybridRetriever)
+    monkeypatch.setattr(agent_mod, "get_collection", lambda: object())
+    monkeypatch.setattr(agent_mod, "BgeEmbedder", lambda model_name, cache_dir=None: object())
+    monkeypatch.setattr(agent_mod, "_retrievers", {})  # 隔离模块级缓存
+
+    default_first = agent_mod.get_retriever()
+    default_again = agent_mod.get_retriever()
+    assert default_first is default_again  # 同键（None）复用
+    assert len(built) == 1
+    assert default_first.k == 60  # None → HybridRetriever 默认 k（构造路径与现行同款）
+
+    k10_first = agent_mod.get_retriever(k=10)
+    k10_again = agent_mod.get_retriever(k=10)
+    assert k10_first is k10_again  # 同 k 复用
+    assert k10_first is not default_first  # 异 k 重建
+    assert k10_first.k == 10
+    assert len(built) == 2
+
+    assert agent_mod.get_retriever() is default_first  # 默认实例不被异 k 构建挤掉

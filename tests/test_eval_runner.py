@@ -323,6 +323,8 @@ def _make_args(multiturn: bool) -> argparse.Namespace:
     return argparse.Namespace(
         tag="ut", dataset=None, top_n=8, runs=1, limit=None, rerun=None,
         multiturn=multiturn, compare=None,
+        # W6 消融开关（§3.4；默认全关 = 线上默认路径）
+        rrf_k=None, no_bm25=False, no_dense=False, no_fewshot=False, rerank=False,
     )
 
 
@@ -420,8 +422,8 @@ def test_render_report_single_turn_fixed_structure():
     assert "双层指标" in report
     # P95 口径声明（§8-5）
     assert "method='inclusive'" in report
-    # 分层表（§1.3）与答案级列（§3.3 v2）
-    assert "有同款示例（EV-001~011，§1.3）" in report
+    # 分层表（W6 §2.3 三分：示例层/近示例/远示例）与答案级列（§3.3 v2）
+    assert "示例层（hit：EV-001~011 有同款示例，§1.3）" in report
     assert "SQL 级准确率" in report and "答案级准确率" in report
     # 双层指标 overall 行（SQL 级 + 答案级 + 差值说明）
     assert "（SQL 判过 1 ｜ 文本判过 0" in report
@@ -445,7 +447,7 @@ def test_render_report_multiturn_section():
     # 轮级注入明细可见（§2.7 每轮全量记录）
     assert "轮 1" in report and "轮 2" in report
     # MT 报告不出题型/分层表
-    assert "有同款示例（EV-001~011，§1.3）" not in report
+    assert "示例层（hit" not in report
 
 
 def test_render_report_multiturn_with_invoke_exception_record_does_not_crash():
@@ -655,3 +657,234 @@ def test_render_report_absorbed_section_only_when_nonempty():
     assert "## 自举语料命中" in with_hit
     assert "命中自举语料的题：EV-001（注入 qa_012+ 片：qa_pair:qa_012、qa_pair:qa_015）" in with_hit
     assert "NNN ≥ 012" in with_hit
+
+
+# ---------------------------------------------------------------------------
+# ⑦ W6 消融 CLI（§3.4）：参数解析 / opts 构建 / 实际生效参数记录 / Recall 动态标题
+# ---------------------------------------------------------------------------
+
+
+def test_parse_args_w6_ablation_flags(monkeypatch: pytest.MonkeyPatch):
+    """新开关全部可解析且默认关闭（默认路径与线上逐字节等价的前提）。"""
+    import sys
+
+    monkeypatch.setattr(
+        sys, "argv",
+        ["eval.run_eval", "--tag", "ablation_row",
+         "--rrf-k", "10", "--no-bm25", "--no-dense", "--no-fewshot", "--rerank"],
+    )
+    args = run_eval._parse_args()
+    assert args.rrf_k == 10
+    assert args.no_bm25 is True
+    assert args.no_dense is True
+    assert args.no_fewshot is True
+    assert args.rerank is True
+
+    monkeypatch.setattr(sys, "argv", ["eval.run_eval", "--tag", "plain"])
+    args = run_eval._parse_args()
+    assert args.rrf_k is None
+    assert args.no_bm25 is False
+    assert args.no_dense is False
+    assert args.no_fewshot is False
+    assert args.rerank is False
+    assert run_eval._build_retrieval_opts(args) is None  # 无开关 → None（同构红线）
+
+
+def test_effective_retrieval_config_default_matches_online():
+    """无开关：实际生效参数 = 线上默认（W3 同构口径的延续）。"""
+    cfg = run_eval.effective_retrieval_config(_make_args(multiturn=False))
+    assert cfg == {
+        "top_k_each": 20,
+        "rrf_k": 60,
+        "enable_bm25": True,
+        "enable_dense": True,
+        "doc_types": None,
+        "rerank": False,
+        "rerank_pool": 0,
+        "rerank_model": None,
+    }
+
+
+def test_effective_retrieval_config_reflects_ablation_flags():
+    """修硬编码谎报（§3.4）：--rrf-k 10 行的实际生效 rrf_k=10，不再是常量 60。"""
+    args = _make_args(multiturn=False)
+    args.rrf_k = 10
+    args.no_bm25 = True
+    args.no_fewshot = True
+    args.rerank = True
+    cfg = run_eval.effective_retrieval_config(args)
+    assert cfg["rrf_k"] == 10
+    assert cfg["enable_bm25"] is False
+    assert cfg["enable_dense"] is True
+    assert cfg["doc_types"] == ["schema", "glossary"]
+    assert cfg["rerank"] is True
+    assert cfg["rerank_pool"] == 16  # RERANK_POOL = 2×top_n 起点（设计 §4.2）
+    assert cfg["rerank_model"] == "BAAI/bge-reranker-v2-m3"
+
+
+def test_build_retrieval_opts_maps_flags(monkeypatch: pytest.MonkeyPatch):
+    """开关 → RetrievalOptions 映射；--rerank 构建真实 reranker 实例 + pool=16。"""
+    from agent.rag import rerank as rerank_mod
+
+    monkeypatch.setattr(rerank_mod, "SILICONFLOW_API_KEY", "sk-ut-key")
+    args = _make_args(multiturn=False)
+    args.rrf_k = 10
+    args.no_fewshot = True
+    args.rerank = True
+    opts = run_eval._build_retrieval_opts(args)
+    assert opts is not None
+    assert opts.rrf_k == 10
+    assert opts.doc_types == ["schema", "glossary"]
+    assert opts.enable_bm25 is True
+    assert opts.enable_dense is True
+    assert opts.rerank_pool == 16
+    assert isinstance(opts.reranker, rerank_mod.SiliconFlowReranker)
+    opts.reranker.close()
+
+
+def test_build_retrieval_opts_rerank_without_key_raises(monkeypatch: pytest.MonkeyPatch):
+    """--rerank 无 key：启动期抛 ValueError（中文指引），不跑一半才在第一题上炸。"""
+    from agent.rag import rerank as rerank_mod
+
+    monkeypatch.setattr(rerank_mod, "SILICONFLOW_API_KEY", "")
+    args = _make_args(multiturn=False)
+    args.rerank = True
+    with pytest.raises(ValueError, match="SILICONFLOW"):
+        run_eval._build_retrieval_opts(args)
+
+
+def test_build_retrieval_opts_none_when_no_flags():
+    """同构红线：无任一开关 → opts=None → prepare_turn 走线上默认分支。"""
+    assert run_eval._build_retrieval_opts(_make_args(multiturn=False)) is None
+
+
+def test_render_report_recall_title_is_dynamic():
+    """Recall 标题动态化（§3.4）：D2 行（top_n=12）的指标名必须是 Recall@12。"""
+    args = _make_args(multiturn=False)
+    args.top_n = 12
+    report = run_eval._render_report(
+        args, Path("eval/dataset/eval_v1.jsonl"), _single_records(),
+        started_at="2026-10-11 00:00:00",
+    )
+    assert "### Recall@12" in report
+    assert "### Recall@8" not in report
+
+
+def test_render_report_retrieval_line_uses_effective_rrf_k():
+    """修谎报：--rrf-k 10 行的报告检索参数行如实写 rrf_k=10（不再硬编码 60）。"""
+    args = _make_args(multiturn=False)
+    args.rrf_k = 10
+    report = run_eval._render_report(
+        args, Path("eval/dataset/eval_v1.jsonl"), _single_records(),
+        started_at="2026-10-11 00:00:00",
+    )
+    assert "- 检索参数：rrf_k=10" in report
+    assert "RRF k=60（与线上 hybrid_retriever 默认一致" not in report  # 谎报行不再出现
+
+    # 默认行（无开关）文案与 W3 逐字节一致
+    default_report = run_eval._render_report(
+        _make_args(multiturn=False), Path("eval/dataset/eval_v1.jsonl"), _single_records(),
+        started_at="2026-10-11 00:00:00",
+    )
+    assert (
+        "- 检索参数：top_k_each=20，RRF k=60（与线上 hybrid_retriever 默认一致，§2.3 同构）"
+        in default_report
+    )
+
+
+def test_corpus_commit_is_short_hash_or_unknown():
+    """git HEAD 短哈希（§3.5 冻结证据链）；git 不可用降级 "unknown" 不炸。"""
+    commit = run_eval._corpus_commit()
+    assert commit == "unknown" or (len(commit) >= 7 and all(c in "0123456789abcdef" for c in commit))
+
+
+def test_build_detail_config_records_effective_retrieval_and_corpus():
+    """detail config 落盘面（§3.4/§3.5）：实际生效检索参数 + corpus_commit + 语料片数——
+    summarize_ablation 冻结断言的消费面。"""
+    args = _make_args(multiturn=False)
+    args.rrf_k = 10
+    config = run_eval._build_detail_config(
+        args,
+        Path("eval/dataset/eval_v1.jsonl"),
+        started_at="2026-10-11 00:00:00",
+        retrieval_cfg=run_eval.effective_retrieval_config(args),
+        corpus_counts={"schema": 6, "glossary": 11, "qa_pair": 11},
+    )
+    assert config["retrieval"]["rrf_k"] == 10  # 如实记录，不谎报 60
+    assert config["retrieval"]["rerank"] is False
+    assert config["corpus"]["counts"] == {"schema": 6, "glossary": 11, "qa_pair": 11}
+    assert config["corpus"]["total"] == 28
+    assert config["corpus"]["commit"]  # 非空（短哈希或 "unknown"）
+    assert config["replay_max_rows"] == run_eval.REPLAY_MAX_ROWS
+
+
+# ---------------------------------------------------------------------------
+# ⑦ W6 §2.3 三分层表（hit/near/far）：记录字段、归层规则、旧明细兼容
+# ---------------------------------------------------------------------------
+
+
+def test_finalize_record_persists_generalize_layer():
+    """W6 §2.3 additive：分层字段随记录落盘，detail JSON 与报告消费。"""
+    replayer = FakeReplayer({_CASE["gold_sql"]: _GOLD_ROWS, "SELECT 1": _GOLD_ROWS})
+    case = dict(_CASE, generalize_layer="far")
+    record = run_eval._finalize_record(
+        case=case, run_idx=1, replayer=replayer,
+        sql_calls=[{"seq": 1, "sql": "SELECT 1"}],
+        injected_ids=[], latency_s=1.0,
+        tokens={"input": 0, "output": 0, "total": 0, "cache_read": 0},
+    )
+    assert record["generalize_layer"] == "far"
+
+
+def test_layer_of_hit_by_id_rule_near_far_by_field():
+    """hit 由 id 前缀规则判定（EV-001~011，旧明细无字段也归层）；
+    near/far 只认 generalize_layer 字段；EV-012+ 缺字段 → None（未分层）。"""
+    assert run_eval._layer_of({"id": "EV-001"}) == "hit"
+    assert run_eval._layer_of({"id": "EV-011"}) == "hit"
+    assert run_eval._layer_of({"id": "EV-001", "generalize_layer": "far"}) == "hit"  # id 规则优先
+    assert run_eval._layer_of({"id": "EV-012", "generalize_layer": "near"}) == "near"
+    assert run_eval._layer_of({"id": "EV-050", "generalize_layer": "far"}) == "far"
+    assert run_eval._layer_of({"id": "EV-012"}) is None  # 旧 30 条明细（v2.1 前）无字段
+    assert run_eval._layer_of({"id": "MT-01"}) is None  # 多轮不分层
+
+
+def test_layer_groups_three_rows_plus_legacy_fallback():
+    records = [
+        {"id": "EV-001", "generalize_layer": "hit"},
+        {"id": "EV-012", "generalize_layer": "near"},
+        {"id": "EV-013", "generalize_layer": "near"},
+        {"id": "EV-029", "generalize_layer": "far"},
+    ]
+    groups = dict(run_eval._layer_groups(records))
+    assert {r["id"] for r in groups["示例层（hit：EV-001~011 有同款示例，§1.3）"]} == {"EV-001"}
+    near_label = "近示例（near：泛化题，有同口径/同构 QA 可改窗口改维度套用，W6 §2.3）"
+    far_label = "远示例（far：泛化题，须 schema+glossary 组合推理，W6 §2.3）"
+    assert {r["id"] for r in groups[near_label]} == {"EV-012", "EV-013"}
+    assert {r["id"] for r in groups[far_label]} == {"EV-029"}
+    assert len(groups) == 3  # 全部记录都有字段 → 无兜底行
+
+    legacy = run_eval._layer_groups(records + [{"id": "EV-015"}])
+    assert any("未分层" in label for label, _ in legacy)
+
+
+def test_render_report_three_layer_table():
+    """W6 §2.3 分层表三分渲染：hit/near/far 三行都出现（additive，旧二分表退役）。"""
+    replayer = FakeReplayer({_CASE["gold_sql"]: _GOLD_ROWS, "SELECT 1": _GOLD_ROWS})
+    records = []
+    for cid, layer in (("EV-001", "hit"), ("EV-012", "near"), ("EV-029", "far")):
+        records.append(
+            run_eval._finalize_record(
+                case=dict(_CASE, id=cid, generalize_layer=layer),
+                run_idx=1, replayer=replayer,
+                sql_calls=[{"seq": 1, "sql": "SELECT 1"}],
+                injected_ids=[], latency_s=1.0,
+                tokens={"input": 0, "output": 0, "total": 0, "cache_read": 0},
+            )
+        )
+    report = run_eval._render_report(
+        _make_args(multiturn=False), Path("eval/dataset/eval_v1.jsonl"),
+        records, started_at="2026-10-11 00:00:00",
+    )
+    assert "示例层（hit：EV-001~011 有同款示例，§1.3）" in report
+    assert "近示例（near" in report
+    assert "远示例（far" in report

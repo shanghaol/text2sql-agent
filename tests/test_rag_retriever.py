@@ -393,3 +393,198 @@ def test_split_entries_last_entry_stops_at_h2_section():
     assert len(entries) == 2
     assert "内容B" in entries[1][2]
     assert "金标答案" not in entries[1][2]  # `## ` 章节被截掉
+
+
+# ---------------------------------------------------------------------------
+# ⑥ W6 消融入口（设计 §3.4/§4.2）：路开关 + rerank 钩子
+#    同构红线：新参全部默认值路径与现行逐字节等价（首测即锁）
+# ---------------------------------------------------------------------------
+
+
+class CountingEmbedder:
+    """包一层 FakeEmbedder 数 embed_query 调用次数——路开关的单路断言面。"""
+
+    def __init__(self, inner) -> None:
+        self.inner = inner
+        self.query_calls = 0
+
+    def embed_query(self, q: str) -> list[float]:
+        self.query_calls += 1
+        return self.inner.embed_query(q)
+
+    def embed(self, docs: list[str]) -> list[list[float]]:
+        return self.inner.embed(docs)
+
+
+class FakeReranker:
+    """mock 重排器：记录调用；reverse=True 时倒序返回（模拟"救回池尾片"）。"""
+
+    def __init__(self, reverse: bool = False, fail: bool = False) -> None:
+        self.calls: list[dict] = []
+        self.reverse = reverse
+        self.fail = fail
+
+    def rerank(
+        self, query: str, documents: list[str], top_n: int | None = None
+    ) -> list[tuple[int, float]]:
+        self.calls.append({"query": query, "documents": list(documents), "top_n": top_n})
+        if self.fail:
+            raise RuntimeError("mock rerank down")
+        order = list(range(len(documents)))
+        if self.reverse:
+            order.reverse()
+        pairs = [(i, 1.0 - i * 0.01) for i in order]
+        return pairs[:top_n] if top_n is not None else pairs
+
+
+@pytest.fixture()
+def spied_retriever(tmp_path: Path) -> tuple[HybridRetriever, CountingEmbedder]:
+    """带 embed_query 计数的检索器 fixture（语料同 MINI_CORPUS 六片）。"""
+    client = chromadb.PersistentClient(path=str(tmp_path / "chroma_spy"))
+    collection = client.get_or_create_collection(name="test_corpus_spy")
+    inner = FakeEmbedder()
+    spy = CountingEmbedder(inner)
+    collection.upsert(
+        ids=[doc_id for doc_id, _, _ in MINI_CORPUS],
+        embeddings=spy.embed([text for _, _, text in MINI_CORPUS]),
+        documents=[text for _, _, text in MINI_CORPUS],
+        metadatas=[meta for _, meta, _ in MINI_CORPUS],
+    )
+    return HybridRetriever(collection, spy), spy
+
+
+def test_search_new_params_defaults_are_byte_equivalent(retriever: HybridRetriever):
+    """同构红线锁：显式传全部默认新参 == 不传（id 与 rrf_score 逐位相等）。"""
+    for query in ("客单价怎么算", "订单 口径 示例", "上个月 GMV"):
+        plain = retriever.search(query)
+        explicit = retriever.search(
+            query, enable_bm25=True, enable_dense=True, reranker=None, rerank_pool=0
+        )
+        assert [(c.id, c.rrf_score) for c in plain] == [(c.id, c.rrf_score) for c in explicit]
+
+
+def test_search_bm25_only_skips_embedding(spied_retriever):
+    """纯 BM25（消融 B 行镜像：关向量路）：不调 embed_query，仍出结果。"""
+    retriever, spy = spied_retriever
+    results = retriever.search("客单价怎么算", enable_dense=False)
+    assert spy.query_calls == 0
+    assert results
+    assert all(isinstance(c, RetrievedChunk) for c in results)
+    # BM25 单路的相关性：与口径片共享分词的查询，该口径片排第一
+    assert results[0].id == "glossary:avg_order_value"
+
+
+def test_search_dense_only_skips_bm25(spied_retriever):
+    """纯向量（消融 C 行镜像：关 BM25 路）：embed_query 恰好一次，仍出结果。"""
+    retriever, spy = spied_retriever
+    results = retriever.search("客单价怎么算", enable_bm25=False)
+    assert spy.query_calls == 1
+    assert results
+    scores = [c.rrf_score for c in results]
+    assert scores == sorted(scores, reverse=True)
+
+
+def test_search_single_path_keeps_doc_types_filtering(spied_retriever):
+    """单路模式下沿用既有过滤语义：BM25 路分组跳过 / 向量路 where 过滤。"""
+    retriever, _ = spied_retriever
+    bm25_only = retriever.search("口径 分母", doc_types=["glossary"], enable_dense=False)
+    assert bm25_only and {c.doc_type for c in bm25_only} == {"glossary"}
+
+    dense_only = retriever.search("订单", doc_types=["qa_pair"], enable_bm25=False)
+    assert dense_only and {c.doc_type for c in dense_only} == {"qa_pair"}
+
+
+def test_search_single_path_on_empty_collection_returns_empty(tmp_path: Path):
+    client = chromadb.PersistentClient(path=str(tmp_path / "empty_single"))
+    collection = client.get_or_create_collection(name="empty_single")
+    retriever = HybridRetriever(collection, FakeEmbedder())
+    assert retriever.search("任何", enable_dense=False) == []
+    assert retriever.search("任何", enable_bm25=False) == []
+
+
+def test_search_both_paths_disabled_raises(retriever: HybridRetriever):
+    """双路全关=检索恒空，消融参数配错的信号——配置期就大声失败。"""
+    with pytest.raises(ValueError, match="不能同时为 False"):
+        retriever.search("任何", enable_bm25=False, enable_dense=False)
+
+
+def test_search_rerank_hook_off_by_default(spied_retriever):
+    """钩子默认关：reranker 存在但 rerank_pool=0 → 不重排，结果与普通 search 全等。"""
+    retriever, _ = spied_retriever
+    reranker = FakeReranker()
+    with_hook_off = retriever.search("订单 口径", reranker=reranker, rerank_pool=0)
+    plain = retriever.search("订单 口径")
+    assert reranker.calls == []
+    assert [(c.id, c.rrf_score) for c in with_hook_off] == [(c.id, c.rrf_score) for c in plain]
+
+
+def test_search_rerank_hook_pool_size_and_top_n(spied_retriever):
+    """钩子开启：候选池=rerank_pool 片、注入=top_n 片；重排分写入 rrf_score 位。"""
+    retriever, _ = spied_retriever
+    reranker = FakeReranker(reverse=True)
+    results = retriever.search("订单 口径 示例", top_n=3, reranker=reranker, rerank_pool=4)
+
+    assert len(reranker.calls) == 1
+    call = reranker.calls[0]
+    assert call["top_n"] == 3
+    assert len(call["documents"]) == 4  # 池=4（2×top_n 起点，设计 §4.2）
+    assert len(results) == 3
+    # reverse 重排：池内第 4 片升到第 1，且重排分（≈1.0）替换了 RRF 分（<0.033）
+    pool_ids = [c.id for c in retriever.search("订单 口径 示例", top_n=4)]
+    assert [c.id for c in results] == [pool_ids[3], pool_ids[2], pool_ids[1]]
+    assert [c.rrf_score for c in results] == [0.97, 0.98, 0.99]
+
+
+def test_search_rerank_hook_rescues_low_ranked_chunk(tmp_path: Path):
+    """rerank 的核心假设（发现 3）：RRF 排位低但语义相关的片被重排上位——
+    池必须大于注入数（pool=top_n 时只能换序救不回第 9-16 名）。"""
+    # 10 片同构语料：查询与全部共享"口径"，BM25 并列 → 稳定序即语料序
+    corpus = [
+        (f"glossary:g{i:02d}", {"doc_type": "glossary", "source_id": f"g{i}", "title": f"口径{i}", "table_name": ""},
+         f"口径说明第{i}号：某指标的分子与分母定义")
+        for i in range(10)
+    ]
+    client = chromadb.PersistentClient(path=str(tmp_path / "chroma_rescue"))
+    collection = client.get_or_create_collection(name="rescue_corpus")
+    embedder = FakeEmbedder()
+    collection.upsert(
+        ids=[d for d, _, _ in corpus],
+        embeddings=embedder.embed([t for _, _, t in corpus]),
+        documents=[t for _, _, t in corpus],
+        metadatas=[m for _, m, _ in corpus],
+    )
+    retriever = HybridRetriever(collection, embedder)
+
+    plain_top2 = [c.id for c in retriever.search("口径说明 某指标", top_n=2)]
+    reranker = FakeReranker(reverse=True)
+    reranked_top2 = [c.id for c in retriever.search("口径说明 某指标", top_n=2, reranker=reranker, rerank_pool=4)]
+
+    assert len(reranker.calls[0]["documents"]) == 4
+    assert set(plain_top2) != set(reranked_top2)  # 换序 + 救回池尾片
+    assert reranked_top2[0] not in plain_top2  # 池内第 4 名（普通 top-2 之外）被救到第 1
+
+
+def test_search_rerank_pool_larger_than_corpus(spied_retriever):
+    """pool=16 > 语料 6 片：池=全语料，reranker 收到 6 片（rrf_fuse 自然截断）。"""
+    retriever, _ = spied_retriever
+    reranker = FakeReranker()
+    retriever.search("订单", top_n=8, reranker=reranker, rerank_pool=16)
+    assert len(reranker.calls[0]["documents"]) == 6
+
+
+def test_search_rerank_failure_propagates_not_silent(spied_retriever):
+    """fail-closed（设计 §4.1）：rerank 挂了向上抛，不静默回退原序——
+    评测 runner 题级 try/except 落 error 记录，--rerun 补跑；静默降级会让
+    消融 F 行部分题实际没 rerank，变量失控。"""
+    retriever, _ = spied_retriever
+    reranker = FakeReranker(fail=True)
+    with pytest.raises(RuntimeError, match="mock rerank down"):
+        retriever.search("订单", reranker=reranker, rerank_pool=4)
+
+
+def test_search_reranker_none_with_pool_is_plain(spied_retriever):
+    """reranker=None 时 rerank_pool 无效（钩子需要两者同时在场）。"""
+    retriever, _ = spied_retriever
+    with_pool = retriever.search("订单 口径", rerank_pool=16)
+    plain = retriever.search("订单 口径")
+    assert [(c.id, c.rrf_score) for c in with_pool] == [(c.id, c.rrf_score) for c in plain]

@@ -7,15 +7,25 @@
 3. RRF 平局按 (-score, id) 排序保证可复现；BM25 按 doc_type 分组建索引、
    每个类型独立排名参与融合。
 
+W6 改造（设计 §3.4 消融入口 + §4.2 rerank 钩子，全部默认关闭）：
+- search() 新参 enable_bm25 / enable_dense（路开关）、reranker / rerank_pool
+  （重排钩子）——**默认值路径与现行逐字节等价**（同构红线，W4 §6.2 验收覆盖）；
+- rerank 钩子：融合候选池取 rerank_pool（=2×top_n，池=8 时 Recall 无提升空间），
+  对池内片全文重排后取前 top_n；重排分写入 rrf_score 字段位置（明细可区分）。
+
 本模块被导入时自动执行一次 setup_jieba()（幂等），保证 BM25 分词质量。
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
+from typing import TYPE_CHECKING
 
 import jieba
 from rank_bm25 import BM25Okapi
 
 from agent.rag.jieba_dict import setup_jieba
+
+if TYPE_CHECKING:  # 仅为类型标注，不引入运行时依赖
+    from agent.rag.rerank import Reranker
 
 # 导入即执行一次（setup_jieba 幂等，构造函数里再调一次是零成本的双保险）
 setup_jieba()
@@ -92,49 +102,67 @@ class HybridRetriever:
         doc_types: list[str] | None = None,
         top_k_each: int = 20,
         top_n: int = 8,
+        enable_bm25: bool = True,
+        enable_dense: bool = True,
+        reranker: "Reranker | None" = None,
+        rerank_pool: int = 0,
     ) -> list[RetrievedChunk]:
         """混合检索一个查询。
 
         doc_types=None 不过滤（全类型）；指定时 BM25 路只查对应分组、
         向量路加 where 过滤。top_k_each 是每路每类型取的条数，
         top_n 是融合后最终返回条数。
+
+        W6 消融入口（设计 §3.4，全部默认关闭——默认参数路径与现行逐字节等价）：
+        - enable_bm25 / enable_dense：路开关（消融 B/C 行：纯向量 / 纯 BM25）；
+        - reranker + rerank_pool：RRF 融合后取前 rerank_pool 片为候选池，交
+          reranker.rerank(query, 片全文列表, top_n) 重排，再取前 top_n 注入
+          （设计 §4.2：池必须大于注入数，pool=top_n 时重排只能换序救不回排位低的片）。
+          rerank 失败**不降级**（fail-closed，设计 §4.1）：异常向上抛，由评测
+          runner 题级 try/except 落 error 记录——静默回退原序会让消融变量失控。
         """
+        if not enable_bm25 and not enable_dense:
+            raise ValueError("enable_bm25 与 enable_dense 不能同时为 False（双路全关检索恒空，多半是消融参数配错）")
+
         wanted = set(doc_types) if doc_types is not None else None
 
         # —— BM25 路：每个类型组独立排名，各取前 top_k_each ——
         bm25_ranked: list[list[str]] = []
-        for dtype in self.bm25s:
-            if wanted is not None and dtype not in wanted:
-                continue
-            indices, bm25 = self.bm25s[dtype]
-            scores = bm25.get_scores(list(jieba.lcut(query)))
-            order = sorted(range(len(indices)), key=lambda j: scores[j], reverse=True)
-            bm25_ranked.append([self.ids[indices[j]] for j in order[:top_k_each]])
+        if enable_bm25:
+            for dtype in self.bm25s:
+                if wanted is not None and dtype not in wanted:
+                    continue
+                indices, bm25 = self.bm25s[dtype]
+                scores = bm25.get_scores(list(jieba.lcut(query)))
+                order = sorted(range(len(indices)), key=lambda j: scores[j], reverse=True)
+                bm25_ranked.append([self.ids[indices[j]] for j in order[:top_k_each]])
 
         # —— 向量路：Chroma query + metadata 过滤 ——
         # n_results 用 min(top_k_each, 过滤后条数) 兜底：超过剩余条数会抛
         # "contiguous 2D array" 错（坑清单 #6）。
-        if wanted is None:
-            filtered_count = len(self.ids)
-            where = None
-        else:
-            filtered_count = sum(1 for m in self.metas if m.get("doc_type") in wanted)
-            where = {"doc_type": {"$in": list(doc_types)}}
-
         dense_ranked: list[list[str]] = []
-        if filtered_count > 0:
-            query_embedding = self.embedder.embed_query(query)
-            query_kwargs: dict = {
-                "query_embeddings": [query_embedding],
-                "n_results": min(top_k_each, filtered_count),
-            }
-            if where is not None:
-                query_kwargs["where"] = where
-            result = self.collection.query(**query_kwargs)
-            dense_ranked = [list(r) for r in result["ids"]]
+        if enable_dense:
+            if wanted is None:
+                filtered_count = len(self.ids)
+                where = None
+            else:
+                filtered_count = sum(1 for m in self.metas if m.get("doc_type") in wanted)
+                where = {"doc_type": {"$in": list(doc_types)}}
 
-        # —— RRF 融合，取前 top_n ——
-        fused = rrf_fuse([*bm25_ranked, *dense_ranked], self.k, top_n)
+            if filtered_count > 0:
+                query_embedding = self.embedder.embed_query(query)
+                query_kwargs: dict = {
+                    "query_embeddings": [query_embedding],
+                    "n_results": min(top_k_each, filtered_count),
+                }
+                if where is not None:
+                    query_kwargs["where"] = where
+                result = self.collection.query(**query_kwargs)
+                dense_ranked = [list(r) for r in result["ids"]]
+
+        # —— RRF 融合：默认取前 top_n；开 rerank 时取前 rerank_pool 做候选池 ——
+        use_rerank = reranker is not None and rerank_pool > 0
+        fused = rrf_fuse([*bm25_ranked, *dense_ranked], self.k, rerank_pool if use_rerank else top_n)
 
         id_to_index = {doc_id: i for i, doc_id in enumerate(self.ids)}
         chunks: list[RetrievedChunk] = []
@@ -150,4 +178,16 @@ class HybridRetriever:
                     rrf_score=score,
                 )
             )
+
+        # —— rerank 钩子（设计 §4.2）：池内片全文重排 → 取前 top_n 注入 ——
+        # 重排分写入 rrf_score 字段位置（RetrievedChunk 不加新字段，明细可区分：
+        # 默认路径的 rrf_score ≤ 2/(k+1) < 0.033，重排分是 cosine 级的 0~1）。
+        if use_rerank:
+            ranked = reranker.rerank(query, [chunk.text for chunk in chunks], top_n=top_n)
+            reranked: list[RetrievedChunk] = []
+            for index, score in ranked:
+                if not 0 <= index < len(chunks):
+                    raise ValueError(f"reranker 返回的 index 越界（{index}，候选池 {len(chunks)} 片）")
+                reranked.append(replace(chunks[index], rrf_score=float(score)))
+            chunks = reranked[:top_n]
         return chunks

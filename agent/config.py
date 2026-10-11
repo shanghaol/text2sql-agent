@@ -95,3 +95,14 @@ SQLGUARD_MODE: str = os.environ.get("TEXT2SQL_SQLGUARD", "ast")
 # 驱动层 read_timeout 取其秒数 + 5 兜底（结果传输卡死/服务器假死，见 sql_tools）。
 # 默认 10 秒 ≈ 合法查询上界（W3 实测最重金标毫秒级）的 10 倍，误杀风险极低。
 MYSQL_MAX_EXECUTION_MS: int = int(os.environ.get("MYSQL_MAX_EXECUTION_MS", "10000"))
+
+# ---------------------------------------------------------------------------
+# W6 新增：rerank 配置（W6 设计 §4.1；评测侧专属，线上不接线 §4.4）
+# SILICONFLOW_API_KEY 缺省空串 = rerank 禁用——开发机 .env 提供 key，
+# 服务器 .env 不配（线上想开也没 key，BYOK 原则不开洞）。
+# ---------------------------------------------------------------------------
+SILICONFLOW_API_KEY: str = os.environ.get("SILICONFLOW_API_KEY", "")
+SILICONFLOW_BASE_URL: str = os.environ.get("SILICONFLOW_BASE_URL", "https://api.siliconflow.cn/v1")
+RERANK_MODEL: str = os.environ.get("RERANK_MODEL", "BAAI/bge-reranker-v2-m3")
+# 候选池 = 2×top_n（设计 §4.2：池=8 时重排只能在原 top-8 内换序，Recall 无提升空间）
+RERANK_POOL: int = int(os.environ.get("RERANK_POOL", "16"))

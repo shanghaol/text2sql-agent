@@ -25,6 +25,10 @@ W5 改造（HITL 设计 §3.3）：build_agent 增加 hitl 参数（默认 False
 resume 用 Command({"resume": {"decisions": [...]}}) 原地续跑（§3.5）。
 hitl=False 时**不传 middleware 参数**，构造路径与 W4 逐字节等价
 （CLI / 评测 / W4 行为回归零变化，条件传参模式与 api_key 同款）。
+
+W6 改造（设计 §3.4 消融入口）：get_retriever 增可选参 k=None——None 时构造
+与现行逐字节同款（HybridRetriever 默认 k=60）；传入异 k 时按 k 另建实例，
+单例缓存键含 k（异 k 重建、同 k 复用）。CLI/FastAPI 不传参 → 现行为不变。
 """
 
 import hashlib
@@ -128,24 +132,33 @@ def get_checkpointer() -> InMemorySaver:
     return _checkpointer
 
 
-_retriever: HybridRetriever | None = None
+_retrievers: dict[int | None, HybridRetriever] = {}
 
 
-def get_retriever() -> HybridRetriever:
-    """混合检索器懒加载单例：Chroma collection + bge embedding（首次约几秒）。"""
-    global _retriever
-    if _retriever is None:
-        collection = get_collection()
-        # 生产由 FASTEMBED_CACHE_DIR 指到稳定缓存路径（%TEMP% 默认在服务器不可靠，
-        # W4 部署实录：缓存缺失 → 运行时向 HuggingFace 下载 → 国内网络挂死）
-        import os
+def get_retriever(k: int | None = None) -> HybridRetriever:
+    """混合检索器懒加载单例（W6 §3.4：缓存键含 k）：Chroma collection + bge embedding（首次约几秒）。
 
-        embedder = BgeEmbedder(
-            model_name=EMBEDDING_MODEL,
-            cache_dir=os.environ.get("FASTEMBED_CACHE_DIR") or None,
-        )
-        _retriever = HybridRetriever(collection, embedder)
-    return _retriever
+    k=None（CLI / FastAPI / 评测默认行）用 HybridRetriever 默认 k=60，构造路径与
+    W5 现行逐字节同款；评测 --rrf-k 传入异 k 时按 k 另建实例并独立缓存
+    （异 k 重建、同 k 复用，设计 §8-7 的单测覆盖点）。
+    """
+    if k in _retrievers:
+        return _retrievers[k]
+    collection = get_collection()
+    # 生产由 FASTEMBED_CACHE_DIR 指到稳定缓存路径（%TEMP% 默认在服务器不可靠，
+    # W4 部署实录：缓存缺失 → 运行时向 HuggingFace 下载 → 国内网络挂死）
+    import os
+
+    embedder = BgeEmbedder(
+        model_name=EMBEDDING_MODEL,
+        cache_dir=os.environ.get("FASTEMBED_CACHE_DIR") or None,
+    )
+    if k is None:
+        retriever = HybridRetriever(collection, embedder)  # 与现行完全同款（默认 k=60）
+    else:
+        retriever = HybridRetriever(collection, embedder, k=k)
+    _retrievers[k] = retriever
+    return retriever
 
 
 def previous_human_message(checkpointer: InMemorySaver, config: dict) -> str:

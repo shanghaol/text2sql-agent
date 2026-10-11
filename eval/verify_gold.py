@@ -1,15 +1,19 @@
-"""W3-T1 金标核对脚本：评测集（单轮 30 + 多轮 4）的质量闸门（设计 §4.1/§4.2）。
+"""W3→W6 金标核对脚本：评测集（单轮 50 + 多轮 8）的质量闸门（W3 §4.1/§4.2 + W6 §1.2/§2）。
 
 职责：
 1. schema 校验——缺字段 / question_type 非法枚举 / expected_chunks 含不存在的 chunk id
-   （真实 id 集合从 chromadb collection.get() 拉取，不硬编码）/ 类型分布 6/7/7/5/5；
+   （真实 id 集合从 chromadb collection.get() 拉取，不硬编码）/ 类型分布 9/14/11/8/8
+   / generalize_layer 枚举与覆盖（W6 §2.3：EV-012+ 39+6=45 条全覆盖，EV-001~011 恒 hit）；
 2. 金标逐条在 mart 库执行（sql_tools.get_engine()，text() 包裹，行数保护上限 5000），
-   断言执行通过且结果非空，并核对命题预期的行数与关键值锚点；
-3. TOP-N 有序题（EV-002/010/013/015/019/021）边界平局检查：
+   断言执行通过且结果非空、行数 ≤ 20（W6 纪律 3：答案行数超 20 会触发工具截断带偏模型），
+   并核对命题预期的行数与关键值锚点；
+3. TOP-N 有序题边界平局检查（EV-002/010/013/015/019/021/033/035/040 + EV-044 组内第一并列）：
    LIMIT N 的第 N 名与第 N+1 名排序键相等 → 报警（有序判定会随并列顺序抖动，必须改题）；
 4. 陷阱题标准错答核对：standard_wrong 的 value 与 qa_verification.md 已知值比对打勾；
-   新实测项（EV-009 quantity 版、EV-029 orders 口径冲减）真库执行错答 SQL 后比对；
-5. 追加写 docs/eval_gold_verification.md（仿 qa_verification.md：每条一行 ✓ 记录）。
+   实测项真库执行错答 SQL 后比对（W3 §4.2 流程；W6 新增 EV-048~050/MT-07/08 全走实测）；
+5. 年份窗口纪律（W6 §1.2）：单行单列纯整数金标 ∈ [1900,2100] 直接报错、∈ [1,31] 警告
+   （答案级文本回退会误吸回答文本里的日期碎数——命题侧规避，judge 不动）；
+6. 追加写 docs/eval_gold_verification.md（仿 qa_verification.md：每条一行 ✓ 记录）。
 
 运行命令（仓库根目录下，直接路径运行——脚本自行把仓库根加入 sys.path，
 eval/ 无需 __init__.py，因此不用 -m 方式）：
@@ -47,7 +51,7 @@ REPORT_PATH = REPO_ROOT / "docs" / "eval_gold_verification.md"
 MAX_ROWS = 5000
 
 # ---------------------------------------------------------------------------
-# schema 常量（设计 §1.2 / §1.7）
+# schema 常量（设计 §1.2 / §1.7 / W6 §2.1 / §2.3）
 # ---------------------------------------------------------------------------
 
 VALID_QUESTION_TYPES = {
@@ -65,11 +69,23 @@ REQUIRED_FIELDS_MT = [
     "id", "turns", "final_gold_sql",
     "ordered", "expected_chunks", "standard_wrong", "notes",
 ]
-# §1.1 的五类分配（T1 验收：类型分布恰为 6/7/7/5/5）
+# W6 §2.1 的五类分配（T1 验收：类型分布恰为 9/14/11/8/8）
 TYPE_DISTRIBUTION = {
-    "single_table": 6, "multi_join": 7, "aggregation": 7,
-    "time_window": 5, "glossary_trap": 5,
+    "single_table": 9, "multi_join": 14, "aggregation": 11,
+    "time_window": 8, "glossary_trap": 8,
 }
+SINGLE_SIZE = 50
+MT_SIZE = 8
+# W6 §2.3 分层字段：EV-001~011 恒 hit（QA 原题）；EV-012+ 必须显式标注 near/far
+VALID_LAYERS = {"hit", "near", "far"}
+FEWSHOT_LAYER_LAST_ID = "EV-011"
+
+# 年份窗口纪律（W6 §1.2）：单行单列纯整数金标落入窗口 = 文本回退巧合误判面
+YEAR_WINDOW_HARD = (1900, 2100)   # 落入 → 报错（日期碎数撞金标）
+YEAR_WINDOW_WARN = (1, 31)        # 落入 → 警告（月/日碎数，须人工确认答案文本不同值）
+
+# 行数纪律（W6 §2.4-3）：答案行数 ≤ 20（工具截断上限，EV-001 教训）
+MAX_ANSWER_ROWS = 20
 
 # ---------------------------------------------------------------------------
 # 命题预期（来源：设计 §1.4 的预期量级 + docs/qa_verification.md 的 W2 实测锚点
@@ -84,6 +100,17 @@ EXPECTED_ROW_COUNTS: dict[str, int | tuple[int, int]] = {
     "EV-016": 20, "EV-017": 8, "EV-018": 20, "EV-019": 5,
     "EV-020": 1, "EV-021": 5, "EV-022": 3, "EV-023": 1, "EV-024": 20,
     "EV-025": 1, "EV-026": 7, "EV-027": 12, "EV-028": 1, "EV-029": 1, "EV-030": 1,
+    # W6 新增 20 条（T1 2026-10-11 真库实测回填）
+    "EV-031": 8, "EV-032": 1, "EV-033": 1, "EV-034": 8, "EV-035": 3,
+    "EV-036": 3, "EV-037": 1, "EV-038": 20, "EV-039": 1, "EV-040": 5,
+    "EV-041": 2, "EV-042": 3, "EV-043": 3, "EV-044": 8, "EV-045": 1,
+    "EV-046": 7, "EV-047": 4, "EV-048": 1, "EV-049": 1, "EV-050": 1,
+}
+
+# 多轮金标行数预期（W6 MT-05~08 新增；判定只看最后一轮）
+EXPECTED_ROW_COUNTS_MT: dict[str, int] = {
+    "MT-01": 2, "MT-02": 1, "MT-03": 1, "MT-04": 1,
+    "MT-05": 1, "MT-06": 1, "MT-07": 1, "MT-08": 1,
 }
 
 # 金标关键值锚点（仅单行结果题）：id -> (期望值字符串, 说明)。
@@ -107,6 +134,18 @@ GOLD_VALUE_CHECKS: dict[str, tuple[str, str]] = {
     "MT-02": ("2749.39", "2026-07 客单价（T1 实测回填）"),
     "MT-03": ("0.0886", "订单口径退款率（同 EV-030）"),
     "MT-04": ("9.96", "银联占比（T1 实测回填：8,785/88,244，精确 9.9554）"),
+    # W6 新增（T1 2026-10-11 真库实测回填；EV-033 双列与多行题不适用标量锚点，走 notes 互证）
+    "EV-032": ("47.90", "高价商品占比（T1 实测：957/2,000）"),
+    "EV-037": ("7717", "微信×图书双条件用户数（T1 实测）"),
+    "EV-039": ("4.00", "美妆占全站比例（T1 实测；类目权重倾斜：同期数码 51.09% 居首）"),
+    "EV-045": ("17.91", "Q2 订单量环比增幅（T1 实测）"),
+    "EV-048": ("77.09", "9 月支付转化率（T1 实测）"),
+    "EV-049": ("98.55", "Q3 动销率（T1 实测：1,971/2,000）"),
+    "EV-050": ("5.22", "9 月新客占比（T1 实测）"),
+    "MT-05": ("2.83", "6 月连带率（T1 实测，与 EV-043 的 2026-06 行互证）"),
+    "MT-06": ("14460561.20", "9 月净销售额（复用 EV-029 已验证：16,029,955.34 − 1,569,394.14）"),
+    "MT-07": ("1559768.99", "1 月上海支付金额（T1 实测，与 EV-016 上海行互证）"),
+    "MT-08": ("11705", "未买过数码用户数（T1 实测 = 20,000 − 8,295 勾稽自证）"),
 }
 
 # TOP-N 有序题边界平局检查（§4.1）：id -> (第 N 与第 N+1 名扩展 SQL, 排序键列下标, N)。
@@ -133,7 +172,39 @@ TIE_CHECKS: dict[str, tuple[str, int, int]] = {
          "GROUP BY o.user_id, u.name ORDER BY refund_total DESC LIMIT 2 OFFSET 4"), 2, 5),
     # EV-021 无 LIMIT：金标本身返回全部 5 档，检查"计数严格降序"（等价于无边界平局）
     "EV-021": (None, 1, 5),
+    # W6 新增有序题（§2.4-4：TOP-N 边界平局全查）
+    "EV-033": (
+        ("SELECT DATE_FORMAT(refunded_at, '%Y-%m-%d'), amount FROM refunds "
+         "ORDER BY amount DESC LIMIT 2 OFFSET 0"), 1, 1),
+    "EV-035": (
+        ("SELECT oc.category, SUM(r.amount) AS refund_amount FROM refunds r "
+         "JOIN orders o ON o.id = r.order_id "
+         "JOIN (SELECT DISTINCT oi.order_id, p.category FROM order_items oi "
+         "JOIN products p ON p.id = oi.product_id) oc ON oc.order_id = o.id "
+         "GROUP BY oc.category ORDER BY refund_amount DESC LIMIT 2 OFFSET 2"), 1, 3),
+    "EV-040": (
+        ("SELECT u.id, SUM(p.amount) AS total_paid FROM users u "
+         "JOIN orders o ON o.user_id = u.id JOIN payments p ON p.order_id = o.id "
+         "WHERE NOT EXISTS (SELECT 1 FROM refunds r JOIN orders o2 ON o2.id = r.order_id "
+         "WHERE o2.user_id = u.id) "
+         "GROUP BY u.id ORDER BY total_paid DESC LIMIT 2 OFFSET 4"), 1, 5),
 }
+
+# EV-044 组内第一并列检查（特殊形态：窗口函数取各类目第一，两商品并列最大销量时
+# ROW_NUMBER 与相关子查询两等价形态结果不同 → 判定抖动）。SQL 返回并列于各类目
+# 最大销量的商品数，任一 >1 即命题不成立。
+EV044_TIE_SQL = (
+    "SELECT t.category, t.qty, COUNT(*) AS tied FROM ("
+    "  SELECT p.category, p.id, SUM(oi.quantity) AS qty "
+    "  FROM order_items oi JOIN products p ON p.id = oi.product_id "
+    "  GROUP BY p.category, p.id) t "
+    "JOIN (SELECT category AS cat, MAX(g.qty) AS mx FROM ("
+    "  SELECT p2.category, SUM(oi2.quantity) AS qty "
+    "  FROM order_items oi2 JOIN products p2 ON p2.id = oi2.product_id "
+    "  GROUP BY p2.category, p2.id) g GROUP BY category) m "
+    "ON m.cat = t.category AND m.mx = t.qty "
+    "GROUP BY t.category, t.qty ORDER BY t.category"
+)
 
 # 已实测登记的标准错答值：(case_id, trap_id) -> value 字符串。
 # 来源有两处（核对方式相同：与 jsonl 登记值直接数值比对，一致打勾）：
@@ -152,6 +223,9 @@ KNOWN_WRONG_VALUES: dict[tuple[str, str], str] = {
     ("MT-01", "month_shift_aug"): "16164482.43",
     ("MT-03", "valid_alt_gloss"): "0.0775",
     ("MT-03", "refund_status_basis"): "0.0565",
+    # W6 新增：复用已验证锚点（W6 §2.5 命题纪律——金标/错答复用已验证数字优先）
+    ("MT-05", "metric_not_switched"): "2765.34",   # = EV-008 已验证 6 月客单价
+    ("MT-06", "gmv_no_deduction"): "16029955.34",  # = EV-003 已验证 9 月 GMV
 }
 
 # T1 新实测的标准错答（qa_verification.md 里没有、需真库执行错答 SQL，§4.2）：
@@ -173,6 +247,62 @@ MEASURED_WRONG_SQL: dict[tuple[str, str], tuple[str, str]] = {
          "WHERE o.created_at >= '2026-09-01' AND o.created_at < '2026-10-01'"),
         ("orders.order_amount 口径冲减（设计预估 19,038,651.57 与实测不符，"
          "以本实测为准回填 jsonl）"),
+    ),
+    # W6 新增陷阱/多轮错答（T1 2026-10-11 真库实测，每轮核对自动重放）
+    ("EV-048", "denominator_missing_unpaid"): (
+        ("SELECT ROUND((SELECT COUNT(*) FROM orders o WHERE o.created_at >= '2026-09-01' "
+         "AND o.created_at < '2026-10-01' AND o.status IN ('paid','shipped','completed',"
+         "'refunded')) * 100.0 / (SELECT COUNT(*) FROM orders o WHERE o.created_at >= "
+         "'2026-09-01' AND o.created_at < '2026-10-01' AND o.status IN ('paid','shipped',"
+         "'completed','refunded')), 2)"),
+        "支付转化率分母漏未支付（分子分母同源 → 100%）",
+    ),
+    ("EV-048", "denominator_by_payments"): (
+        ("SELECT ROUND((SELECT COUNT(DISTINCT p.order_id) FROM payments p JOIN orders o "
+         "ON o.id = p.order_id WHERE o.created_at >= '2026-09-01' AND o.created_at < "
+         "'2026-10-01') * 100.0 / (SELECT COUNT(*) FROM payments p JOIN orders o ON "
+         "o.id = p.order_id WHERE o.created_at >= '2026-09-01' AND o.created_at < "
+         "'2026-10-01'), 2)"),
+        "支付转化率分母误用 payments 计数（对 payments 计数即分子 → 100%）",
+    ),
+    ("EV-049", "denominator_in_period"): (
+        ("SELECT ROUND((SELECT COUNT(DISTINCT oi.product_id) FROM order_items oi "
+         "JOIN orders o ON o.id = oi.order_id WHERE o.created_at >= '2026-07-01' AND "
+         "o.created_at < '2026-10-01') * 100.0 / (SELECT COUNT(DISTINCT oi.product_id) "
+         "FROM order_items oi JOIN orders o ON o.id = oi.order_id WHERE o.created_at >= "
+         "'2026-07-01' AND o.created_at < '2026-10-01'), 2)"),
+        "动销率分母误用期内有售商品数（分子分母同源 → 100%）",
+    ),
+    ("EV-049", "numerator_by_orders"): (
+        ("SELECT ROUND((SELECT COUNT(DISTINCT o.id) FROM orders o WHERE o.created_at >= "
+         "'2026-07-01' AND o.created_at < '2026-10-01') * 100.0 / (SELECT COUNT(*) FROM "
+         "products), 2)"),
+        "动销率分子误按订单数计（订单维度 ≠ 商品维度）",
+    ),
+    ("EV-050", "first_order_in_period_only"): (
+        ("SELECT ROUND((SELECT COUNT(*) FROM (SELECT user_id FROM orders WHERE created_at "
+         ">= '2026-09-01' AND created_at < '2026-10-01' GROUP BY user_id HAVING "
+         "MIN(created_at) >= '2026-09-01') t) * 100.0 / (SELECT COUNT(DISTINCT user_id) "
+         "FROM orders WHERE created_at >= '2026-09-01' AND created_at < '2026-10-01'), 2)"),
+        "'首次'只在期内取 MIN（期内下单者'期内首次'恒真 → 100%，glossary 陷阱条目原文）",
+    ),
+    ("EV-050", "registration_cohort"): (
+        ("SELECT ROUND((SELECT COUNT(*) FROM users WHERE registered_at >= '2026-09-01' "
+         "AND registered_at < '2026-10-01') * 100.0 / (SELECT COUNT(DISTINCT user_id) "
+         "FROM orders WHERE created_at >= '2026-09-01' AND created_at < '2026-10-01'), 2)"),
+        "新客与'新增注册用户'混淆（注册止于 2025-08-31 → 0%）",
+    ),
+    ("MT-07", "city_filter_missing"): (
+        ("SELECT SUM(p.amount) FROM payments p JOIN orders o ON o.id = p.order_id "
+         "JOIN users u ON u.id = o.user_id WHERE p.paid_at >= '2026-01-01' AND "
+         "p.paid_at < '2026-02-01'"),
+        "范围收窄失败：忘加城市过滤的全城合计",
+    ),
+    ("MT-08", "negation_missing"): (
+        ("SELECT COUNT(DISTINCT o.user_id) FROM orders o JOIN order_items oi ON "
+         "oi.order_id = o.id JOIN products p ON p.id = oi.product_id WHERE "
+         "p.category = '数码'"),
+        "否定式失败：未取补集，仍答数码购买者数",
     ),
 }
 
@@ -226,6 +356,18 @@ def validate_cases(cases: list[dict], required: list[str], real_chunk_ids: set[s
             if qtype not in VALID_QUESTION_TYPES:
                 problems.append(f"{cid}: question_type 非法（{qtype!r} 不在五类枚举内）")
             type_counts[qtype] = type_counts.get(qtype, 0) + 1
+            # 3b) generalize_layer（W6 §2.3）：EV-001~011 恒 hit；EV-012+ 必填且
+            #     notes 须记近/远依据（G 行消融的 Δ 归因依赖静态分层）
+            layer = case.get("generalize_layer")
+            if layer is not None and layer not in VALID_LAYERS:
+                problems.append(f"{cid}: generalize_layer 非法枚举（{layer!r}，合法 hit/near/far）")
+            if cid <= FEWSHOT_LAYER_LAST_ID:
+                if layer != "hit":
+                    problems.append(f"{cid}: 示例层题 generalize_layer 必须是 hit，实际 {layer!r}")
+            elif layer not in ("near", "far"):
+                problems.append(f"{cid}: EV-012+ 泛化题缺 generalize_layer（near/far）")
+            if cid > FEWSHOT_LAYER_LAST_ID and "分层" not in case.get("notes", ""):
+                problems.append(f"{cid}: notes 未记近/远分层依据（W6 §2.3）")
         # 4) expected_chunks：非空列表，且每个 id 都在真实 28 片集合内
         chunks = case.get("expected_chunks")
         if not (isinstance(chunks, list) and chunks
@@ -247,12 +389,13 @@ def validate_cases(cases: list[dict], required: list[str], real_chunk_ids: set[s
 
     # 6) 规模与类型分布（仅单轮）
     if not is_multiturn:
-        if len(cases) != 30:
-            problems.append(f"单轮评测集应为 30 条，实际 {len(cases)} 条")
+        if len(cases) != SINGLE_SIZE:
+            problems.append(f"单轮评测集应为 {SINGLE_SIZE} 条，实际 {len(cases)} 条")
         if type_counts != TYPE_DISTRIBUTION:
-            problems.append(f"类型分布应为 6/7/7/5/5，实际 {type_counts}")
-    elif len(cases) != 4:
-        problems.append(f"多轮评测集应为 4 条，实际 {len(cases)} 条")
+            problems.append(
+                f"类型分布应为 {TYPE_DISTRIBUTION}，实际 {type_counts}")
+    elif len(cases) != MT_SIZE:
+        problems.append(f"多轮评测集应为 {MT_SIZE} 条，实际 {len(cases)} 条")
     return problems
 
 
@@ -292,12 +435,50 @@ def dec_equal(actual, expected: str) -> bool:
         return False
 
 
+def is_integral_number(value) -> bool:
+    """纯整数判定：int（bool 除外）/ 值为整数的 Decimal（如 MySQL COUNT(*) 的 int、
+    SUM 溢出转 Decimal 但值仍为整数的情形）。"""
+    if isinstance(value, bool):
+        return False
+    if isinstance(value, int):
+        return True
+    if isinstance(value, Decimal):
+        return value.is_finite() and value == value.to_integral_value()
+    return False
+
+
+def check_year_window(cid: str, rows: list[tuple]) -> tuple[str | None, str | None]:
+    """年份窗口纪律（W6 §1.2）：单行单列纯整数金标落窗检测。
+
+    返回 (problem, warning)：problem = 落入 [1900,2100]（日期碎数撞金标，文本回退
+    巧合误判面，直接拦下）；warning = 落入 [1,31]（月/日碎数窗口，存在合法答案但须
+    人工确认答案文本不会同时出现同值环境数字）。多行/多列/非整数金标天然免疫。
+    """
+    if len(rows) != 1 or len(rows[0]) != 1:
+        return None, None
+    value = rows[0][0]
+    if not is_integral_number(value):
+        return None, None
+    num = int(value)
+    lo, hi = YEAR_WINDOW_HARD
+    if lo <= num <= hi:
+        return (f"{cid}: 单值整数金标 {num} 落入年份窗口 [{lo},{hi}]——"
+                "答案级文本回退会误吸回答里的日期碎数，按 §1.2 命题纪律改题（带小数/"
+                "改多行/换大数值），judge 不动"), None
+    lo, hi = YEAR_WINDOW_WARN
+    if lo <= num <= hi:
+        return None, (f"{cid}: 单值整数金标 {num} 落入月/日碎数窗口 [{lo},{hi}]——"
+                      "人工确认该题答案文本不会同时出现同值环境数字（§1.2 软警告）")
+    return None, None
+
+
 # ---------------------------------------------------------------------------
 # 主流程
 # ---------------------------------------------------------------------------
 
 def main() -> int:
     problems: list[str] = []          # 致命问题（影响退出码）
+    warnings: list[str] = []          # 软警告（不影响退出码，人工确认项）
     report_lines: list[str] = []      # 追加进 md 的本轮记录
 
     # —— 第 0 步：从 Chroma 拉真实 chunk id 集合（不硬编码 28 个 id，防语料改版失配）——
@@ -311,8 +492,17 @@ def main() -> int:
     multis = load_jsonl(DATASET_MT_PATH)
     problems += validate_cases(singles, REQUIRED_FIELDS, real_chunk_ids, is_multiturn=False)
     problems += validate_cases(multis, REQUIRED_FIELDS_MT, real_chunk_ids, is_multiturn=True)
+    layer_counts: dict[str, int] = {}
+    for case in singles:
+        layer = case.get("generalize_layer")
+        layer_counts[layer] = layer_counts.get(layer, 0) + 1
     print(f"[1] schema 校验：单轮 {len(singles)} 条 + 多轮 {len(multis)} 条，"
-          f"{'通过' if not problems else f'{len(problems)} 个问题'}")
+          f"{'通过' if not problems else f'{len(problems)} 个问题'}；"
+          f"分层 hit/near/far = {layer_counts.get('hit', 0)}/{layer_counts.get('near', 0)}/"
+          f"{layer_counts.get('far', 0)}")
+    report_lines.append(
+        f"分层分布（W6 §2.3）：hit {layer_counts.get('hit', 0)} / near "
+        f"{layer_counts.get('near', 0)} / far {layer_counts.get('far', 0)}。")
     for p in problems:
         print(f"    ✗ {p}")
     if any("缺必填字段" in p or "question_type 非法" in p or "chunk id" in p for p in problems):
@@ -340,6 +530,19 @@ def main() -> int:
             report_lines.append(f"- ✗ {cid}：执行通过但结果为空（命题不成立）")
             print(f"    ✗ {cid} 结果为空")
             continue
+
+        # W6 §2.4-3 行数纪律：答案行数 ≤ 20（工具截断上限，超限会带偏模型改查子区间）
+        if len(rows) > MAX_ANSWER_ROWS:
+            problems.append(
+                f"{cid}: 结果 {len(rows)} 行超过答案行数上限 {MAX_ANSWER_ROWS}"
+                "（工具截断会带偏模型，EV-001 教训）")
+
+        # W6 §1.2 年份窗口纪律：单值整数金标落窗检测（硬错误/软警告）
+        year_problem, year_warning = check_year_window(cid, rows)
+        if year_problem:
+            problems.append(year_problem)
+        if year_warning:
+            warnings.append(year_warning)
 
         # 行数命题预期核对（剧情类检查：如 EV-014 六状态非零 / EV-017 八类目全覆盖）
         expected = EXPECTED_ROW_COUNTS.get(cid)
@@ -389,6 +592,27 @@ def main() -> int:
             report_lines.append(f"- ✗ {cid}：结果{'超上限' if oversized else '为空'}")
             print(f"    ✗ {cid} 结果{'超上限' if oversized else '为空'}")
             continue
+        # W6：MT 行数预期 + 行数上限 + 年份窗口（与单轮同款纪律）
+        expected = EXPECTED_ROW_COUNTS_MT.get(cid)
+        if expected is not None and len(rows) != expected:
+            problems.append(f"{cid}: 行数 {len(rows)} ≠ 命题预期 {expected}")
+        if len(rows) > MAX_ANSWER_ROWS:
+            problems.append(f"{cid}: 结果 {len(rows)} 行超过答案行数上限 {MAX_ANSWER_ROWS}")
+        year_problem, year_warning = check_year_window(cid, rows)
+        if year_problem:
+            problems.append(year_problem)
+        if year_warning:
+            warnings.append(year_warning)
+        # 关键值锚点（MT-02~08 单行题；W6 起新增条目与单轮同表 GOLD_VALUE_CHECKS）
+        check = GOLD_VALUE_CHECKS.get(cid)
+        if check is not None and len(rows) == 1:
+            expected_str, note = check
+            if dec_equal(rows[0][0], expected_str):
+                desc_line += f"；值 {fmt_cell(rows[0][0])} = 锚点 {expected_str}（{note}）"
+            else:
+                problems.append(
+                    f"{cid}: 金标值 {fmt_cell(rows[0][0])} ≠ 锚点 {expected_str}（{note}）")
+                desc_line += f"；⚠ 值 {fmt_cell(rows[0][0])} ≠ 锚点 {expected_str}"
         # MT-01 金标是有序两行（8 月→9 月），值锚点单独核对
         if cid == "MT-01":
             expected_pairs = [("2026-08", "16164482.43"), ("2026-09", "16029955.34")]
@@ -433,6 +657,19 @@ def main() -> int:
         else:
             tie_lines.append(f"- ✓ {cid}：第 {n}/{n + 1} 名排序键 {key_n} / {key_n1}，无平局")
             print(f"    ✓ {cid} 第 {n}/{n + 1} 名：{key_n} vs {key_n1}")
+
+    # EV-044（W6 §2.2）：组内第一并列检查——窗口函数与相关子查询两等价形态在
+    # "最大销量并列"时会给出不同结果（ROW_NUMBER 任选其一 / 子查询并列全给），
+    # 任一类目并列于最大销量即命题抖动，必须改题
+    rows, _ = replay(EV044_TIE_SQL)
+    tied = [(r[0], int(r[1]), int(r[2])) for r in rows if int(r[2]) > 1]
+    if tied:
+        problems.append(f"EV-044: 类目最大销量存在并列 {tied}，两等价形态结果不同，须改题")
+        tie_lines.append(f"- ✗ EV-044：组内第一并列 {tied}")
+        print(f"    ✗ EV-044 组内并列：{tied}")
+    else:
+        tie_lines.append("- ✓ EV-044：8 类目最大销量并列数全为 1，两等价形态结果一致")
+        print(f"    ✓ EV-044 组内第一无并列（{len(rows)} 类目）")
     report_lines.extend(tie_lines)
 
     # —— 第 5 步：陷阱题标准错答核对（§4.2）——
@@ -482,17 +719,21 @@ def main() -> int:
 
     # —— 第 6 步：汇总 + 追加写核对记录 ——
     summary = (f"单轮 {len(singles)} 条 + 多轮 {len(multis)} 条；"
-               f"问题 {len(problems)} 个（退出码 {0 if not problems else 1}）")
+               f"问题 {len(problems)} 个、软警告 {len(warnings)} 个"
+               f"（退出码 {0 if not problems else 1}）")
     print(f"\n[6] 汇总：{summary}")
     for p in problems:
         print(f"    ✗ {p}")
+    for w in warnings:
+        print(f"    ⚠ {w}")
 
-    write_report(report_lines, problems)
+    write_report(report_lines, problems, warnings=warnings)
     print(f"    核对记录已追加：{REPORT_PATH}")
     return 0 if not problems else 1
 
 
-def write_report(report_lines: list[str], problems: list[str], fatal: bool = False) -> None:
+def write_report(report_lines: list[str], problems: list[str],
+                 fatal: bool = False, warnings: list[str] | None = None) -> None:
     """把本轮核对结果按时间戳分节追加到 docs/eval_gold_verification.md。
 
     追加而非覆盖：核对记录是留痕文档（仿 qa_verification.md 的台账性质），
@@ -504,7 +745,7 @@ def write_report(report_lines: list[str], problems: list[str], fatal: bool = Fal
     header = ""
     if not REPORT_PATH.exists():
         header = (
-            "# W3 评测集金标核对记录（eval_gold_verification）\n\n"
+            "# W3→W6 评测集金标核对记录（eval_gold_verification）\n\n"
             "> 本文件由 `eval/verify_gold.py` 自动追加生成（每轮核对一个时间戳分节）。\n"
             "> 数据为 `--seed 42` 固定种子静态快照，核对一次终身有效；"
             "**重导数据后必须重跑核对**（`python eval/verify_gold.py`）。\n"
@@ -512,12 +753,16 @@ def write_report(report_lines: list[str], problems: list[str], fatal: bool = Fal
         )
     section = [f"\n## 核对轮次：{stamp}\n"]
     section += [f"{line}" for line in report_lines]
+    if warnings:
+        section.append("\n### 软警告（不影响退出码，人工确认项）")
+        section += [f"- ⚠ {w}" for w in warnings]
     if problems:
         section.append("\n### 问题清单（须修数后复跑）")
         section += [f"- ✗ {p}" for p in problems]
     else:
         section.append("\n### 结论")
-        section.append("- 全部金标执行通过且结果非空；schema / 平局 / 错答登记核对全部通过。")
+        section.append("- 全部金标执行通过且结果非空；schema / 平局 / 错答登记 / "
+                       "年份窗口 / 行数上限核对全部通过。")
     if fatal:
         section.append("- schema 校验未通过，本轮未执行金标。")
 

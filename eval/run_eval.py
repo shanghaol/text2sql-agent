@@ -14,6 +14,8 @@ W4 起升级为"三方向 prepare_turn 看齐"——CLI（agent/main.py）、Fas
     .venv/Scripts/python.exe -m eval.run_eval --tag flaky_check --rerun EV-017,EV-029   # 复跑指定题
     .venv/Scripts/python.exe -m eval.run_eval --tag multiturn --multiturn               # 多轮 4 题（§2.7）
     .venv/Scripts/python.exe -m eval.run_eval --tag vs_control --compare eval/reports/detail_xxx.json
+    .venv/Scripts/python.exe -m eval.run_eval --tag rrf_k_10 --rrf-k 10 --runs 3       # W6 消融 E 行
+    .venv/Scripts/python.exe -m eval.run_eval --tag rerank_bge --rerank --runs 3       # W6 消融 F 行（需 SILICONFLOW_API_KEY）
 
 产物（eval/reports/，进 git——报告是简历证据链）：
     report_<tag>_<ts>.md    Markdown 汇总（§3.3 固定结构，声明段五条写死在模板里）
@@ -25,6 +27,7 @@ from __future__ import annotations
 import argparse
 import json
 import statistics
+import subprocess
 import sys
 import time
 from collections import Counter
@@ -34,9 +37,10 @@ from pathlib import Path
 from langchain_core.messages import HumanMessage
 from sqlalchemy import text
 
-from agent.config import DEEPSEEK_MODEL
+from agent.config import DEEPSEEK_MODEL, RERANK_MODEL, RERANK_POOL
 from agent.core.agent import get_retriever
-from agent.core.turn import prepare_turn
+from agent.core.turn import RetrievalOptions, prepare_turn
+from agent.rag.rerank import SiliconFlowReranker
 from agent.tools.sql_tools import get_engine
 from eval.judge import (
     extract_execute_calls,
@@ -58,7 +62,9 @@ REPORTS_DIR = REPO_ROOT / "eval" / "reports"
 # 超过上限截断并在明细里标记 oversized。
 REPLAY_MAX_ROWS = 5000
 
-# 与线上同款的检索参数（hybrid_retriever 的默认值；runner 不覆盖，报告引用声明）
+# 检索参数默认值 = hybrid_retriever 的线上默认（不传消融参数时实际生效的值）。
+# W6 §3.4 修硬编码谎报：报告与 detail 的 RRF k 不再直接引用本常量渲染，改经
+# effective_retrieval_config() 从实际生效参数取值（--rrf-k 10 行不再谎报 60）。
 RETRIEVAL_TOP_K_EACH = 20
 RRF_K = 60
 
@@ -127,6 +133,133 @@ def preflight() -> None:
 
 
 # ---------------------------------------------------------------------------
+# W6 消融入口（设计 §3.4）：CLI 开关 → RetrievalOptions → prepare_turn 透传；
+# 无任何消融开关时 opts 恒为 None——prepare_turn 默认分支与线上逐字节等价（同构红线）
+# ---------------------------------------------------------------------------
+
+
+def _ablation_flags_present(args: argparse.Namespace) -> bool:
+    """是否有任一消融开关被启用（getattr 兼容旧调用方直接构造的 Namespace）。"""
+    return bool(
+        getattr(args, "rrf_k", None) is not None
+        or getattr(args, "no_bm25", False)
+        or getattr(args, "no_dense", False)
+        or getattr(args, "no_fewshot", False)
+        or getattr(args, "rerank", False)
+    )
+
+
+def _build_retrieval_opts(args: argparse.Namespace) -> RetrievalOptions | None:
+    """从 CLI 开关构建 RetrievalOptions；无开关返回 None（走线上默认路径）。
+
+    --rerank 在此构建 SiliconFlowReranker 实例（设计 §4.1/§4.4：仅评测侧接线，
+    线上永不构造）——key 缺失时构造即抛 ValueError，main() 捕获后给中文指引退出
+    （启动期失败，而不是跑了一半才在第一题上炸）。
+    """
+    if not _ablation_flags_present(args):
+        return None
+    reranker = None
+    rerank_pool = 0
+    if args.rerank:
+        reranker = SiliconFlowReranker()  # 无 key 抛 ValueError（中文指引）
+        rerank_pool = RERANK_POOL  # 16 = 2×top_n 起点（设计 §4.2）
+    return RetrievalOptions(
+        rrf_k=args.rrf_k,
+        doc_types=["schema", "glossary"] if args.no_fewshot else None,
+        enable_bm25=not args.no_bm25,
+        enable_dense=not args.no_dense,
+        rerank_pool=rerank_pool,
+        reranker=reranker,
+    )
+
+
+def effective_retrieval_config(args: argparse.Namespace) -> dict:
+    """实际生效的全部检索参数（W6 §3.4 修硬编码谎报的唯一事实源）。
+
+    detail config 与报告的"检索参数"行都从这里取——--rrf-k 10 的行如实记
+    rrf_k=10，不再引用模块常量谎报 60。默认（无开关）时返回值与线上默认一致。
+    """
+    rerank_enabled = bool(getattr(args, "rerank", False))
+    return {
+        "top_k_each": RETRIEVAL_TOP_K_EACH,  # runner 无此开关，恒为线上默认 20
+        "rrf_k": args.rrf_k if getattr(args, "rrf_k", None) is not None else RRF_K,
+        "enable_bm25": not getattr(args, "no_bm25", False),
+        "enable_dense": not getattr(args, "no_dense", False),
+        "doc_types": ["schema", "glossary"] if getattr(args, "no_fewshot", False) else None,
+        "rerank": rerank_enabled,
+        "rerank_pool": RERANK_POOL if rerank_enabled else 0,
+        "rerank_model": RERANK_MODEL if rerank_enabled else None,
+    }
+
+
+def _describe_retrieval(retrieval_cfg: dict) -> str:
+    """消融参数生效时的单行日志描述（默认行不需要，报告行另走 _render_report）。"""
+    bits = [
+        f"rrf_k={retrieval_cfg['rrf_k']}",
+        f"BM25路={'开' if retrieval_cfg['enable_bm25'] else '关'}",
+        f"向量路={'开' if retrieval_cfg['enable_dense'] else '关'}",
+    ]
+    if retrieval_cfg["doc_types"] is not None:
+        bits.append(f"doc_types={'+'.join(retrieval_cfg['doc_types'])}（去 few-shot）")
+    if retrieval_cfg["rerank"]:
+        bits.append(f"rerank={retrieval_cfg['rerank_model']}（pool={retrieval_cfg['rerank_pool']}）")
+    return "，".join(bits)
+
+
+def _corpus_commit() -> str:
+    """git HEAD 短哈希（设计 §3.5 语料冻结证据链）：detail config 的 corpus_commit。
+
+    非 git 环境 / git 不可用时返回 "unknown"（不阻断评测——freeze 断言在
+    summarize_ablation 侧做，那里不一致才拒绝出表）。
+    """
+    try:
+        proc = subprocess.run(
+            ["git", "rev-parse", "--short", "HEAD"],
+            capture_output=True,
+            text=True,
+            cwd=REPO_ROOT,
+            timeout=10,
+            check=False,  # 非 0 返回码走 returncode 分支降级 unknown，不抛
+        )
+    except Exception:  # noqa: BLE001 - git 缺失/超时不该炸评测，降级 unknown
+        return "unknown"
+    if proc.returncode == 0 and proc.stdout.strip():
+        return proc.stdout.strip()
+    return "unknown"
+
+
+def _build_detail_config(
+    args: argparse.Namespace,
+    dataset_path: Path,
+    started_at: str,
+    retrieval_cfg: dict,
+    corpus_counts: dict[str, int],
+) -> dict:
+    """detail JSON 的 config 节（W6 §3.4/§3.5：实际生效检索参数 + 语料冻结证据链）。
+
+    retrieval（实际生效值，唯一事实源 effective_retrieval_config）与 corpus
+    （commit 短哈希 + 片数）是 summarize_ablation 启动断言的消费面——
+    行间任一不一致，该行作废重跑（§3.5-3）。
+    """
+    return {
+        "dataset": str(dataset_path),
+        "multiturn": args.multiturn,
+        "top_n": args.top_n,
+        "runs": args.runs,
+        "model": DEEPSEEK_MODEL,
+        "temperature": 0,
+        "snapshot_anchor": "2026-09-30",
+        "retrieval": retrieval_cfg,
+        "corpus": {
+            "commit": _corpus_commit(),
+            "counts": corpus_counts,
+            "total": sum(corpus_counts.values()),
+        },
+        "replay_max_rows": REPLAY_MAX_ROWS,
+    }
+
+
+# ---------------------------------------------------------------------------
 # SQL 重放器（§2.4）：评测器自己执行金标与模型 SQL 拿原生结果，不解析 ToolMessage 文本
 # ---------------------------------------------------------------------------
 
@@ -163,7 +296,9 @@ class Replayer:
 # ---------------------------------------------------------------------------
 
 
-def evaluate_single_case(case: dict, run_idx: int, top_n: int, replayer: Replayer) -> dict:
+def evaluate_single_case(
+    case: dict, run_idx: int, top_n: int, replayer: Replayer, retrieval_opts: RetrievalOptions | None = None
+) -> dict:
     """跑一题单轮评测，返回 §3.3 明细记录。
 
     与线上 main.py 的逐点同构对照（W3 设计 §2.3 表格；W4 起组装三步收进
@@ -175,6 +310,7 @@ def evaluate_single_case(case: dict, run_idx: int, top_n: int, replayer: Replaye
                 —— prepare_turn 内部逐字符同款实现（W4 §3.1）。
     [3 search]  prepare_turn → get_retriever().search(query, top_n)，doc_types 缺省全类型
                 ——同一函数同一参数路径；top_n=8 时与线上逐字节一致（检索全链路确定性）。
+                W6 消融行经 retrieval_opts 走参数化分支（设计 §3.4），None 时仍逐字节等价。
     [4 prompt]  prepare_turn → build_agent(build_system_prompt(format_context_block(chunks)))
                 ——原样 import 零差异，收进 prepare_turn 内部（W4 §3.1）。
     [5 调用]    invoke 替代 stream——同一 LangGraph 执行、消息状态语义相同，评测取全量消息。
@@ -186,7 +322,7 @@ def evaluate_single_case(case: dict, run_idx: int, top_n: int, replayer: Replaye
     thread_id = f"eval-{case_id}-r{run_idx}"  # [1]
 
     start = time.perf_counter()  # [6] 计时起点：组装（检索）之前
-    pt = prepare_turn(case["question"], thread_id, top_n=top_n)  # [2][3][4] 三方看齐 prepare_turn
+    pt = prepare_turn(case["question"], thread_id, top_n=top_n, retrieval_opts=retrieval_opts)  # [2][3][4] 三方看齐 prepare_turn
     result = pt.agent.invoke({"messages": [HumanMessage(content=case["question"])]}, config=pt.config)  # [5]
     latency_s = time.perf_counter() - start  # [6] 计时终点：invoke 返回
 
@@ -204,7 +340,9 @@ def evaluate_single_case(case: dict, run_idx: int, top_n: int, replayer: Replaye
     )
 
 
-def evaluate_multiturn_case(case: dict, run_idx: int, top_n: int, replayer: Replayer) -> dict:
+def evaluate_multiturn_case(
+    case: dict, run_idx: int, top_n: int, replayer: Replayer, retrieval_opts: RetrievalOptions | None = None
+) -> dict:
     """跑一个多轮 case（§2.7）：逐轮 invoke 共享 thread，判定只看最后一轮。
 
     与单轮的差异（每点仍与线上多轮同构，§2.3 表 + §2.7 增补；W4 起每轮组装
@@ -226,7 +364,7 @@ def evaluate_multiturn_case(case: dict, run_idx: int, top_n: int, replayer: Repl
     for turn_idx, user_input in enumerate(case["turns"], 1):
         start = time.perf_counter()
         # 组装 + 调用：prepare_turn 覆盖 W3 §2.3 的 [2][3][4]，invoke 即 [5]
-        pt = prepare_turn(user_input, thread_id, top_n=top_n)
+        pt = prepare_turn(user_input, thread_id, top_n=top_n, retrieval_opts=retrieval_opts)
         result = pt.agent.invoke({"messages": [HumanMessage(content=user_input)]}, config=pt.config)
         latency = time.perf_counter() - start
         total_latency += latency
@@ -288,6 +426,9 @@ def _finalize_record(
         "id": case["id"],
         "run_idx": run_idx,
         "question_type": case.get("question_type"),
+        # W6 §2.3 分层字段随记录落盘（additive）：hit/near/far 三分层的报告与
+        # 消融交叉表消费；旧数据集/多轮无该字段时为 None（报告按 id 规则兜底归层）
+        "generalize_layer": case.get("generalize_layer"),
         "injected_chunks": injected_ids,
         "expected_chunks": list(case["expected_chunks"]),
         "recall_hits": [c for c in case["expected_chunks"] if c in set(injected_ids)],
@@ -373,6 +514,7 @@ def _invoke_exception_record(case: dict, run_idx: int, exc: Exception) -> dict:
         "id": case["id"],
         "run_idx": run_idx,
         "question_type": case.get("question_type"),
+        "generalize_layer": case.get("generalize_layer"),
         "injected_chunks": [],
         "expected_chunks": list(case["expected_chunks"]),
         "recall_hits": [],
@@ -457,6 +599,35 @@ def _is_fewshot_layer(record: dict) -> bool:
     return record["id"].startswith("EV-") and record["id"] <= FEWSHOT_LAYER_LAST_ID
 
 
+# W6 §2.3 三分层：示例层（hit）由 id 前缀规则判定（EV-001~011 恒为 hit，旧明细
+# 无 generalize_layer 字段也能归层）；近示例（near）/ 远示例（far）是命题时静态
+# 标注的字段，无法从 id 推导——缺字段且过 EV-011 的记录归"未分层"兜底行。
+_LAYER_ROWS: tuple[tuple[str, str], ...] = (
+    ("hit", "示例层（hit：EV-001~011 有同款示例，§1.3）"),
+    ("near", "近示例（near：泛化题，有同口径/同构 QA 可改窗口改维度套用，W6 §2.3）"),
+    ("far", "远示例（far：泛化题，须 schema+glossary 组合推理，W6 §2.3）"),
+)
+
+
+def _layer_of(record: dict) -> str | None:
+    """记录 → hit/near/far 三分层；EV-012 起且缺 generalize_layer 字段的旧记录返回 None。"""
+    if _is_fewshot_layer(record):
+        return "hit"
+    return record.get("generalize_layer")
+
+
+def _layer_groups(records: list[dict]) -> list[tuple[str, list[dict]]]:
+    """W6 §2.3 分层表的三分组（hit/near/far）+ 旧数据集未分层兜底行（仅在存在
+    EV-012+ 且无 generalize_layer 字段的记录时出现——30 条旧明细直渲不破）。"""
+    groups = [
+        (label, [r for r in records if _layer_of(r) == layer]) for layer, label in _LAYER_ROWS
+    ]
+    legacy = [r for r in records if _layer_of(r) is None]
+    if legacy:
+        groups.append(("泛化题（未分层：旧数据集无 generalize_layer 字段）", legacy))
+    return groups
+
+
 def _is_absorbed_qa_chunk(chunk_id: str) -> bool:
     """是否自举语料片：qa_pair:qa_NNN 且 NNN ≥ 012（W5 §4.6 自举从 012 起编号）。"""
     if not chunk_id.startswith("qa_pair:qa_"):
@@ -535,9 +706,14 @@ def _render_report(
     lines.append(f"- 数据集：`{dataset_display}`（{len(records) // max(args.runs, 1)} 条，{mode_label}）")
     lines.append(f"- top_n={args.top_n} ｜ runs={args.runs} ｜ 本次共 {n_records} 次题级运行")
     lines.append(f"- 模型：{DEEPSEEK_MODEL}（temperature=0）｜ 快照锚点：2026-09-30")
-    lines.append(
-        f"- 检索参数：top_k_each={RETRIEVAL_TOP_K_EACH}，RRF k={RRF_K}（与线上 hybrid_retriever 默认一致，§2.3 同构）"
-    )
+    # W6 §3.4：从实际生效参数取值渲染（--rrf-k 10 行不再谎报 60）；默认行文案与 W3 逐字节一致
+    retrieval_cfg = effective_retrieval_config(args)
+    if _ablation_flags_present(args):
+        lines.append(f"- 检索参数：{_describe_retrieval(retrieval_cfg)}（消融行，实际生效值，W6 §3.4）")
+    else:
+        lines.append(
+            f"- 检索参数：top_k_each={RETRIEVAL_TOP_K_EACH}，RRF k={RRF_K}（与线上 hybrid_retriever 默认一致，§2.3 同构）"
+        )
     if corpus_counts is not None:
         # W5 §4.7-2：语料片数进报告——语料从 28 片变 28+k 片后 top-8 竞争加剧，
         # Recall 数字的变化是"检索环境改变"而非退化；此行让任意两次报告可对齐语料版本
@@ -571,11 +747,9 @@ def _render_report(
             (qtype, [r for r in records if r["question_type"] == qtype]) for qtype in _QUESTION_TYPE_ORDER
         ]
         lines.extend(_accuracy_table(records, type_groups))
-        layer_groups = [
-            ("有同款示例（EV-001~011，§1.3）", [r for r in records if _is_fewshot_layer(r)]),
-            ("泛化题（EV-012 起）", [r for r in records if not _is_fewshot_layer(r)]),
-        ]
-        lines.extend(_accuracy_table(records, layer_groups))
+        # W6 §2.3：分层表从二分（示例/泛化）升级为三分（hit/near/far）——
+        # G 行（去 few-shot）消融后按层拆 Δ，量化"自举的作用半径"
+        lines.extend(_accuracy_table(records, _layer_groups(records)))
     lines.append("")
 
     # —— 四指标汇总 · 回答准确率（答案级，§2.4 判定规则 v2）——
@@ -590,8 +764,8 @@ def _render_report(
     )
     lines.append("")
 
-    # —— 四指标汇总 · Recall@8 ——
-    lines.append("### Recall@8")
+    # —— 四指标汇总 · Recall@{top_n}（W6 §3.4 标题动态化：D1/D2 行的指标名才诚实）——
+    lines.append(f"### Recall@{args.top_n}")
     if args.top_n <= 0:
         lines.append(
             "- 对照行（top_n=0）注入恒空，Recall=0 是设定使然，本节不列数字；报告只做执行准确率对比（§2.5）"
@@ -851,6 +1025,12 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--rerun", default=None, help="复跑指定题，逗号分隔 id（如 EV-017,EV-029）")
     parser.add_argument("--multiturn", action="store_true", help="加载多轮评测集（eval_v1_multiturn.jsonl，§2.7：逐轮 invoke 共享 thread，判定只看最后一轮）")
     parser.add_argument("--compare", default=None, help="对照行的 detail JSON 路径，报告据此生成对照行对比表（§3.3）")
+    # —— W6 消融入口（设计 §3.4，全部默认关闭；无任一开关时组装与线上逐字节等价）——
+    parser.add_argument("--rrf-k", dest="rrf_k", type=int, default=None, help="RRF 融合常数 k（默认 60=线上默认；消融 E 行用 10。传入后按该 k 另建检索器实例并缓存）")
+    parser.add_argument("--no-bm25", dest="no_bm25", action="store_true", help="关 BM25 路=纯向量检索（消融 B 行：精确 token 命中的损失）")
+    parser.add_argument("--no-dense", dest="no_dense", action="store_true", help="关向量路=纯 BM25 检索（消融 C 行：语义改写鲁棒性的损失）")
+    parser.add_argument("--no-fewshot", dest="no_fewshot", action="store_true", help="过滤 qa_pair 片（doc_types=schema+glossary，消融 G 行：去 few-shot 自举）")
+    parser.add_argument("--rerank", action="store_true", help=f"启用 rerank（SiliconFlow {RERANK_MODEL}，候选池 {RERANK_POOL}=2×top_n 起点，消融 F 行；需 .env 配 SILICONFLOW_API_KEY，仅评测侧）")
     return parser.parse_args()
 
 
@@ -870,6 +1050,14 @@ def main() -> None:
         dataset_path = DEFAULT_DATASET
 
     preflight()
+
+    # W6 消融入口（§3.4）：启动期构建 opts（--rerank 缺 key 在这里失败，不跑一半才炸）
+    try:
+        retrieval_opts = _build_retrieval_opts(args)
+    except ValueError as exc:  # SiliconFlowReranker 构造失败的中文指引
+        print(str(exc))
+        sys.exit(1)
+    retrieval_cfg = effective_retrieval_config(args)
 
     retriever = get_retriever()
     # §8-7：加载时用真实 chunk id 集合复检 expected_chunks（T1 已核对，运行时再拦一道）
@@ -897,6 +1085,8 @@ def main() -> None:
         f"评测开始：{mode_label} ｜ 数据集 {dataset_path.name}（{len(cases)} 条）"
         f" ｜ top_n={args.top_n} ｜ runs={args.runs} ｜ tag={args.tag}"
     )
+    if retrieval_opts is not None:
+        print(f"消融参数生效：{_describe_retrieval(retrieval_cfg)}（W6 §3.4）")
 
     replayer = Replayer()
     records: list[dict] = []
@@ -904,9 +1094,9 @@ def main() -> None:
         for case in cases:
             try:
                 if args.multiturn:
-                    record = evaluate_multiturn_case(case, run_idx, args.top_n, replayer)
+                    record = evaluate_multiturn_case(case, run_idx, args.top_n, replayer, retrieval_opts)
                 else:
-                    record = evaluate_single_case(case, run_idx, args.top_n, replayer)
+                    record = evaluate_single_case(case, run_idx, args.top_n, replayer, retrieval_opts)
             except Exception as exc:  # noqa: BLE001 - 题级 try/except 不中断整场（§6 风险 4）
                 record = _invoke_exception_record(case, run_idx, exc)
             records.append(record)
@@ -923,25 +1113,16 @@ def main() -> None:
     detail_path = REPORTS_DIR / f"detail_{args.tag}_{timestamp}.json"
     report_path = REPORTS_DIR / f"report_{args.tag}_{timestamp}.md"
 
+    corpus_counts = corpus_type_counts(retriever)
     detail = {
         "tag": args.tag,
         "started_at": started_at,
-        "config": {
-            "dataset": str(dataset_path),
-            "multiturn": args.multiturn,
-            "top_n": args.top_n,
-            "runs": args.runs,
-            "model": DEEPSEEK_MODEL,
-            "temperature": 0,
-            "snapshot_anchor": "2026-09-30",
-            "retrieval": {"top_k_each": RETRIEVAL_TOP_K_EACH, "rrf_k": RRF_K},
-            "replay_max_rows": REPLAY_MAX_ROWS,
-        },
+        "config": _build_detail_config(args, dataset_path, started_at, retrieval_cfg, corpus_counts),
         "cases": records,
     }
     detail_path.write_text(json.dumps(detail, ensure_ascii=False, indent=2), encoding="utf-8")
     report_path.write_text(
-        _render_report(args, dataset_path, records, started_at, corpus_counts=corpus_type_counts(retriever)),
+        _render_report(args, dataset_path, records, started_at, corpus_counts=corpus_counts),
         encoding="utf-8",
     )
 
