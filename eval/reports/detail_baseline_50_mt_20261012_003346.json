@@ -1,0 +1,3011 @@
+{
+  "tag": "baseline_50_mt",
+  "started_at": "2026-10-12 00:33:46",
+  "config": {
+    "dataset": "C:\\Users\\yhnt\\rg\\agent\\eval\\dataset\\eval_v1_multiturn.jsonl",
+    "multiturn": true,
+    "top_n": 8,
+    "runs": 3,
+    "model": "deepseek-flash",
+    "temperature": 0,
+    "snapshot_anchor": "2026-09-30",
+    "retrieval": {
+      "top_k_each": 20,
+      "rrf_k": 60,
+      "enable_bm25": true,
+      "enable_dense": true,
+      "doc_types": null,
+      "rerank": false,
+      "rerank_pool": 0,
+      "rerank_model": null
+    },
+    "corpus": {
+      "commit": "3b98c3a",
+      "counts": {
+        "schema": 6,
+        "glossary": 11,
+        "qa_pair": 11
+      },
+      "total": 28
+    },
+    "replay_max_rows": 5000
+  },
+  "cases": [
+    {
+      "id": "MT-01",
+      "run_idx": 1,
+      "question_type": null,
+      "generalize_layer": null,
+      "injected_chunks": [
+        "glossary:yoy_mom",
+        "qa_pair:qa_003",
+        "qa_pair:qa_008",
+        "qa_pair:qa_001",
+        "schema:products",
+        "glossary:arpu",
+        "qa_pair:qa_009",
+        "glossary:gmv"
+      ],
+      "expected_chunks": [
+        "glossary:yoy_mom",
+        "qa_pair:qa_003"
+      ],
+      "recall_hits": [
+        "glossary:yoy_mom",
+        "qa_pair:qa_003"
+      ],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT SUM(amount) AS gmv, COUNT(*) AS pay_cnt, COUNT(DISTINCT order_id) AS order_cnt FROM payments WHERE paid_at >= '2026-09-01' AND paid_at < '2026-10-01';"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT DATE_FORMAT(paid_at, '%Y-%m') AS month, SUM(amount) AS gmv\nFROM payments\nWHERE paid_at >= '2026-08-01' AND paid_at < '2026-10-01'\nGROUP BY month\nORDER BY month;"
+        },
+        {
+          "seq": 3,
+          "sql": "SELECT ROUND((cur - prev) / NULLIF(prev, 0) * 100, 2) AS mom_pct\nFROM (SELECT SUM(amount) AS cur FROM payments WHERE paid_at >= '2026-09-01' AND paid_at < '2026-10-01') a,\n     (SELECT SUM(amount) AS prev FROM payments WHERE paid_at >= '2026-08-01' AND paid_at < '2026-09-01') b;"
+        }
+      ],
+      "sql_used": "SELECT ROUND((cur - prev) / NULLIF(prev, 0) * 100, 2) AS mom_pct\nFROM (SELECT SUM(amount) AS cur FROM payments WHERE paid_at >= '2026-09-01' AND paid_at < '2026-10-01') a,\n     (SELECT SUM(amount) AS prev FROM payments WHERE paid_at >= '2026-08-01' AND paid_at < '2026-09-01') b;",
+      "sql_source": "last",
+      "gold_row_count": 2,
+      "model_row_count": 1,
+      "judge": "fail",
+      "pass_via": null,
+      "text_matched": null,
+      "final_answer_text": "**环比：-0.83%（微降）**\n\n| 期间 | GMV（元） |\n|---|---|\n| 2026-08（上期） | 16,164,482.43 |\n| 2026-09（本期） | 16,029,955.34 |\n| 环比变动 | **-134,527.09 元（-0.83%）** |\n\n口径说明：\n- 环比 =（本期 − 上期）÷ 上期，对比期为上一个自然月（2026-08），均按 `DATE_FORMAT(paid_at, '%Y-%m')` 整月聚合，非 30 天近似；除数用 `NULLIF(对比期, 0)` 防除零。\n- GMV 仍按成功支付金额（`SUM(payments.amount)`）计。\n\n数据来源：本次对 `payments` 表按 2026-08-01 ~ 2026-10-01 聚合的两行结果（16,164,482.43 与 16,029,955.34），环比由第二次查询计算得出（-0.83%）。\n\n补充：由于该数据是 2025-10-01 至 2026-09-30 的静态快照，2026-09 是最后一个完整月；若你更关注同比（对比 2025-09），但快照起始为 2025-10-01，**2025 年 9 月无数据，同比不可比**。",
+      "failure_mode": "trap:month_shift_aug",
+      "error_msg": null,
+      "latency_s": 7.283,
+      "tokens": {
+        "input": 21542,
+        "output": 1538,
+        "total": 23080,
+        "cache_read": 19840
+      },
+      "oversized": false,
+      "ended_with_failed_call": false,
+      "turns": [
+        {
+          "turn_idx": 1,
+          "question": "上个月 GMV 多少？",
+          "retrieval_query": "上个月 GMV 多少？",
+          "injected_chunks": [
+            "qa_pair:qa_003",
+            "qa_pair:qa_001",
+            "qa_pair:qa_008",
+            "glossary:gmv",
+            "glossary:arpu",
+            "qa_pair:qa_007",
+            "glossary:yoy_mom",
+            "qa_pair:qa_009"
+          ],
+          "sql_calls": [
+            {
+              "seq": 1,
+              "sql": "SELECT SUM(amount) AS gmv, COUNT(*) AS pay_cnt, COUNT(DISTINCT order_id) AS order_cnt FROM payments WHERE paid_at >= '2026-09-01' AND paid_at < '2026-10-01';"
+            }
+          ],
+          "latency_s": 3.009,
+          "tokens": {
+            "input": 5137,
+            "output": 409,
+            "total": 5546,
+            "cache_read": 4736
+          }
+        },
+        {
+          "turn_idx": 2,
+          "question": "那环比呢",
+          "retrieval_query": "上个月 GMV 多少？\n那环比呢",
+          "injected_chunks": [
+            "glossary:yoy_mom",
+            "qa_pair:qa_003",
+            "qa_pair:qa_008",
+            "qa_pair:qa_001",
+            "schema:products",
+            "glossary:arpu",
+            "qa_pair:qa_009",
+            "glossary:gmv"
+          ],
+          "sql_calls": [
+            {
+              "seq": 1,
+              "sql": "SELECT SUM(amount) AS gmv, COUNT(*) AS pay_cnt, COUNT(DISTINCT order_id) AS order_cnt FROM payments WHERE paid_at >= '2026-09-01' AND paid_at < '2026-10-01';"
+            },
+            {
+              "seq": 2,
+              "sql": "SELECT DATE_FORMAT(paid_at, '%Y-%m') AS month, SUM(amount) AS gmv\nFROM payments\nWHERE paid_at >= '2026-08-01' AND paid_at < '2026-10-01'\nGROUP BY month\nORDER BY month;"
+            },
+            {
+              "seq": 3,
+              "sql": "SELECT ROUND((cur - prev) / NULLIF(prev, 0) * 100, 2) AS mom_pct\nFROM (SELECT SUM(amount) AS cur FROM payments WHERE paid_at >= '2026-09-01' AND paid_at < '2026-10-01') a,\n     (SELECT SUM(amount) AS prev FROM payments WHERE paid_at >= '2026-08-01' AND paid_at < '2026-09-01') b;"
+            }
+          ],
+          "latency_s": 4.275,
+          "tokens": {
+            "input": 16405,
+            "output": 1129,
+            "total": 17534,
+            "cache_read": 15104
+          }
+        }
+      ]
+    },
+    {
+      "id": "MT-02",
+      "run_idx": 1,
+      "question_type": null,
+      "generalize_layer": null,
+      "injected_chunks": [
+        "qa_pair:qa_008",
+        "qa_pair:qa_001",
+        "qa_pair:qa_009",
+        "qa_pair:qa_007",
+        "glossary:avg_order_value",
+        "glossary:gmv",
+        "qa_pair:qa_003",
+        "schema:order_items"
+      ],
+      "expected_chunks": [
+        "glossary:avg_order_value",
+        "schema:payments"
+      ],
+      "recall_hits": [
+        "glossary:avg_order_value"
+      ],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT ROUND(SUM(amount) / COUNT(DISTINCT order_id), 2) AS avg_order_value, SUM(amount) AS gmv, COUNT(DISTINCT order_id) AS paid_orders FROM payments WHERE paid_at >= '2026-06-01' AND paid_at < '2026-07-01';"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT ROUND(SUM(amount) / COUNT(DISTINCT order_id), 2) AS avg_order_value, SUM(amount) AS gmv, COUNT(DISTINCT order_id) AS paid_orders FROM payments WHERE paid_at >= '2026-07-01' AND paid_at < '2026-08-01';"
+        }
+      ],
+      "sql_used": "SELECT ROUND(SUM(amount) / COUNT(DISTINCT order_id), 2) AS avg_order_value, SUM(amount) AS gmv, COUNT(DISTINCT order_id) AS paid_orders FROM payments WHERE paid_at >= '2026-07-01' AND paid_at < '2026-08-01';",
+      "sql_source": "last",
+      "gold_row_count": 1,
+      "model_row_count": 1,
+      "judge": "pass",
+      "pass_via": "text",
+      "text_matched": "2749.39",
+      "final_answer_text": "2026 年 7 月的客单价为 **2749.39 元**。\n\n| 月份 | 客单价 | GMV（元） | 支付订单数 |\n| --- | --- | --- | --- |\n| 2026-06 | 2765.34 | 29,782,686.06 | 10,770 |\n| 2026-07 | 2749.39 | 17,266,164.29 | 6,280 |\n| 变化 | −15.95（−0.58%） | −12,516,521.77（−42.0%） | −4,490（−41.7%） |\n\n**口径**同上一问（口径 3）：分子为当月支付成功金额合计（按 `paid_at` 圈期，左闭右开 `>= '2026-07-01' AND < '2026-08-01'`），分母为当月 `COUNT(DISTINCT order_id)`，均取自 payments 表。\n\n简要解读：7 月客单价相比 6 月基本持平（仅降 0.58%，约 16 元），但支付订单数大幅下降约 42%，导致 GMV 几乎同步下滑 42%——即 7 月的规模下降主要来自**订单量收缩**，而非单笔金额走低。数据来源：上述两次对 payments 表的聚合查询结果。",
+      "failure_mode": null,
+      "error_msg": null,
+      "latency_s": 5.198,
+      "tokens": {
+        "input": 21209,
+        "output": 1245,
+        "total": 22454,
+        "cache_read": 19840
+      },
+      "oversized": false,
+      "ended_with_failed_call": false,
+      "turns": [
+        {
+          "turn_idx": 1,
+          "question": "2026 年 6 月的客单价是多少？",
+          "retrieval_query": "2026 年 6 月的客单价是多少？",
+          "injected_chunks": [
+            "qa_pair:qa_008",
+            "qa_pair:qa_001",
+            "glossary:gmv",
+            "qa_pair:qa_009",
+            "glossary:avg_order_value",
+            "schema:order_items",
+            "qa_pair:qa_003",
+            "qa_pair:qa_007"
+          ],
+          "sql_calls": [
+            {
+              "seq": 1,
+              "sql": "SELECT ROUND(SUM(amount) / COUNT(DISTINCT order_id), 2) AS avg_order_value, SUM(amount) AS gmv, COUNT(DISTINCT order_id) AS paid_orders FROM payments WHERE paid_at >= '2026-06-01' AND paid_at < '2026-07-01';"
+            }
+          ],
+          "latency_s": 2.048,
+          "tokens": {
+            "input": 6821,
+            "output": 348,
+            "total": 7169,
+            "cache_read": 6400
+          }
+        },
+        {
+          "turn_idx": 2,
+          "question": "那 7 月呢",
+          "retrieval_query": "2026 年 6 月的客单价是多少？\n那 7 月呢",
+          "injected_chunks": [
+            "qa_pair:qa_008",
+            "qa_pair:qa_001",
+            "qa_pair:qa_009",
+            "qa_pair:qa_007",
+            "glossary:avg_order_value",
+            "glossary:gmv",
+            "qa_pair:qa_003",
+            "schema:order_items"
+          ],
+          "sql_calls": [
+            {
+              "seq": 1,
+              "sql": "SELECT ROUND(SUM(amount) / COUNT(DISTINCT order_id), 2) AS avg_order_value, SUM(amount) AS gmv, COUNT(DISTINCT order_id) AS paid_orders FROM payments WHERE paid_at >= '2026-06-01' AND paid_at < '2026-07-01';"
+            },
+            {
+              "seq": 2,
+              "sql": "SELECT ROUND(SUM(amount) / COUNT(DISTINCT order_id), 2) AS avg_order_value, SUM(amount) AS gmv, COUNT(DISTINCT order_id) AS paid_orders FROM payments WHERE paid_at >= '2026-07-01' AND paid_at < '2026-08-01';"
+            }
+          ],
+          "latency_s": 3.15,
+          "tokens": {
+            "input": 14388,
+            "output": 897,
+            "total": 15285,
+            "cache_read": 13440
+          }
+        }
+      ]
+    },
+    {
+      "id": "MT-03",
+      "run_idx": 1,
+      "question_type": null,
+      "generalize_layer": null,
+      "injected_chunks": [
+        "qa_pair:qa_004",
+        "glossary:refund_rate",
+        "schema:refunds",
+        "glossary:net_sales",
+        "qa_pair:qa_008",
+        "qa_pair:qa_010",
+        "schema:order_items",
+        "schema:orders"
+      ],
+      "expected_chunks": [
+        "glossary:refund_rate",
+        "schema:refunds",
+        "schema:payments"
+      ],
+      "recall_hits": [
+        "glossary:refund_rate",
+        "schema:refunds"
+      ],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT ROUND(SUM(r.amount) / SUM(p.amount), 4) AS refund_rate\nFROM payments p\nLEFT JOIN refunds r ON r.payment_id = p.id\nWHERE p.paid_at >= '2026-09-01' AND p.paid_at < '2026-10-01';"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT SUM(p.amount) AS pay_amount, SUM(r.amount) AS refund_amount, ROUND(SUM(r.amount) / SUM(p.amount), 4) AS refund_rate\nFROM payments p\nLEFT JOIN refunds r ON r.payment_id = p.id\nWHERE p.paid_at >= '2026-09-01' AND p.paid_at < '2026-10-01';"
+        },
+        {
+          "seq": 3,
+          "sql": "SELECT COUNT(DISTINCT p.order_id) AS paid_orders,\n       COUNT(DISTINCT r.order_id) AS refunded_orders,\n       ROUND(COUNT(DISTINCT r.order_id) / COUNT(DISTINCT p.order_id), 4) AS refund_rate_orders\nFROM payments p\nLEFT JOIN refunds r ON r.payment_id = p.id\nWHERE p.paid_at >= '2026-09-01' AND p.paid_at < '2026-10-01';"
+        },
+        {
+          "seq": 4,
+          "sql": "SELECT (SELECT COUNT(DISTINCT order_id) FROM payments WHERE paid_at >= '2026-09-01' AND paid_at < '2026-10-01') AS paid_orders,\n       (SELECT COUNT(DISTINCT order_id) FROM refunds WHERE refunded_at >= '2026-09-01' AND refunded_at < '2026-10-01') AS refunded_orders_sep,\n       ROUND((SELECT COUNT(DISTINCT order_id) FROM refunds WHERE refunded_at >= '2026-09-01' AND refunded_at < '2026-10-01')\n             / (SELECT COUNT(DISTINCT order_id) FROM payments WHERE paid_at >= '2026-09-01' AND paid_at < '2026-10-01'), 4) AS rate_mixed;"
+        }
+      ],
+      "sql_used": "SELECT (SELECT COUNT(DISTINCT order_id) FROM payments WHERE paid_at >= '2026-09-01' AND paid_at < '2026-10-01') AS paid_orders,\n       (SELECT COUNT(DISTINCT order_id) FROM refunds WHERE refunded_at >= '2026-09-01' AND refunded_at < '2026-10-01') AS refunded_orders_sep,\n       ROUND((SELECT COUNT(DISTINCT order_id) FROM refunds WHERE refunded_at >= '2026-09-01' AND refunded_at < '2026-10-01')\n             / (SELECT COUNT(DISTINCT order_id) FROM payments WHERE paid_at >= '2026-09-01' AND paid_at < '2026-10-01'), 4) AS rate_mixed;",
+      "sql_source": "last",
+      "gold_row_count": 1,
+      "model_row_count": 1,
+      "judge": "pass",
+      "pass_via": "text",
+      "text_matched": "0.0886",
+      "final_answer_text": "**订单口径退款率（2026 年 9 月）≈ 8.86%**\n\n| 指标 | 数值 |\n| --- | --- |\n| 9 月支付成功订单数（分母） | 5,901 单 |\n| 其中有退款记录的订单数（分子） | 523 单 |\n| **退款率（订单口径）** | **0.0886（8.86%）** |\n\n**口径说明**\n- 订单口径 = 有退款记录的订单数 ÷ 支付成功订单数，均按 `DISTINCT order_id` 去重（订单全生命周期无论退几次都只算 1 单）。\n- 时间轴与上一条金额口径保持一致：分母按 `payments.paid_at` 落在 2026-09 的支付订单，分子取这批支付订单对应的退款记录（通过 `refunds.payment_id` 关联），因此分子是\"9 月支付的订单中发生过退款的单数\"。\n- 与金额口径 7.75% 的差异是正常的：部分退款订单只退了 20%~90% 的金额，所以在订单口径里被完整计为 1 单，会推高订单口径的比值。\n\n**另一组口径（分子按退款发生期）**\n如果分子改用 `refunds.refunded_at` 落在 2026-09 的退款订单（637 单）、分母仍为 9 月支付订单（5,901 单），则比值为 **0.1079（10.79%）**。两者都合法，区别只在\"按支付期看退款暴露\"还是\"按退款发生期看退款规模\"，回答时必须报口径。\n\n数据来源：上述两次对 `payments` LEFT JOIN `refunds` 及 `payments`/`refunds` 分别聚合的查询结果。",
+      "failure_mode": null,
+      "error_msg": null,
+      "latency_s": 8.848,
+      "tokens": {
+        "input": 32553,
+        "output": 2265,
+        "total": 34818,
+        "cache_read": 30464
+      },
+      "oversized": false,
+      "ended_with_failed_call": false,
+      "turns": [
+        {
+          "turn_idx": 1,
+          "question": "9 月的退款率是多少（金额口径）？",
+          "retrieval_query": "9 月的退款率是多少（金额口径）？",
+          "injected_chunks": [
+            "qa_pair:qa_004",
+            "glossary:refund_rate",
+            "schema:refunds",
+            "glossary:net_sales",
+            "qa_pair:qa_008",
+            "qa_pair:qa_010",
+            "qa_pair:qa_003",
+            "qa_pair:qa_009"
+          ],
+          "sql_calls": [
+            {
+              "seq": 1,
+              "sql": "SELECT ROUND(SUM(r.amount) / SUM(p.amount), 4) AS refund_rate\nFROM payments p\nLEFT JOIN refunds r ON r.payment_id = p.id\nWHERE p.paid_at >= '2026-09-01' AND p.paid_at < '2026-10-01';"
+            },
+            {
+              "seq": 2,
+              "sql": "SELECT SUM(p.amount) AS pay_amount, SUM(r.amount) AS refund_amount, ROUND(SUM(r.amount) / SUM(p.amount), 4) AS refund_rate\nFROM payments p\nLEFT JOIN refunds r ON r.payment_id = p.id\nWHERE p.paid_at >= '2026-09-01' AND p.paid_at < '2026-10-01';"
+            }
+          ],
+          "latency_s": 3.697,
+          "tokens": {
+            "input": 10264,
+            "output": 635,
+            "total": 10899,
+            "cache_read": 9728
+          }
+        },
+        {
+          "turn_idx": 2,
+          "question": "换成订单口径呢",
+          "retrieval_query": "9 月的退款率是多少（金额口径）？\n换成订单口径呢",
+          "injected_chunks": [
+            "qa_pair:qa_004",
+            "glossary:refund_rate",
+            "schema:refunds",
+            "glossary:net_sales",
+            "qa_pair:qa_008",
+            "qa_pair:qa_010",
+            "schema:order_items",
+            "schema:orders"
+          ],
+          "sql_calls": [
+            {
+              "seq": 1,
+              "sql": "SELECT ROUND(SUM(r.amount) / SUM(p.amount), 4) AS refund_rate\nFROM payments p\nLEFT JOIN refunds r ON r.payment_id = p.id\nWHERE p.paid_at >= '2026-09-01' AND p.paid_at < '2026-10-01';"
+            },
+            {
+              "seq": 2,
+              "sql": "SELECT SUM(p.amount) AS pay_amount, SUM(r.amount) AS refund_amount, ROUND(SUM(r.amount) / SUM(p.amount), 4) AS refund_rate\nFROM payments p\nLEFT JOIN refunds r ON r.payment_id = p.id\nWHERE p.paid_at >= '2026-09-01' AND p.paid_at < '2026-10-01';"
+            },
+            {
+              "seq": 3,
+              "sql": "SELECT COUNT(DISTINCT p.order_id) AS paid_orders,\n       COUNT(DISTINCT r.order_id) AS refunded_orders,\n       ROUND(COUNT(DISTINCT r.order_id) / COUNT(DISTINCT p.order_id), 4) AS refund_rate_orders\nFROM payments p\nLEFT JOIN refunds r ON r.payment_id = p.id\nWHERE p.paid_at >= '2026-09-01' AND p.paid_at < '2026-10-01';"
+            },
+            {
+              "seq": 4,
+              "sql": "SELECT (SELECT COUNT(DISTINCT order_id) FROM payments WHERE paid_at >= '2026-09-01' AND paid_at < '2026-10-01') AS paid_orders,\n       (SELECT COUNT(DISTINCT order_id) FROM refunds WHERE refunded_at >= '2026-09-01' AND refunded_at < '2026-10-01') AS refunded_orders_sep,\n       ROUND((SELECT COUNT(DISTINCT order_id) FROM refunds WHERE refunded_at >= '2026-09-01' AND refunded_at < '2026-10-01')\n             / (SELECT COUNT(DISTINCT order_id) FROM payments WHERE paid_at >= '2026-09-01' AND paid_at < '2026-10-01'), 4) AS rate_mixed;"
+            }
+          ],
+          "latency_s": 5.151,
+          "tokens": {
+            "input": 22289,
+            "output": 1630,
+            "total": 23919,
+            "cache_read": 20736
+          }
+        }
+      ]
+    },
+    {
+      "id": "MT-04",
+      "run_idx": 1,
+      "question_type": null,
+      "generalize_layer": null,
+      "injected_chunks": [
+        "qa_pair:qa_011",
+        "schema:payments",
+        "glossary:avg_order_value",
+        "qa_pair:qa_008",
+        "schema:order_items",
+        "qa_pair:qa_003",
+        "glossary:gmv",
+        "qa_pair:qa_010"
+      ],
+      "expected_chunks": [
+        "schema:payments"
+      ],
+      "recall_hits": [
+        "schema:payments"
+      ],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT method,\n       COUNT(*) AS order_count,\n       ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM payments), 2) AS pct\nFROM payments\nGROUP BY method\nORDER BY order_count DESC;"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT method,\n       COUNT(*) AS order_count,\n       ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM payments), 2) AS pct\nFROM payments\nWHERE method = '银联'\nGROUP BY method;"
+        }
+      ],
+      "sql_used": "SELECT method,\n       COUNT(*) AS order_count,\n       ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM payments), 2) AS pct\nFROM payments\nWHERE method = '银联'\nGROUP BY method;",
+      "sql_source": "last",
+      "gold_row_count": 1,
+      "model_row_count": 1,
+      "judge": "pass",
+      "pass_via": "text",
+      "text_matched": "9.96",
+      "final_answer_text": "## 银联支付方式的订单占比\n\n**口径**：基于 `payments` 表（一笔成功支付 = 一条记录），统计期内支付成功订单为分母。\n\n| 支付方式 | 订单数 | 占比 |\n|---|---|---|\n| 银联 | 8,785 | **9.96%** |\n\n**结论**（基于本次查询结果）：\n- 银联支付的订单共 **8,785 笔**，占总成功支付订单的 **9.96%**，约合每 10 笔支付中有 1 笔走银联；\n- 在三种支付方式中占比最低（微信 54.94% > 支付宝 35.10% > 银联 9.96%）。\n\n⚠️ 口径提示：该占比分母为**支付成功订单总数**（含全部支付方式的记录数），不含 pending/cancelled 未支付订单；若改用\"全部下单量\"为分母，比例会略低。",
+      "failure_mode": null,
+      "error_msg": null,
+      "latency_s": 5.121,
+      "tokens": {
+        "input": 24919,
+        "output": 1284,
+        "total": 26203,
+        "cache_read": 23296
+      },
+      "oversized": false,
+      "ended_with_failed_call": false,
+      "turns": [
+        {
+          "turn_idx": 1,
+          "question": "各支付方式的订单占比是多少？",
+          "retrieval_query": "各支付方式的订单占比是多少？",
+          "injected_chunks": [
+            "qa_pair:qa_011",
+            "glossary:avg_order_value",
+            "qa_pair:qa_008",
+            "schema:payments",
+            "glossary:gmv",
+            "schema:order_items",
+            "qa_pair:qa_003",
+            "glossary:pay_conversion"
+          ],
+          "sql_calls": [
+            {
+              "seq": 1,
+              "sql": "SELECT method,\n       COUNT(*) AS order_count,\n       ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM payments), 2) AS pct\nFROM payments\nGROUP BY method\nORDER BY order_count DESC;"
+            }
+          ],
+          "latency_s": 2.611,
+          "tokens": {
+            "input": 8008,
+            "output": 448,
+            "total": 8456,
+            "cache_read": 7552
+          }
+        },
+        {
+          "turn_idx": 2,
+          "question": "银联的占比是多少",
+          "retrieval_query": "各支付方式的订单占比是多少？\n银联的占比是多少",
+          "injected_chunks": [
+            "qa_pair:qa_011",
+            "schema:payments",
+            "glossary:avg_order_value",
+            "qa_pair:qa_008",
+            "schema:order_items",
+            "qa_pair:qa_003",
+            "glossary:gmv",
+            "qa_pair:qa_010"
+          ],
+          "sql_calls": [
+            {
+              "seq": 1,
+              "sql": "SELECT method,\n       COUNT(*) AS order_count,\n       ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM payments), 2) AS pct\nFROM payments\nGROUP BY method\nORDER BY order_count DESC;"
+            },
+            {
+              "seq": 2,
+              "sql": "SELECT method,\n       COUNT(*) AS order_count,\n       ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM payments), 2) AS pct\nFROM payments\nWHERE method = '银联'\nGROUP BY method;"
+            }
+          ],
+          "latency_s": 2.51,
+          "tokens": {
+            "input": 16911,
+            "output": 836,
+            "total": 17747,
+            "cache_read": 15744
+          }
+        }
+      ]
+    },
+    {
+      "id": "MT-05",
+      "run_idx": 1,
+      "question_type": null,
+      "generalize_layer": null,
+      "injected_chunks": [
+        "qa_pair:qa_008",
+        "qa_pair:qa_001",
+        "glossary:items_per_order",
+        "qa_pair:qa_009",
+        "glossary:yoy_mom",
+        "glossary:avg_order_value",
+        "qa_pair:qa_007",
+        "qa_pair:qa_003"
+      ],
+      "expected_chunks": [
+        "glossary:items_per_order",
+        "schema:orders"
+      ],
+      "recall_hits": [
+        "glossary:items_per_order"
+      ],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT ROUND(SUM(amount) / COUNT(DISTINCT order_id), 2) AS avg_order_value, SUM(amount) AS gmv, COUNT(DISTINCT order_id) AS paid_orders FROM payments WHERE paid_at >= '2026-06-01' AND paid_at < '2026-07-01'"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT ROUND(SUM(item_count) / COUNT(*), 4) AS items_per_order, SUM(item_count) AS total_items, COUNT(*) AS order_count FROM orders WHERE created_at >= '2026-09-01' AND created_at < '2026-10-01'"
+        },
+        {
+          "seq": 3,
+          "sql": "SELECT ROUND(SUM(oi.quantity) / COUNT(DISTINCT oi.order_id), 4) AS items_per_order, SUM(oi.quantity) AS total_items, COUNT(DISTINCT oi.order_id) AS order_count FROM order_items oi JOIN orders o ON o.id = oi.order_id WHERE o.created_at >= '2026-09-01' AND o.created_at < '2026-10-01'"
+        }
+      ],
+      "sql_used": "SELECT ROUND(SUM(oi.quantity) / COUNT(DISTINCT oi.order_id), 4) AS items_per_order, SUM(oi.quantity) AS total_items, COUNT(DISTINCT oi.order_id) AS order_count FROM order_items oi JOIN orders o ON o.id = oi.order_id WHERE o.created_at >= '2026-09-01' AND o.created_at < '2026-10-01'",
+      "sql_source": "last",
+      "gold_row_count": 1,
+      "model_row_count": 1,
+      "judge": "fail",
+      "pass_via": null,
+      "text_matched": null,
+      "final_answer_text": "**2026 年 9 月（本月，锚点 2026-09-30）连带率：2.8014 件/单**\n\n口径与结果（按订单下单时间 created_at 统计该月全部订单）：\n- 总购买件数 = **21,338 件**\n- 订单数（去重）= **7,617 单**\n- 连带率 = 21,338 ÷ 7,617 ≈ **2.8014 件/单**\n\n两种算法结果一致，互相验证通过：\n1. `SUM(orders.item_count) / COUNT(*)` = 21,338 / 7,617 = 2.8014（用冗余列，免 JOIN）\n2. `SUM(order_items.quantity) / COUNT(DISTINCT order_id)`，与 orders 按下单时间关联后 = 21,338 / 7,617 = 2.8014\n\n补充说明：连带率是**件数**口径（每单平均件数），与上一条 2026 年 6 月客单价的**金额**口径（2,765.34 元/单）不同；另外本指标统计的是该月**全部订单**（含未支付），若要与客单价同源比较，需改用 payments 表按支付时间过滤。以上数字均来自本次对 orders / order_items 的两次查询。",
+      "failure_mode": "trap:metric_not_switched",
+      "error_msg": null,
+      "latency_s": 5.948,
+      "tokens": {
+        "input": 22825,
+        "output": 1266,
+        "total": 24091,
+        "cache_read": 19200
+      },
+      "oversized": false,
+      "ended_with_failed_call": false,
+      "turns": [
+        {
+          "turn_idx": 1,
+          "question": "2026 年 6 月的客单价是多少？",
+          "retrieval_query": "2026 年 6 月的客单价是多少？",
+          "injected_chunks": [
+            "qa_pair:qa_008",
+            "qa_pair:qa_001",
+            "glossary:gmv",
+            "qa_pair:qa_009",
+            "glossary:avg_order_value",
+            "schema:order_items",
+            "qa_pair:qa_003",
+            "qa_pair:qa_007"
+          ],
+          "sql_calls": [
+            {
+              "seq": 1,
+              "sql": "SELECT ROUND(SUM(amount) / COUNT(DISTINCT order_id), 2) AS avg_order_value, SUM(amount) AS gmv, COUNT(DISTINCT order_id) AS paid_orders FROM payments WHERE paid_at >= '2026-06-01' AND paid_at < '2026-07-01'"
+            }
+          ],
+          "latency_s": 2.405,
+          "tokens": {
+            "input": 6822,
+            "output": 323,
+            "total": 7145,
+            "cache_read": 6400
+          }
+        },
+        {
+          "turn_idx": 2,
+          "question": "那这个月的连带率呢",
+          "retrieval_query": "2026 年 6 月的客单价是多少？\n那这个月的连带率呢",
+          "injected_chunks": [
+            "qa_pair:qa_008",
+            "qa_pair:qa_001",
+            "glossary:items_per_order",
+            "qa_pair:qa_009",
+            "glossary:yoy_mom",
+            "glossary:avg_order_value",
+            "qa_pair:qa_007",
+            "qa_pair:qa_003"
+          ],
+          "sql_calls": [
+            {
+              "seq": 1,
+              "sql": "SELECT ROUND(SUM(amount) / COUNT(DISTINCT order_id), 2) AS avg_order_value, SUM(amount) AS gmv, COUNT(DISTINCT order_id) AS paid_orders FROM payments WHERE paid_at >= '2026-06-01' AND paid_at < '2026-07-01'"
+            },
+            {
+              "seq": 2,
+              "sql": "SELECT ROUND(SUM(item_count) / COUNT(*), 4) AS items_per_order, SUM(item_count) AS total_items, COUNT(*) AS order_count FROM orders WHERE created_at >= '2026-09-01' AND created_at < '2026-10-01'"
+            },
+            {
+              "seq": 3,
+              "sql": "SELECT ROUND(SUM(oi.quantity) / COUNT(DISTINCT oi.order_id), 4) AS items_per_order, SUM(oi.quantity) AS total_items, COUNT(DISTINCT oi.order_id) AS order_count FROM order_items oi JOIN orders o ON o.id = oi.order_id WHERE o.created_at >= '2026-09-01' AND o.created_at < '2026-10-01'"
+            }
+          ],
+          "latency_s": 3.542,
+          "tokens": {
+            "input": 16003,
+            "output": 943,
+            "total": 16946,
+            "cache_read": 12800
+          }
+        }
+      ]
+    },
+    {
+      "id": "MT-06",
+      "run_idx": 1,
+      "question_type": null,
+      "generalize_layer": null,
+      "injected_chunks": [
+        "qa_pair:qa_004",
+        "qa_pair:qa_003",
+        "qa_pair:qa_008",
+        "schema:refunds",
+        "glossary:net_sales",
+        "qa_pair:qa_010",
+        "glossary:gmv",
+        "glossary:refund_rate"
+      ],
+      "expected_chunks": [
+        "glossary:gmv",
+        "glossary:net_sales",
+        "schema:payments",
+        "schema:refunds"
+      ],
+      "recall_hits": [
+        "glossary:gmv",
+        "glossary:net_sales",
+        "schema:refunds"
+      ],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT ROUND(SUM(amount), 2) AS gmv, COUNT(*) AS pay_cnt, COUNT(DISTINCT order_id) AS order_cnt\nFROM payments\nWHERE paid_at >= '2026-09-01' AND paid_at < '2026-10-01';"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT\n  (SELECT ROUND(SUM(amount),2) FROM payments WHERE paid_at >= '2026-09-01' AND paid_at < '2026-10-01') AS gmv_sep,\n  (SELECT ROUND(SUM(amount),2) FROM refunds  WHERE refunded_at >= '2026-09-01' AND refunded_at < '2026-10-01') AS refund_sep_by_refunded_at,\n  (SELECT ROUND(SUM(r.amount),2) FROM payments p JOIN refunds r ON r.payment_id = p.id\n     WHERE p.paid_at >= '2026-09-01' AND p.paid_at < '2026-10-01') AS refund_on_sep_payments;"
+        }
+      ],
+      "sql_used": "SELECT\n  (SELECT ROUND(SUM(amount),2) FROM payments WHERE paid_at >= '2026-09-01' AND paid_at < '2026-10-01') AS gmv_sep,\n  (SELECT ROUND(SUM(amount),2) FROM refunds  WHERE refunded_at >= '2026-09-01' AND refunded_at < '2026-10-01') AS refund_sep_by_refunded_at,\n  (SELECT ROUND(SUM(r.amount),2) FROM payments p JOIN refunds r ON r.payment_id = p.id\n     WHERE p.paid_at >= '2026-09-01' AND p.paid_at < '2026-10-01') AS refund_on_sep_payments;",
+      "sql_source": "last",
+      "gold_row_count": 1,
+      "model_row_count": 1,
+      "judge": "pass",
+      "pass_via": "text",
+      "text_matched": "14460561.20",
+      "final_answer_text": "没有扣。上面那个 **16,029,955.34 元是 GMV 口径，不冲减退款**；扣掉退款后的指标叫\"净销售额（net_sales）\"。\n\n刚才那次查询的结果（同一批查询，第 2 次）：\n\n| 指标 | 金额（元） |\n|---|---|\n| 9 月 GMV（按支付时间） | 16,029,955.34 |\n| 9 月退款金额（按退款完成时间 refunded_at 落在 9 月） | 1,569,394.14 |\n| **9 月净销售额 = 16,029,955.34 − 1,569,394.14** | **14,460,561.20** |\n\n口径说明：\n- **GMV**：`SUM(payments.amount)` 按 `paid_at` 过滤，**不冲减退款**。\n- **净销售额**：GMV − 统计期内退款金额；支付按 `paid_at`、退款按 `refunded_at` **各自落在统计期内**（两条时间轴，这是口径规定）。\n- 另有第 3 列的 1,242,030.15 元，是\"9 月支付的那批订单所产生的退款金额\"（按支付时间归属），用于算退款率（金额口径）≈ 1,242,030.15 ÷ 16,029,955.34 ≈ **7.75%**。它和净销售额里的 1,569,394.14 不是同一个口径，不要混用。\n\n所以：\n- 问\"9 月 GMV\"→ 16,029,955.34 元（含未退部分）\n- 问\"9 月净销售额\"→ 14,460,561.20 元（已扣退款）",
+      "failure_mode": null,
+      "error_msg": null,
+      "latency_s": 6.625,
+      "tokens": {
+        "input": 20268,
+        "output": 1519,
+        "total": 21787,
+        "cache_read": 11264
+      },
+      "oversized": false,
+      "ended_with_failed_call": false,
+      "turns": [
+        {
+          "turn_idx": 1,
+          "question": "2026 年 9 月的 GMV 是多少？",
+          "retrieval_query": "2026 年 9 月的 GMV 是多少？",
+          "injected_chunks": [
+            "qa_pair:qa_003",
+            "qa_pair:qa_001",
+            "glossary:gmv",
+            "qa_pair:qa_004",
+            "qa_pair:qa_008",
+            "glossary:yoy_mom",
+            "qa_pair:qa_009",
+            "schema:users"
+          ],
+          "sql_calls": [
+            {
+              "seq": 1,
+              "sql": "SELECT ROUND(SUM(amount), 2) AS gmv, COUNT(*) AS pay_cnt, COUNT(DISTINCT order_id) AS order_cnt\nFROM payments\nWHERE paid_at >= '2026-09-01' AND paid_at < '2026-10-01';"
+            }
+          ],
+          "latency_s": 2.555,
+          "tokens": {
+            "input": 6411,
+            "output": 354,
+            "total": 6765,
+            "cache_read": 3584
+          }
+        },
+        {
+          "turn_idx": 2,
+          "question": "这个数扣掉退款了吗",
+          "retrieval_query": "2026 年 9 月的 GMV 是多少？\n这个数扣掉退款了吗",
+          "injected_chunks": [
+            "qa_pair:qa_004",
+            "qa_pair:qa_003",
+            "qa_pair:qa_008",
+            "schema:refunds",
+            "glossary:net_sales",
+            "qa_pair:qa_010",
+            "glossary:gmv",
+            "glossary:refund_rate"
+          ],
+          "sql_calls": [
+            {
+              "seq": 1,
+              "sql": "SELECT ROUND(SUM(amount), 2) AS gmv, COUNT(*) AS pay_cnt, COUNT(DISTINCT order_id) AS order_cnt\nFROM payments\nWHERE paid_at >= '2026-09-01' AND paid_at < '2026-10-01';"
+            },
+            {
+              "seq": 2,
+              "sql": "SELECT\n  (SELECT ROUND(SUM(amount),2) FROM payments WHERE paid_at >= '2026-09-01' AND paid_at < '2026-10-01') AS gmv_sep,\n  (SELECT ROUND(SUM(amount),2) FROM refunds  WHERE refunded_at >= '2026-09-01' AND refunded_at < '2026-10-01') AS refund_sep_by_refunded_at,\n  (SELECT ROUND(SUM(r.amount),2) FROM payments p JOIN refunds r ON r.payment_id = p.id\n     WHERE p.paid_at >= '2026-09-01' AND p.paid_at < '2026-10-01') AS refund_on_sep_payments;"
+            }
+          ],
+          "latency_s": 4.069,
+          "tokens": {
+            "input": 13857,
+            "output": 1165,
+            "total": 15022,
+            "cache_read": 7680
+          }
+        }
+      ]
+    },
+    {
+      "id": "MT-07",
+      "run_idx": 1,
+      "question_type": null,
+      "generalize_layer": null,
+      "injected_chunks": [
+        "qa_pair:qa_008",
+        "qa_pair:qa_004",
+        "qa_pair:qa_002",
+        "glossary:gmv",
+        "qa_pair:qa_003",
+        "qa_pair:qa_007",
+        "qa_pair:qa_001",
+        "qa_pair:qa_009"
+      ],
+      "expected_chunks": [
+        "schema:payments",
+        "schema:orders",
+        "schema:users"
+      ],
+      "recall_hits": [],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT u.city, SUM(p.amount) AS pay_amount, COUNT(DISTINCT p.order_id) AS order_count\nFROM payments p\nJOIN orders o ON o.id = p.order_id\nJOIN users u ON u.id = o.user_id\nWHERE p.paid_at >= '2026-01-01' AND p.paid_at < '2026-02-01'\nGROUP BY u.city\nORDER BY pay_amount DESC;"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT COUNT(DISTINCT u.city) AS city_count,\n       SUM(p.amount) AS total_pay_amount,\n       COUNT(*) AS pay_orders\nFROM payments p\nJOIN orders o ON o.id = p.order_id\nJOIN users u ON u.id = o.user_id\nWHERE p.paid_at >= '2026-01-01' AND p.paid_at < '2026-02-01';"
+        },
+        {
+          "seq": 3,
+          "sql": "SELECT u.city,\n       SUM(p.amount) AS pay_amount,\n       COUNT(DISTINCT p.order_id) AS pay_orders,\n       COUNT(DISTINCT o.user_id) AS pay_users\nFROM payments p\nJOIN orders o ON o.id = p.order_id\nJOIN users u ON u.id = o.user_id\nWHERE u.city = '上海'\n  AND p.paid_at >= '2026-01-01' AND p.paid_at < '2026-02-01'\nGROUP BY u.city;"
+        },
+        {
+          "seq": 4,
+          "sql": "SELECT DATE_FORMAT(p.paid_at, '%Y-%m-%d') AS pay_date,\n       SUM(p.amount) AS pay_amount,\n       COUNT(DISTINCT p.order_id) AS pay_orders\nFROM payments p\nJOIN orders o ON o.id = p.order_id\nJOIN users u ON u.id = o.user_id\nWHERE u.city = '上海'\n  AND p.paid_at >= '2026-01-01' AND p.paid_at < '2026-02-01'\nGROUP BY pay_date\nORDER BY pay_date;"
+        },
+        {
+          "seq": 5,
+          "sql": "SELECT pay_date, pay_amount, pay_orders FROM (\n  SELECT DATE_FORMAT(p.paid_at, '%Y-%m-%d') AS pay_date,\n         SUM(p.amount) AS pay_amount,\n         COUNT(DISTINCT p.order_id) AS pay_orders\n  FROM payments p\n  JOIN orders o ON o.id = p.order_id\n  JOIN users u ON u.id = o.user_id\n  WHERE u.city = '上海'\n    AND p.paid_at >= '2026-01-01' AND p.paid_at < '2026-02-01'\n  GROUP BY pay_date\n) t\nORDER BY pay_amount DESC\nLIMIT 5;"
+        },
+        {
+          "seq": 6,
+          "sql": "SELECT pay_date, pay_amount, pay_orders FROM (\n  SELECT DATE_FORMAT(p.paid_at, '%Y-%m-%d') AS pay_date,\n         SUM(p.amount) AS pay_amount,\n         COUNT(DISTINCT p.order_id) AS pay_orders\n  FROM payments p\n  JOIN orders o ON o.id = p.order_id\n  JOIN users u ON u.id = o.user_id\n  WHERE u.city = '上海'\n    AND p.paid_at >= '2026-01-01' AND p.paid_at < '2026-02-01'\n  GROUP BY pay_date\n) t\nORDER BY pay_amount ASC\nLIMIT 5;"
+        }
+      ],
+      "sql_used": "SELECT pay_date, pay_amount, pay_orders FROM (\n  SELECT DATE_FORMAT(p.paid_at, '%Y-%m-%d') AS pay_date,\n         SUM(p.amount) AS pay_amount,\n         COUNT(DISTINCT p.order_id) AS pay_orders\n  FROM payments p\n  JOIN orders o ON o.id = p.order_id\n  JOIN users u ON u.id = o.user_id\n  WHERE u.city = '上海'\n    AND p.paid_at >= '2026-01-01' AND p.paid_at < '2026-02-01'\n  GROUP BY pay_date\n) t\nORDER BY pay_amount ASC\nLIMIT 5;",
+      "sql_source": "last",
+      "gold_row_count": 1,
+      "model_row_count": 5,
+      "judge": "pass",
+      "pass_via": "text",
+      "text_matched": "1559768.99",
+      "final_answer_text": "## 上海 · 2026 年 1 月支付金额\n\n**口径**：支付成功金额（GMV），取 `payments.amount`，按支付时间过滤（2026-01-01 ≤ paid_at < 2026-02-01），经 `orders` 关联到所在城市为「上海」的用户。\n\n### 月度汇总\n\n| 城市 | 支付金额（元） | 支付订单数 | 支付用户数 |\n| --- | --- | --- | --- |\n| 上海 | 1,559,768.99 | 646 | 431 |\n\n上海在全月 20 个城市中排**第 3 位**，占当月总额 19,545,362.44 元的 **8.0%**；客单价约 **2,414 元**（1,559,768.99 ÷ 646，按支付订单数去重）。\n\n### 按天明细（金额最高的 5 天）\n\n| 日期 | 支付金额（元） | 支付订单数 |\n| --- | --- | --- |\n| 2026-01-15 | 119,491.85 | 23 |\n| 2026-01-28 | 84,735.58 | 28 |\n| 2026-01-29 | 81,360.87 | 26 |\n| 2026-01-08 | 78,504.67 | 24 |\n| 2026-01-18 | 72,308.16 | 22 |\n\n### 按天明细（金额最低的 5 天）\n\n| 日期 | 支付金额（元） | 支付订单数 |\n| --- | --- | --- |\n| 2026-01-13 | 19,653.55 | 12 |\n| 2026-01-30 | 21,654.63 | 18 |\n| 2026-01-09 | 23,712.38 | 18 |\n| 2026-01-23 | 27,114.58 | 17 |\n| 2026-01-17 | 27,171.70 | 13 |\n\n**说明**：逐日数据为 31 天，首次查询因结果上限 20 行被截断，故又分别取了两端 Top5/Bottom5；完整逐日序列可按需再查。可以看出上海日间波动较大（1.97 万 ～ 11.95 万），1 月 15 日为明显高峰，且该日订单数并不最多（23 单），说明是单笔金额偏大的订单拉动了当日金额；而 1 月 28 日订单数最多（28 单）但金额居中。以上数字均来自对 `payments`/`orders`/`users` 三表联查的真实执行结果。",
+      "failure_mode": null,
+      "error_msg": null,
+      "latency_s": 13.151,
+      "tokens": {
+        "input": 34625,
+        "output": 3789,
+        "total": 38414,
+        "cache_read": 28928
+      },
+      "oversized": false,
+      "ended_with_failed_call": false,
+      "turns": [
+        {
+          "turn_idx": 1,
+          "question": "2026 年 1 月各城市的支付金额是多少？",
+          "retrieval_query": "2026 年 1 月各城市的支付金额是多少？",
+          "injected_chunks": [
+            "qa_pair:qa_008",
+            "qa_pair:qa_002",
+            "glossary:gmv",
+            "qa_pair:qa_001",
+            "qa_pair:qa_007",
+            "qa_pair:qa_003",
+            "schema:payments",
+            "qa_pair:qa_011"
+          ],
+          "sql_calls": [
+            {
+              "seq": 1,
+              "sql": "SELECT u.city, SUM(p.amount) AS pay_amount, COUNT(DISTINCT p.order_id) AS order_count\nFROM payments p\nJOIN orders o ON o.id = p.order_id\nJOIN users u ON u.id = o.user_id\nWHERE p.paid_at >= '2026-01-01' AND p.paid_at < '2026-02-01'\nGROUP BY u.city\nORDER BY pay_amount DESC;"
+            },
+            {
+              "seq": 2,
+              "sql": "SELECT COUNT(DISTINCT u.city) AS city_count,\n       SUM(p.amount) AS total_pay_amount,\n       COUNT(*) AS pay_orders\nFROM payments p\nJOIN orders o ON o.id = p.order_id\nJOIN users u ON u.id = o.user_id\nWHERE p.paid_at >= '2026-01-01' AND p.paid_at < '2026-02-01';"
+            }
+          ],
+          "latency_s": 6.202,
+          "tokens": {
+            "input": 10549,
+            "output": 1171,
+            "total": 11720,
+            "cache_read": 9728
+          }
+        },
+        {
+          "turn_idx": 2,
+          "question": "只看上海呢",
+          "retrieval_query": "2026 年 1 月各城市的支付金额是多少？\n只看上海呢",
+          "injected_chunks": [
+            "qa_pair:qa_008",
+            "qa_pair:qa_004",
+            "qa_pair:qa_002",
+            "glossary:gmv",
+            "qa_pair:qa_003",
+            "qa_pair:qa_007",
+            "qa_pair:qa_001",
+            "qa_pair:qa_009"
+          ],
+          "sql_calls": [
+            {
+              "seq": 1,
+              "sql": "SELECT u.city, SUM(p.amount) AS pay_amount, COUNT(DISTINCT p.order_id) AS order_count\nFROM payments p\nJOIN orders o ON o.id = p.order_id\nJOIN users u ON u.id = o.user_id\nWHERE p.paid_at >= '2026-01-01' AND p.paid_at < '2026-02-01'\nGROUP BY u.city\nORDER BY pay_amount DESC;"
+            },
+            {
+              "seq": 2,
+              "sql": "SELECT COUNT(DISTINCT u.city) AS city_count,\n       SUM(p.amount) AS total_pay_amount,\n       COUNT(*) AS pay_orders\nFROM payments p\nJOIN orders o ON o.id = p.order_id\nJOIN users u ON u.id = o.user_id\nWHERE p.paid_at >= '2026-01-01' AND p.paid_at < '2026-02-01';"
+            },
+            {
+              "seq": 3,
+              "sql": "SELECT u.city,\n       SUM(p.amount) AS pay_amount,\n       COUNT(DISTINCT p.order_id) AS pay_orders,\n       COUNT(DISTINCT o.user_id) AS pay_users\nFROM payments p\nJOIN orders o ON o.id = p.order_id\nJOIN users u ON u.id = o.user_id\nWHERE u.city = '上海'\n  AND p.paid_at >= '2026-01-01' AND p.paid_at < '2026-02-01'\nGROUP BY u.city;"
+            },
+            {
+              "seq": 4,
+              "sql": "SELECT DATE_FORMAT(p.paid_at, '%Y-%m-%d') AS pay_date,\n       SUM(p.amount) AS pay_amount,\n       COUNT(DISTINCT p.order_id) AS pay_orders\nFROM payments p\nJOIN orders o ON o.id = p.order_id\nJOIN users u ON u.id = o.user_id\nWHERE u.city = '上海'\n  AND p.paid_at >= '2026-01-01' AND p.paid_at < '2026-02-01'\nGROUP BY pay_date\nORDER BY pay_date;"
+            },
+            {
+              "seq": 5,
+              "sql": "SELECT pay_date, pay_amount, pay_orders FROM (\n  SELECT DATE_FORMAT(p.paid_at, '%Y-%m-%d') AS pay_date,\n         SUM(p.amount) AS pay_amount,\n         COUNT(DISTINCT p.order_id) AS pay_orders\n  FROM payments p\n  JOIN orders o ON o.id = p.order_id\n  JOIN users u ON u.id = o.user_id\n  WHERE u.city = '上海'\n    AND p.paid_at >= '2026-01-01' AND p.paid_at < '2026-02-01'\n  GROUP BY pay_date\n) t\nORDER BY pay_amount DESC\nLIMIT 5;"
+            },
+            {
+              "seq": 6,
+              "sql": "SELECT pay_date, pay_amount, pay_orders FROM (\n  SELECT DATE_FORMAT(p.paid_at, '%Y-%m-%d') AS pay_date,\n         SUM(p.amount) AS pay_amount,\n         COUNT(DISTINCT p.order_id) AS pay_orders\n  FROM payments p\n  JOIN orders o ON o.id = p.order_id\n  JOIN users u ON u.id = o.user_id\n  WHERE u.city = '上海'\n    AND p.paid_at >= '2026-01-01' AND p.paid_at < '2026-02-01'\n  GROUP BY pay_date\n) t\nORDER BY pay_amount ASC\nLIMIT 5;"
+            }
+          ],
+          "latency_s": 6.949,
+          "tokens": {
+            "input": 24076,
+            "output": 2618,
+            "total": 26694,
+            "cache_read": 19200
+          }
+        }
+      ]
+    },
+    {
+      "id": "MT-08",
+      "run_idx": 1,
+      "question_type": null,
+      "generalize_layer": null,
+      "injected_chunks": [
+        "qa_pair:qa_005",
+        "schema:products",
+        "glossary:repurchase_rate",
+        "qa_pair:qa_008",
+        "qa_pair:qa_009",
+        "qa_pair:qa_006",
+        "schema:users",
+        "glossary:sell_through"
+      ],
+      "expected_chunks": [
+        "schema:users",
+        "schema:orders",
+        "schema:order_items",
+        "schema:products"
+      ],
+      "recall_hits": [
+        "schema:users",
+        "schema:products"
+      ],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT COUNT(DISTINCT o.user_id) AS digital_users\nFROM orders o\nJOIN order_items oi ON oi.order_id = o.id\nJOIN products p ON p.id = oi.product_id\nWHERE p.category = '数码'"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT (SELECT COUNT(*) FROM users) AS total_users,\n       COUNT(*) AS not_buy_digital_users\nFROM users u\nWHERE NOT EXISTS (\n    SELECT 1\n    FROM orders o\n    JOIN order_items oi ON oi.order_id = o.id\n    JOIN products p ON p.id = oi.product_id\n    WHERE o.user_id = u.id\n      AND p.category = '数码'\n)"
+        }
+      ],
+      "sql_used": "SELECT (SELECT COUNT(*) FROM users) AS total_users,\n       COUNT(*) AS not_buy_digital_users\nFROM users u\nWHERE NOT EXISTS (\n    SELECT 1\n    FROM orders o\n    JOIN order_items oi ON oi.order_id = o.id\n    JOIN products p ON p.id = oi.product_id\n    WHERE o.user_id = u.id\n      AND p.category = '数码'\n)",
+      "sql_source": "last",
+      "gold_row_count": 1,
+      "model_row_count": 1,
+      "judge": "pass",
+      "pass_via": "text",
+      "text_matched": "11705",
+      "final_answer_text": "**没买过数码类目商品的用户共 11,705 人。**\n\n口径说明（基于上述查询结果）：\n- 用 `NOT EXISTS` 在全量在册用户（20,000 人）中排除\"存在数码类目订单明细\"的用户；\n- 与上一问互补：20,000 − 8,295（买过数码）= 11,705 ✓ 两个口径完全对得上（上一问的 8,295 来自同源三表 JOIN 查询）。\n\n占比情况：买过数码的约 41.5%，没买过的约 58.5%。\n\n若你想换口径（例如只看\"期内下单用户\"中有多少没买过数码，或限定某个时间段），告诉我统计期间即可。",
+      "failure_mode": null,
+      "error_msg": null,
+      "latency_s": 6.844,
+      "tokens": {
+        "input": 23866,
+        "output": 1283,
+        "total": 25149,
+        "cache_read": 16128
+      },
+      "oversized": false,
+      "ended_with_failed_call": false,
+      "turns": [
+        {
+          "turn_idx": 1,
+          "question": "买过数码类目商品的用户有多少？",
+          "retrieval_query": "买过数码类目商品的用户有多少？",
+          "injected_chunks": [
+            "qa_pair:qa_005",
+            "schema:products",
+            "qa_pair:qa_009",
+            "glossary:repurchase_rate",
+            "glossary:arpu",
+            "schema:users",
+            "qa_pair:qa_002",
+            "glossary:sell_through"
+          ],
+          "sql_calls": [
+            {
+              "seq": 1,
+              "sql": "SELECT COUNT(DISTINCT o.user_id) AS digital_users\nFROM orders o\nJOIN order_items oi ON oi.order_id = o.id\nJOIN products p ON p.id = oi.product_id\nWHERE p.category = '数码'"
+            }
+          ],
+          "latency_s": 3.582,
+          "tokens": {
+            "input": 7742,
+            "output": 435,
+            "total": 8177,
+            "cache_read": 5376
+          }
+        },
+        {
+          "turn_idx": 2,
+          "question": "那没买过的呢",
+          "retrieval_query": "买过数码类目商品的用户有多少？\n那没买过的呢",
+          "injected_chunks": [
+            "qa_pair:qa_005",
+            "schema:products",
+            "glossary:repurchase_rate",
+            "qa_pair:qa_008",
+            "qa_pair:qa_009",
+            "qa_pair:qa_006",
+            "schema:users",
+            "glossary:sell_through"
+          ],
+          "sql_calls": [
+            {
+              "seq": 1,
+              "sql": "SELECT COUNT(DISTINCT o.user_id) AS digital_users\nFROM orders o\nJOIN order_items oi ON oi.order_id = o.id\nJOIN products p ON p.id = oi.product_id\nWHERE p.category = '数码'"
+            },
+            {
+              "seq": 2,
+              "sql": "SELECT (SELECT COUNT(*) FROM users) AS total_users,\n       COUNT(*) AS not_buy_digital_users\nFROM users u\nWHERE NOT EXISTS (\n    SELECT 1\n    FROM orders o\n    JOIN order_items oi ON oi.order_id = o.id\n    JOIN products p ON p.id = oi.product_id\n    WHERE o.user_id = u.id\n      AND p.category = '数码'\n)"
+            }
+          ],
+          "latency_s": 3.262,
+          "tokens": {
+            "input": 16124,
+            "output": 848,
+            "total": 16972,
+            "cache_read": 10752
+          }
+        }
+      ]
+    },
+    {
+      "id": "MT-01",
+      "run_idx": 2,
+      "question_type": null,
+      "generalize_layer": null,
+      "injected_chunks": [
+        "glossary:yoy_mom",
+        "qa_pair:qa_003",
+        "qa_pair:qa_008",
+        "qa_pair:qa_001",
+        "schema:products",
+        "glossary:arpu",
+        "qa_pair:qa_009",
+        "glossary:gmv"
+      ],
+      "expected_chunks": [
+        "glossary:yoy_mom",
+        "qa_pair:qa_003"
+      ],
+      "recall_hits": [
+        "glossary:yoy_mom",
+        "qa_pair:qa_003"
+      ],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT SUM(amount) AS gmv, COUNT(*) AS pay_count, COUNT(DISTINCT order_id) AS pay_orders FROM payments WHERE paid_at >= '2026-09-01' AND paid_at < '2026-10-01'"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT DATE_FORMAT(paid_at, '%Y-%m') AS month, SUM(amount) AS gmv, COUNT(DISTINCT order_id) AS pay_orders FROM payments WHERE paid_at >= '2025-09-01' AND paid_at < '2026-10-01' AND (DATE_FORMAT(paid_at,'%Y-%m') IN ('2025-09','2026-08','2026-09')) GROUP BY month ORDER BY month"
+        }
+      ],
+      "sql_used": "SELECT DATE_FORMAT(paid_at, '%Y-%m') AS month, SUM(amount) AS gmv, COUNT(DISTINCT order_id) AS pay_orders FROM payments WHERE paid_at >= '2025-09-01' AND paid_at < '2026-10-01' AND (DATE_FORMAT(paid_at,'%Y-%m') IN ('2025-09','2026-08','2026-09')) GROUP BY month ORDER BY month",
+      "sql_source": "last",
+      "gold_row_count": 2,
+      "model_row_count": 2,
+      "judge": "fail",
+      "pass_via": null,
+      "text_matched": null,
+      "final_answer_text": "**环比：下降 0.83%**\n\n| 月份 | GMV（元） | 支付订单数 |\n|---|---|---|\n| 2026-08 | 16,164,482.43 | 6,079 |\n| 2026-09 | 16,029,955.34 | 5,901 |\n\n- 环比 =（16,029,955.34 − 16,164,482.43）÷ 16,164,482.43 = **−0.83%**，即 9 月 GMV 比 8 月减少约 13.45 万元。\n- 计算口径：先按 `DATE_FORMAT(paid_at, '%Y-%m')` 分自然月聚合出各月 GMV，再算差值比率（未用 30 天近似）；金额均按支付成功金额计。\n\n**同比：无法计算。** 本库数据范围为 2025-10-01 起，2025 年 9 月没有任何支付记录，去年同期无数据，按\"除零/不可比\"处理，不能给出同比。\n\n数据来源：对 `payments` 表按 `paid_at` 分月聚合的一次查询结果（上一条 9 月数字同源于此）。",
+      "failure_mode": "trap:month_shift_aug",
+      "error_msg": null,
+      "latency_s": 5.108,
+      "tokens": {
+        "input": 17371,
+        "output": 1168,
+        "total": 18539,
+        "cache_read": 15872
+      },
+      "oversized": false,
+      "ended_with_failed_call": false,
+      "turns": [
+        {
+          "turn_idx": 1,
+          "question": "上个月 GMV 多少？",
+          "retrieval_query": "上个月 GMV 多少？",
+          "injected_chunks": [
+            "qa_pair:qa_003",
+            "qa_pair:qa_001",
+            "qa_pair:qa_008",
+            "glossary:gmv",
+            "glossary:arpu",
+            "qa_pair:qa_007",
+            "glossary:yoy_mom",
+            "qa_pair:qa_009"
+          ],
+          "sql_calls": [
+            {
+              "seq": 1,
+              "sql": "SELECT SUM(amount) AS gmv, COUNT(*) AS pay_count, COUNT(DISTINCT order_id) AS pay_orders FROM payments WHERE paid_at >= '2026-09-01' AND paid_at < '2026-10-01'"
+            }
+          ],
+          "latency_s": 2.051,
+          "tokens": {
+            "input": 5125,
+            "output": 305,
+            "total": 5430,
+            "cache_read": 4736
+          }
+        },
+        {
+          "turn_idx": 2,
+          "question": "那环比呢",
+          "retrieval_query": "上个月 GMV 多少？\n那环比呢",
+          "injected_chunks": [
+            "glossary:yoy_mom",
+            "qa_pair:qa_003",
+            "qa_pair:qa_008",
+            "qa_pair:qa_001",
+            "schema:products",
+            "glossary:arpu",
+            "qa_pair:qa_009",
+            "glossary:gmv"
+          ],
+          "sql_calls": [
+            {
+              "seq": 1,
+              "sql": "SELECT SUM(amount) AS gmv, COUNT(*) AS pay_count, COUNT(DISTINCT order_id) AS pay_orders FROM payments WHERE paid_at >= '2026-09-01' AND paid_at < '2026-10-01'"
+            },
+            {
+              "seq": 2,
+              "sql": "SELECT DATE_FORMAT(paid_at, '%Y-%m') AS month, SUM(amount) AS gmv, COUNT(DISTINCT order_id) AS pay_orders FROM payments WHERE paid_at >= '2025-09-01' AND paid_at < '2026-10-01' AND (DATE_FORMAT(paid_at,'%Y-%m') IN ('2025-09','2026-08','2026-09')) GROUP BY month ORDER BY month"
+            }
+          ],
+          "latency_s": 3.057,
+          "tokens": {
+            "input": 12246,
+            "output": 863,
+            "total": 13109,
+            "cache_read": 11136
+          }
+        }
+      ]
+    },
+    {
+      "id": "MT-02",
+      "run_idx": 2,
+      "question_type": null,
+      "generalize_layer": null,
+      "injected_chunks": [
+        "qa_pair:qa_008",
+        "qa_pair:qa_001",
+        "qa_pair:qa_009",
+        "qa_pair:qa_007",
+        "glossary:avg_order_value",
+        "glossary:gmv",
+        "qa_pair:qa_003",
+        "schema:order_items"
+      ],
+      "expected_chunks": [
+        "glossary:avg_order_value",
+        "schema:payments"
+      ],
+      "recall_hits": [
+        "glossary:avg_order_value"
+      ],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT ROUND(SUM(amount) / COUNT(DISTINCT order_id), 2) AS avg_order_value, SUM(amount) AS gmv, COUNT(DISTINCT order_id) AS paid_orders FROM payments WHERE paid_at >= '2026-06-01' AND paid_at < '2026-07-01';"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT ROUND(SUM(amount) / COUNT(DISTINCT order_id), 2) AS avg_order_value, SUM(amount) AS gmv, COUNT(DISTINCT order_id) AS paid_orders FROM payments WHERE paid_at >= '2026-07-01' AND paid_at < '2026-08-01';"
+        }
+      ],
+      "sql_used": "SELECT ROUND(SUM(amount) / COUNT(DISTINCT order_id), 2) AS avg_order_value, SUM(amount) AS gmv, COUNT(DISTINCT order_id) AS paid_orders FROM payments WHERE paid_at >= '2026-07-01' AND paid_at < '2026-08-01';",
+      "sql_source": "last",
+      "gold_row_count": 1,
+      "model_row_count": 1,
+      "judge": "pass",
+      "pass_via": "text",
+      "text_matched": "2749.39",
+      "final_answer_text": "**2026 年 7 月客单价为 2749.39 元。**\n\n- 分子 GMV = SUM(payments.amount) = 17,266,164.29 元\n- 分母 = COUNT(DISTINCT order_id) = 6,280 笔已支付订单\n- 17,266,164.29 ÷ 6,280 ≈ **2749.39 元/单**\n\n口径同上（口径 5）：分子分母均取自 `payments`，按 `paid_at` 取 `>= 2026-07-01 AND < 2026-08-01`，不冲减退款。\n\n**两个月对比：**\n\n| 月份 | 客单价（元） | GMV（元） | 支付订单数 |\n| --- | --- | --- | --- |\n| 2026-06 | 2765.34 | 29,782,686.06 | 10,770 |\n| 2026-07 | 2749.39 | 17,266,164.29 | 6,280 |\n\n客单价基本持平（7 月仅微降 0.6%），但 7 月 GMV 下降约 42%，主要来自支付订单数减少（少了约 4,490 笔），而非单笔金额变化——即 7 月是「单量下滑」而非「购买力下降」。数字均来自对 `payments` 表的两次实际查询。",
+      "failure_mode": null,
+      "error_msg": null,
+      "latency_s": 5.052,
+      "tokens": {
+        "input": 21265,
+        "output": 1222,
+        "total": 22487,
+        "cache_read": 19840
+      },
+      "oversized": false,
+      "ended_with_failed_call": false,
+      "turns": [
+        {
+          "turn_idx": 1,
+          "question": "2026 年 6 月的客单价是多少？",
+          "retrieval_query": "2026 年 6 月的客单价是多少？",
+          "injected_chunks": [
+            "qa_pair:qa_008",
+            "qa_pair:qa_001",
+            "glossary:gmv",
+            "qa_pair:qa_009",
+            "glossary:avg_order_value",
+            "schema:order_items",
+            "qa_pair:qa_003",
+            "qa_pair:qa_007"
+          ],
+          "sql_calls": [
+            {
+              "seq": 1,
+              "sql": "SELECT ROUND(SUM(amount) / COUNT(DISTINCT order_id), 2) AS avg_order_value, SUM(amount) AS gmv, COUNT(DISTINCT order_id) AS paid_orders FROM payments WHERE paid_at >= '2026-06-01' AND paid_at < '2026-07-01';"
+            }
+          ],
+          "latency_s": 2.304,
+          "tokens": {
+            "input": 6824,
+            "output": 377,
+            "total": 7201,
+            "cache_read": 6400
+          }
+        },
+        {
+          "turn_idx": 2,
+          "question": "那 7 月呢",
+          "retrieval_query": "2026 年 6 月的客单价是多少？\n那 7 月呢",
+          "injected_chunks": [
+            "qa_pair:qa_008",
+            "qa_pair:qa_001",
+            "qa_pair:qa_009",
+            "qa_pair:qa_007",
+            "glossary:avg_order_value",
+            "glossary:gmv",
+            "qa_pair:qa_003",
+            "schema:order_items"
+          ],
+          "sql_calls": [
+            {
+              "seq": 1,
+              "sql": "SELECT ROUND(SUM(amount) / COUNT(DISTINCT order_id), 2) AS avg_order_value, SUM(amount) AS gmv, COUNT(DISTINCT order_id) AS paid_orders FROM payments WHERE paid_at >= '2026-06-01' AND paid_at < '2026-07-01';"
+            },
+            {
+              "seq": 2,
+              "sql": "SELECT ROUND(SUM(amount) / COUNT(DISTINCT order_id), 2) AS avg_order_value, SUM(amount) AS gmv, COUNT(DISTINCT order_id) AS paid_orders FROM payments WHERE paid_at >= '2026-07-01' AND paid_at < '2026-08-01';"
+            }
+          ],
+          "latency_s": 2.748,
+          "tokens": {
+            "input": 14441,
+            "output": 845,
+            "total": 15286,
+            "cache_read": 13440
+          }
+        }
+      ]
+    },
+    {
+      "id": "MT-03",
+      "run_idx": 2,
+      "question_type": null,
+      "generalize_layer": null,
+      "injected_chunks": [
+        "qa_pair:qa_004",
+        "glossary:refund_rate",
+        "schema:refunds",
+        "glossary:net_sales",
+        "qa_pair:qa_008",
+        "qa_pair:qa_010",
+        "schema:order_items",
+        "schema:orders"
+      ],
+      "expected_chunks": [
+        "glossary:refund_rate",
+        "schema:refunds",
+        "schema:payments"
+      ],
+      "recall_hits": [
+        "glossary:refund_rate",
+        "schema:refunds"
+      ],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT ROUND(SUM(r.amount) / SUM(p.amount), 4) AS refund_rate,\n       SUM(p.amount) AS pay_amount,\n       SUM(r.amount) AS refund_amount,\n       COUNT(DISTINCT p.order_id) AS paid_orders,\n       COUNT(DISTINCT r.order_id) AS refunded_orders\nFROM payments p\nLEFT JOIN refunds r ON r.payment_id = p.id\nWHERE p.paid_at >= '2026-09-01' AND p.paid_at < '2026-10-01'"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT (SELECT COUNT(DISTINCT order_id) FROM payments\n         WHERE paid_at >= '2026-09-01' AND paid_at < '2026-10-01') AS paid_orders,\n       (SELECT COUNT(DISTINCT order_id) FROM refunds\n         WHERE refunded_at >= '2026-09-01' AND refunded_at < '2026-10-01') AS refunded_orders,\n       ROUND((SELECT COUNT(DISTINCT order_id) FROM refunds\n         WHERE refunded_at >= '2026-09-01' AND refunded_at < '2026-10-01')\n       / (SELECT COUNT(DISTINCT order_id) FROM payments\n         WHERE paid_at >= '2026-09-01' AND paid_at < '2026-10-01'), 4) AS refund_rate_order"
+        }
+      ],
+      "sql_used": "SELECT (SELECT COUNT(DISTINCT order_id) FROM payments\n         WHERE paid_at >= '2026-09-01' AND paid_at < '2026-10-01') AS paid_orders,\n       (SELECT COUNT(DISTINCT order_id) FROM refunds\n         WHERE refunded_at >= '2026-09-01' AND refunded_at < '2026-10-01') AS refunded_orders,\n       ROUND((SELECT COUNT(DISTINCT order_id) FROM refunds\n         WHERE refunded_at >= '2026-09-01' AND refunded_at < '2026-10-01')\n       / (SELECT COUNT(DISTINCT order_id) FROM payments\n         WHERE paid_at >= '2026-09-01' AND paid_at < '2026-10-01'), 4) AS refund_rate_order",
+      "sql_source": "last",
+      "gold_row_count": 1,
+      "model_row_count": 1,
+      "judge": "pass",
+      "pass_via": "text",
+      "text_matched": "0.0886",
+      "final_answer_text": "**2026 年 9 月退款率（订单口径）≈ 10.79%**\n\n所用口径：**订单口径**——有退款记录的订单数 ÷ 支付成功订单数。按口径文档要求，分子分母走各自的时间轴：分母按 `payments.paid_at` 圈 9 月支付订单，分子按 `refunds.refunded_at` 圈 9 月发生退款的订单（去重 `order_id`）。\n\n| 指标 | 数值 |\n| --- | --- |\n| 9 月支付成功订单数（paid_at 在 9 月，DISTINCT order_id） | 5,901 单 |\n| 9 月有退款的订单数（refunded_at 在 9 月，DISTINCT order_id） | 637 单 |\n| **退款率（订单口径）** | **0.1079（10.79%）** |\n\n两个口径对比（同为 2026 年 9 月）：\n\n| 口径 | 计算方式 | 结果 |\n| --- | --- | --- |\n| 金额口径 | 退款金额 ÷ 支付金额（退款按 refunded_at） | 7.75%（1,242,030.15 / 16,029,955.34 元） |\n| 订单口径 | 有退款订单数 ÷ 支付订单数 | 10.79%（637 / 5,901 单） |\n\n补充说明：两口径数值不同属正常——订单口径里一笔小额退款与一笔大额退款权重相同，且分子的 637 单中包含对更早期（8 月及以前）支付的订单在 9 月完成的退款；若改用\"9 月支付的订单中有退款的笔数\"（无论退款发生在何时），则为 523 单（约 8.86%，来自上一次查询），口径边界不同，回答时需点明所采用的时间轴。",
+      "failure_mode": null,
+      "error_msg": null,
+      "latency_s": 8.273,
+      "tokens": {
+        "input": 25150,
+        "output": 2238,
+        "total": 27388,
+        "cache_read": 23552
+      },
+      "oversized": false,
+      "ended_with_failed_call": false,
+      "turns": [
+        {
+          "turn_idx": 1,
+          "question": "9 月的退款率是多少（金额口径）？",
+          "retrieval_query": "9 月的退款率是多少（金额口径）？",
+          "injected_chunks": [
+            "qa_pair:qa_004",
+            "glossary:refund_rate",
+            "schema:refunds",
+            "glossary:net_sales",
+            "qa_pair:qa_008",
+            "qa_pair:qa_010",
+            "qa_pair:qa_003",
+            "qa_pair:qa_009"
+          ],
+          "sql_calls": [
+            {
+              "seq": 1,
+              "sql": "SELECT ROUND(SUM(r.amount) / SUM(p.amount), 4) AS refund_rate,\n       SUM(p.amount) AS pay_amount,\n       SUM(r.amount) AS refund_amount,\n       COUNT(DISTINCT p.order_id) AS paid_orders,\n       COUNT(DISTINCT r.order_id) AS refunded_orders\nFROM payments p\nLEFT JOIN refunds r ON r.payment_id = p.id\nWHERE p.paid_at >= '2026-09-01' AND p.paid_at < '2026-10-01'"
+            }
+          ],
+          "latency_s": 3.802,
+          "tokens": {
+            "input": 6783,
+            "output": 717,
+            "total": 7500,
+            "cache_read": 6400
+          }
+        },
+        {
+          "turn_idx": 2,
+          "question": "换成订单口径呢",
+          "retrieval_query": "9 月的退款率是多少（金额口径）？\n换成订单口径呢",
+          "injected_chunks": [
+            "qa_pair:qa_004",
+            "glossary:refund_rate",
+            "schema:refunds",
+            "glossary:net_sales",
+            "qa_pair:qa_008",
+            "qa_pair:qa_010",
+            "schema:order_items",
+            "schema:orders"
+          ],
+          "sql_calls": [
+            {
+              "seq": 1,
+              "sql": "SELECT ROUND(SUM(r.amount) / SUM(p.amount), 4) AS refund_rate,\n       SUM(p.amount) AS pay_amount,\n       SUM(r.amount) AS refund_amount,\n       COUNT(DISTINCT p.order_id) AS paid_orders,\n       COUNT(DISTINCT r.order_id) AS refunded_orders\nFROM payments p\nLEFT JOIN refunds r ON r.payment_id = p.id\nWHERE p.paid_at >= '2026-09-01' AND p.paid_at < '2026-10-01'"
+            },
+            {
+              "seq": 2,
+              "sql": "SELECT (SELECT COUNT(DISTINCT order_id) FROM payments\n         WHERE paid_at >= '2026-09-01' AND paid_at < '2026-10-01') AS paid_orders,\n       (SELECT COUNT(DISTINCT order_id) FROM refunds\n         WHERE refunded_at >= '2026-09-01' AND refunded_at < '2026-10-01') AS refunded_orders,\n       ROUND((SELECT COUNT(DISTINCT order_id) FROM refunds\n         WHERE refunded_at >= '2026-09-01' AND refunded_at < '2026-10-01')\n       / (SELECT COUNT(DISTINCT order_id) FROM payments\n         WHERE paid_at >= '2026-09-01' AND paid_at < '2026-10-01'), 4) AS refund_rate_order"
+            }
+          ],
+          "latency_s": 4.471,
+          "tokens": {
+            "input": 18367,
+            "output": 1521,
+            "total": 19888,
+            "cache_read": 17152
+          }
+        }
+      ]
+    },
+    {
+      "id": "MT-04",
+      "run_idx": 2,
+      "question_type": null,
+      "generalize_layer": null,
+      "injected_chunks": [
+        "qa_pair:qa_011",
+        "schema:payments",
+        "glossary:avg_order_value",
+        "qa_pair:qa_008",
+        "schema:order_items",
+        "qa_pair:qa_003",
+        "glossary:gmv",
+        "qa_pair:qa_010"
+      ],
+      "expected_chunks": [
+        "schema:payments"
+      ],
+      "recall_hits": [
+        "schema:payments"
+      ],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT method,\n       COUNT(*) AS order_count,\n       ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM payments), 2) AS pct\nFROM payments\nGROUP BY method\nORDER BY order_count DESC;"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT COUNT(*) AS unionpay_orders,\n       (SELECT COUNT(*) FROM payments) AS total_orders,\n       ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM payments), 2) AS pct\nFROM payments\nWHERE method = '银联';"
+        }
+      ],
+      "sql_used": "SELECT COUNT(*) AS unionpay_orders,\n       (SELECT COUNT(*) FROM payments) AS total_orders,\n       ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM payments), 2) AS pct\nFROM payments\nWHERE method = '银联';",
+      "sql_source": "last",
+      "gold_row_count": 1,
+      "model_row_count": 1,
+      "judge": "pass",
+      "pass_via": "text",
+      "text_matched": "9.96",
+      "final_answer_text": "**银联的订单占比是 9.96%**。\n\n- 银联支付订单数：8,785 笔\n- 支付订单总数：88,244 笔\n- 占比 = 8,785 ÷ 88,244 × 100% ≈ **9.96%**\n\n**口径说明**：数据来自 `payments` 表（按支付成功流水计，一笔成功订单恰一条支付记录），未支付订单（pending/cancelled）无支付记录、不在分母中。银联是三种支付方式中占比最小的一个，约为微信（54.94%）的 1/5.5、支付宝（35.10%）的 1/3.5。",
+      "failure_mode": null,
+      "error_msg": null,
+      "latency_s": 5.093,
+      "tokens": {
+        "input": 24723,
+        "output": 1018,
+        "total": 25741,
+        "cache_read": 23168
+      },
+      "oversized": false,
+      "ended_with_failed_call": false,
+      "turns": [
+        {
+          "turn_idx": 1,
+          "question": "各支付方式的订单占比是多少？",
+          "retrieval_query": "各支付方式的订单占比是多少？",
+          "injected_chunks": [
+            "qa_pair:qa_011",
+            "glossary:avg_order_value",
+            "qa_pair:qa_008",
+            "schema:payments",
+            "glossary:gmv",
+            "schema:order_items",
+            "qa_pair:qa_003",
+            "glossary:pay_conversion"
+          ],
+          "sql_calls": [
+            {
+              "seq": 1,
+              "sql": "SELECT method,\n       COUNT(*) AS order_count,\n       ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM payments), 2) AS pct\nFROM payments\nGROUP BY method\nORDER BY order_count DESC;"
+            }
+          ],
+          "latency_s": 2.446,
+          "tokens": {
+            "input": 7992,
+            "output": 358,
+            "total": 8350,
+            "cache_read": 7552
+          }
+        },
+        {
+          "turn_idx": 2,
+          "question": "银联的占比是多少",
+          "retrieval_query": "各支付方式的订单占比是多少？\n银联的占比是多少",
+          "injected_chunks": [
+            "qa_pair:qa_011",
+            "schema:payments",
+            "glossary:avg_order_value",
+            "qa_pair:qa_008",
+            "schema:order_items",
+            "qa_pair:qa_003",
+            "glossary:gmv",
+            "qa_pair:qa_010"
+          ],
+          "sql_calls": [
+            {
+              "seq": 1,
+              "sql": "SELECT method,\n       COUNT(*) AS order_count,\n       ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM payments), 2) AS pct\nFROM payments\nGROUP BY method\nORDER BY order_count DESC;"
+            },
+            {
+              "seq": 2,
+              "sql": "SELECT COUNT(*) AS unionpay_orders,\n       (SELECT COUNT(*) FROM payments) AS total_orders,\n       ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM payments), 2) AS pct\nFROM payments\nWHERE method = '银联';"
+            }
+          ],
+          "latency_s": 2.647,
+          "tokens": {
+            "input": 16731,
+            "output": 660,
+            "total": 17391,
+            "cache_read": 15616
+          }
+        }
+      ]
+    },
+    {
+      "id": "MT-05",
+      "run_idx": 2,
+      "question_type": null,
+      "generalize_layer": null,
+      "injected_chunks": [
+        "qa_pair:qa_008",
+        "qa_pair:qa_001",
+        "glossary:items_per_order",
+        "qa_pair:qa_009",
+        "glossary:yoy_mom",
+        "glossary:avg_order_value",
+        "qa_pair:qa_007",
+        "qa_pair:qa_003"
+      ],
+      "expected_chunks": [
+        "glossary:items_per_order",
+        "schema:orders"
+      ],
+      "recall_hits": [
+        "glossary:items_per_order"
+      ],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT ROUND(SUM(amount) / COUNT(DISTINCT order_id), 2) AS avg_order_value,\n       SUM(amount) AS gmv,\n       COUNT(DISTINCT order_id) AS paid_orders\nFROM payments\nWHERE paid_at >= '2026-06-01' AND paid_at < '2026-07-01';"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT COLUMN_NAME, DATA_TYPE\nFROM information_schema.COLUMNS\nWHERE TABLE_SCHEMA = 'mart' AND TABLE_NAME = 'order_items'\nORDER BY ORDINAL_POSITION;"
+        },
+        {
+          "seq": 3,
+          "sql": "SELECT ROUND(SUM(item_count) / COUNT(*), 4) AS items_per_order,\n       SUM(item_count) AS total_items,\n       COUNT(*) AS order_count\nFROM orders\nWHERE created_at >= '2026-09-01' AND created_at < '2026-10-01';"
+        },
+        {
+          "seq": 4,
+          "sql": "SELECT ROUND(SUM(oi.quantity) / COUNT(DISTINCT oi.order_id), 4) AS items_per_order,\n       SUM(oi.quantity) AS total_items,\n       COUNT(DISTINCT oi.order_id) AS order_count\nFROM order_items oi\nJOIN orders o ON oi.order_id = o.id\nWHERE o.created_at >= '2026-09-01' AND o.created_at < '2026-10-01';"
+        }
+      ],
+      "sql_used": "SELECT ROUND(SUM(oi.quantity) / COUNT(DISTINCT oi.order_id), 4) AS items_per_order,\n       SUM(oi.quantity) AS total_items,\n       COUNT(DISTINCT oi.order_id) AS order_count\nFROM order_items oi\nJOIN orders o ON oi.order_id = o.id\nWHERE o.created_at >= '2026-09-01' AND o.created_at < '2026-10-01';",
+      "sql_source": "last",
+      "gold_row_count": 1,
+      "model_row_count": 1,
+      "judge": "fail",
+      "pass_via": null,
+      "text_matched": null,
+      "final_answer_text": "**2026 年 9 月（“这个月”，以锚点 2026-09-30 计）连带率 = 2.8014 件/单**\n\n计算口径（依据资料口径「连带率 items_per_order」）：\n- 连带率（件单比）= 期间总购买件数 ÷ 期间订单数\n- 时间按 `orders.created_at` 过滤 2026-09-01 起、10-01 前（左闭右开）\n\n两种等价算法结果完全一致（可交叉验证）：\n\n| 算法 | SQL 口径 | 总件数 | 订单数 | 连带率 |\n| --- | --- | --- | --- | --- |\n| 冗余列（免 JOIN） | `SUM(orders.item_count) / COUNT(*)` | 21,338 | 7,617 | 2.8014 |\n| 明细口径 | `SUM(order_items.quantity) / COUNT(DISTINCT order_items.order_id)` | 21,338 | 7,617 | 2.8014 |\n\n说明：\n- 订单数已按订单去重（`COUNT(DISTINCT order_id)`），避免一条明细一行导致重复计数；\n- 这是**件数口径**，即平均每单 2.80 件商品——与客单价（金额口径，9 月未在本次查询中计算）不是同一个指标，注意不要混淆；\n- 若你的“这个月”指的是别的月份（例如相对 6 月而言的 7 月），告诉我月份我再跑一次。",
+      "failure_mode": "other",
+      "error_msg": null,
+      "latency_s": 10.389,
+      "tokens": {
+        "input": 28384,
+        "output": 2110,
+        "total": 30494,
+        "cache_read": 26112
+      },
+      "oversized": false,
+      "ended_with_failed_call": false,
+      "turns": [
+        {
+          "turn_idx": 1,
+          "question": "2026 年 6 月的客单价是多少？",
+          "retrieval_query": "2026 年 6 月的客单价是多少？",
+          "injected_chunks": [
+            "qa_pair:qa_008",
+            "qa_pair:qa_001",
+            "glossary:gmv",
+            "qa_pair:qa_009",
+            "glossary:avg_order_value",
+            "schema:order_items",
+            "qa_pair:qa_003",
+            "qa_pair:qa_007"
+          ],
+          "sql_calls": [
+            {
+              "seq": 1,
+              "sql": "SELECT ROUND(SUM(amount) / COUNT(DISTINCT order_id), 2) AS avg_order_value,\n       SUM(amount) AS gmv,\n       COUNT(DISTINCT order_id) AS paid_orders\nFROM payments\nWHERE paid_at >= '2026-06-01' AND paid_at < '2026-07-01';"
+            }
+          ],
+          "latency_s": 2.829,
+          "tokens": {
+            "input": 6840,
+            "output": 404,
+            "total": 7244,
+            "cache_read": 6400
+          }
+        },
+        {
+          "turn_idx": 2,
+          "question": "那这个月的连带率呢",
+          "retrieval_query": "2026 年 6 月的客单价是多少？\n那这个月的连带率呢",
+          "injected_chunks": [
+            "qa_pair:qa_008",
+            "qa_pair:qa_001",
+            "glossary:items_per_order",
+            "qa_pair:qa_009",
+            "glossary:yoy_mom",
+            "glossary:avg_order_value",
+            "qa_pair:qa_007",
+            "qa_pair:qa_003"
+          ],
+          "sql_calls": [
+            {
+              "seq": 1,
+              "sql": "SELECT ROUND(SUM(amount) / COUNT(DISTINCT order_id), 2) AS avg_order_value,\n       SUM(amount) AS gmv,\n       COUNT(DISTINCT order_id) AS paid_orders\nFROM payments\nWHERE paid_at >= '2026-06-01' AND paid_at < '2026-07-01';"
+            },
+            {
+              "seq": 2,
+              "sql": "SELECT COLUMN_NAME, DATA_TYPE\nFROM information_schema.COLUMNS\nWHERE TABLE_SCHEMA = 'mart' AND TABLE_NAME = 'order_items'\nORDER BY ORDINAL_POSITION;"
+            },
+            {
+              "seq": 3,
+              "sql": "SELECT ROUND(SUM(item_count) / COUNT(*), 4) AS items_per_order,\n       SUM(item_count) AS total_items,\n       COUNT(*) AS order_count\nFROM orders\nWHERE created_at >= '2026-09-01' AND created_at < '2026-10-01';"
+            },
+            {
+              "seq": 4,
+              "sql": "SELECT ROUND(SUM(oi.quantity) / COUNT(DISTINCT oi.order_id), 4) AS items_per_order,\n       SUM(oi.quantity) AS total_items,\n       COUNT(DISTINCT oi.order_id) AS order_count\nFROM order_items oi\nJOIN orders o ON oi.order_id = o.id\nWHERE o.created_at >= '2026-09-01' AND o.created_at < '2026-10-01';"
+            }
+          ],
+          "latency_s": 7.56,
+          "tokens": {
+            "input": 21544,
+            "output": 1706,
+            "total": 23250,
+            "cache_read": 19712
+          }
+        }
+      ]
+    },
+    {
+      "id": "MT-06",
+      "run_idx": 2,
+      "question_type": null,
+      "generalize_layer": null,
+      "injected_chunks": [
+        "qa_pair:qa_004",
+        "qa_pair:qa_003",
+        "qa_pair:qa_008",
+        "schema:refunds",
+        "glossary:net_sales",
+        "qa_pair:qa_010",
+        "glossary:gmv",
+        "glossary:refund_rate"
+      ],
+      "expected_chunks": [
+        "glossary:gmv",
+        "glossary:net_sales",
+        "schema:payments",
+        "schema:refunds"
+      ],
+      "recall_hits": [
+        "glossary:gmv",
+        "glossary:net_sales",
+        "schema:refunds"
+      ],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT ROUND(SUM(amount), 2) AS gmv FROM payments WHERE paid_at >= '2026-09-01' AND paid_at < '2026-10-01';"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT\n  (SELECT ROUND(SUM(amount),2) FROM payments WHERE paid_at >= '2026-09-01' AND paid_at < '2026-10-01') AS gmv,\n  (SELECT ROUND(SUM(amount),2) FROM refunds WHERE refunded_at >= '2026-09-01' AND refunded_at < '2026-10-01') AS refund_amount,\n  (SELECT ROUND(SUM(amount),2) FROM payments WHERE paid_at >= '2026-09-01' AND paid_at < '2026-10-01')\n  - (SELECT ROUND(SUM(amount),2) FROM refunds WHERE refunded_at >= '2026-09-01' AND refunded_at < '2026-10-01') AS net_sales;"
+        }
+      ],
+      "sql_used": "SELECT\n  (SELECT ROUND(SUM(amount),2) FROM payments WHERE paid_at >= '2026-09-01' AND paid_at < '2026-10-01') AS gmv,\n  (SELECT ROUND(SUM(amount),2) FROM refunds WHERE refunded_at >= '2026-09-01' AND refunded_at < '2026-10-01') AS refund_amount,\n  (SELECT ROUND(SUM(amount),2) FROM payments WHERE paid_at >= '2026-09-01' AND paid_at < '2026-10-01')\n  - (SELECT ROUND(SUM(amount),2) FROM refunds WHERE refunded_at >= '2026-09-01' AND refunded_at < '2026-10-01') AS net_sales;",
+      "sql_source": "last",
+      "gold_row_count": 1,
+      "model_row_count": 1,
+      "judge": "pass",
+      "pass_via": "text",
+      "text_matched": "14460561.20",
+      "final_answer_text": "**是的，1,602.99 万是未扣退款的 GMV。** 扣退款后的口径如下：\n\n| 指标 | 2026 年 9 月金额（元） |\n|---|---|\n| GMV（SUM(payments.amount)，按 paid_at） | 16,029,955.34 |\n| 退款金额（SUM(refunds.amount)，按 refunded_at） | 1,569,394.14 |\n| **净销售额 net_sales = GMV − 退款** | **14,460,561.20** |\n\n两点口径提醒：\n1. **两条时间轴不同**：支付按 `paid_at` 落在 9 月，退款按 `refunded_at` 落在 9 月，因此 9 月冲减的退款可能包含 8 月及更早支付订单的退款，属于正常的「期间口径」差异，不是同一批支付订单的自退款。\n2. **退款额必须查 refunds 表**：用 `orders.status='refunded'` 估算会漏掉约四成部分退款（其状态仍为 completed）。\n\n数据来源：对 `payments`、`refunds` 两张表的一次子查询（1 行，gmv = 16029955.34，refund_amount = 1569394.14，net_sales = 14460561.20）。\n\n如果只是想看 9 月 GMV，用 16,029,955.34 元；如果问的是「实际留存销售额」，则用净销售额 14,460,561.20 元。",
+      "failure_mode": null,
+      "error_msg": null,
+      "latency_s": 5.66,
+      "tokens": {
+        "input": 20055,
+        "output": 1221,
+        "total": 21276,
+        "cache_read": 18816
+      },
+      "oversized": false,
+      "ended_with_failed_call": false,
+      "turns": [
+        {
+          "turn_idx": 1,
+          "question": "2026 年 9 月的 GMV 是多少？",
+          "retrieval_query": "2026 年 9 月的 GMV 是多少？",
+          "injected_chunks": [
+            "qa_pair:qa_003",
+            "qa_pair:qa_001",
+            "glossary:gmv",
+            "qa_pair:qa_004",
+            "qa_pair:qa_008",
+            "glossary:yoy_mom",
+            "qa_pair:qa_009",
+            "schema:users"
+          ],
+          "sql_calls": [
+            {
+              "seq": 1,
+              "sql": "SELECT ROUND(SUM(amount), 2) AS gmv FROM payments WHERE paid_at >= '2026-09-01' AND paid_at < '2026-10-01';"
+            }
+          ],
+          "latency_s": 1.969,
+          "tokens": {
+            "input": 6369,
+            "output": 274,
+            "total": 6643,
+            "cache_read": 6016
+          }
+        },
+        {
+          "turn_idx": 2,
+          "question": "这个数扣掉退款了吗",
+          "retrieval_query": "2026 年 9 月的 GMV 是多少？\n这个数扣掉退款了吗",
+          "injected_chunks": [
+            "qa_pair:qa_004",
+            "qa_pair:qa_003",
+            "qa_pair:qa_008",
+            "schema:refunds",
+            "glossary:net_sales",
+            "qa_pair:qa_010",
+            "glossary:gmv",
+            "glossary:refund_rate"
+          ],
+          "sql_calls": [
+            {
+              "seq": 1,
+              "sql": "SELECT ROUND(SUM(amount), 2) AS gmv FROM payments WHERE paid_at >= '2026-09-01' AND paid_at < '2026-10-01';"
+            },
+            {
+              "seq": 2,
+              "sql": "SELECT\n  (SELECT ROUND(SUM(amount),2) FROM payments WHERE paid_at >= '2026-09-01' AND paid_at < '2026-10-01') AS gmv,\n  (SELECT ROUND(SUM(amount),2) FROM refunds WHERE refunded_at >= '2026-09-01' AND refunded_at < '2026-10-01') AS refund_amount,\n  (SELECT ROUND(SUM(amount),2) FROM payments WHERE paid_at >= '2026-09-01' AND paid_at < '2026-10-01')\n  - (SELECT ROUND(SUM(amount),2) FROM refunds WHERE refunded_at >= '2026-09-01' AND refunded_at < '2026-10-01') AS net_sales;"
+            }
+          ],
+          "latency_s": 3.691,
+          "tokens": {
+            "input": 13686,
+            "output": 947,
+            "total": 14633,
+            "cache_read": 12800
+          }
+        }
+      ]
+    },
+    {
+      "id": "MT-07",
+      "run_idx": 2,
+      "question_type": null,
+      "generalize_layer": null,
+      "injected_chunks": [
+        "qa_pair:qa_008",
+        "qa_pair:qa_004",
+        "qa_pair:qa_002",
+        "glossary:gmv",
+        "qa_pair:qa_003",
+        "qa_pair:qa_007",
+        "qa_pair:qa_001",
+        "qa_pair:qa_009"
+      ],
+      "expected_chunks": [
+        "schema:payments",
+        "schema:orders",
+        "schema:users"
+      ],
+      "recall_hits": [],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT u.city,\n       SUM(p.amount) AS pay_amount,\n       COUNT(*) AS order_count\nFROM payments p\nJOIN orders o ON o.id = p.order_id\nJOIN users u ON u.id = o.user_id\nWHERE p.paid_at >= '2026-01-01' AND p.paid_at < '2026-02-01'\nGROUP BY u.city\nORDER BY pay_amount DESC;"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT COUNT(DISTINCT u.city) AS city_count,\n       SUM(p.amount) AS total_amount,\n       COUNT(*) AS total_orders\nFROM payments p\nJOIN orders o ON o.id = p.order_id\nJOIN users u ON u.id = o.user_id\nWHERE p.paid_at >= '2026-01-01' AND p.paid_at < '2026-02-01';"
+        },
+        {
+          "seq": 3,
+          "sql": "SELECT u.city,\n       SUM(p.amount) AS pay_amount,\n       COUNT(*) AS pay_orders,\n       COUNT(DISTINCT o.user_id) AS buyers,\n       ROUND(SUM(p.amount) / COUNT(*), 2) AS avg_order_value,\n       ROUND(SUM(p.amount) / COUNT(DISTINCT o.user_id), 2) AS arpu\nFROM payments p\nJOIN orders o ON o.id = p.order_id\nJOIN users u ON u.id = o.user_id\nWHERE p.paid_at >= '2026-01-01' AND p.paid_at < '2026-02-01'\n  AND u.city = '上海'\nGROUP BY u.city;"
+        },
+        {
+          "seq": 4,
+          "sql": "SELECT ROUND(SUM(r.amount), 2) AS refund_amount, COUNT(r.id) AS refund_cnt\nFROM payments p\nJOIN orders o ON o.id = p.order_id\nJOIN users u ON u.id = o.user_id\nLEFT JOIN refunds r ON r.payment_id = p.id\nWHERE p.paid_at >= '2026-01-01' AND p.paid_at < '2026-02-01'\n  AND u.city = '上海';"
+        },
+        {
+          "seq": 5,
+          "sql": "SELECT DATE_FORMAT(p.paid_at, '%Y-%m-%d') AS pay_date,\n       SUM(p.amount) AS pay_amount,\n       COUNT(*) AS pay_orders\nFROM payments p\nJOIN orders o ON o.id = p.order_id\nJOIN users u ON u.id = o.user_id\nWHERE p.paid_at >= '2026-01-01' AND p.paid_at < '2026-02-01'\n  AND u.city = '上海'\nGROUP BY pay_date\nORDER BY pay_date;"
+        }
+      ],
+      "sql_used": "SELECT DATE_FORMAT(p.paid_at, '%Y-%m-%d') AS pay_date,\n       SUM(p.amount) AS pay_amount,\n       COUNT(*) AS pay_orders\nFROM payments p\nJOIN orders o ON o.id = p.order_id\nJOIN users u ON u.id = o.user_id\nWHERE p.paid_at >= '2026-01-01' AND p.paid_at < '2026-02-01'\n  AND u.city = '上海'\nGROUP BY pay_date\nORDER BY pay_date;",
+      "sql_source": "last",
+      "gold_row_count": 1,
+      "model_row_count": 31,
+      "judge": "pass",
+      "pass_via": "text",
+      "text_matched": "1559768.99",
+      "final_answer_text": "好的，聚焦上海（口径同上一轮：payments.amount 按 paid_at 落在 2026-01-01 至 2026-02-01，用户归属城市 = 上海）：\n\n## 上海 · 2026 年 1 月核心指标\n\n| 指标 | 数值 |\n|---|---|\n| 支付金额 | **1,559,768.99 元** |\n| 支付订单数 | 646 笔 |\n| 下单用户数 | 431 人 |\n| 客单价 | 2,414.50 元/单 |\n| ARPU（人均消费） | 3,618.95 元/人 |\n| 退款金额 | 238,219.43 元（91 笔） |\n| 净销售额（支付 − 退款） | 1,321,549.56 元 |\n| 退款率（金额口径） | 15.27% |\n\n## 上海 vs 全平台（2026 年 1 月）\n\n| 指标 | 上海 | 全平台 20 城 | 占比 |\n|---|---|---|---|\n| 支付金额 | 155.98 万 | 1,954.54 万 | **7.98%** |\n| 支付订单数 | 646 | 7,226 | 8.94% |\n| 城市排名 | 第 3 名 | — | 仅次于北京、广州 |\n\n## 上海日度支付金额（1 月，前 20 天）\n\n数据从查询结果看，1 月 1–20 日每天金额在 **1.97 万 ~ 11.95 万元** 之间波动：\n- 高点：1 月 15 日 **119,491.85 元**（23 笔）、1 月 8 日 78,504.67 元、1 月 18 日 72,308.16 元\n- 低点：1 月 13 日 19,653.55 元（12 笔）、1 月 9 日 23,712.38 元\n- 日均约 5.4 万元，日订单数多在 12~30 笔\n\n> 注：日度表因结果最多返回 20 行被截断（仅显示 1 月 1–20 日）。如需完整的 31 天明细，我可以按周汇总或分区间再查一次。\n\n**口径提醒**：\n- 客单价分母是支付订单数（DISTINCT 后与 COUNT(*) 一致，因一笔成功支付对应唯一订单），ARPU 分母是下单用户数；\n- 退款率 = 当期支付订单中退款金额占比（走 refunds 表关联 payment_id），不代表净利润率；\n- 以上均为\"用户归属城市\"，非收货城市。",
+      "failure_mode": null,
+      "error_msg": null,
+      "latency_s": 11.376,
+      "tokens": {
+        "input": 33675,
+        "output": 3467,
+        "total": 37142,
+        "cache_read": 30080
+      },
+      "oversized": false,
+      "ended_with_failed_call": false,
+      "turns": [
+        {
+          "turn_idx": 1,
+          "question": "2026 年 1 月各城市的支付金额是多少？",
+          "retrieval_query": "2026 年 1 月各城市的支付金额是多少？",
+          "injected_chunks": [
+            "qa_pair:qa_008",
+            "qa_pair:qa_002",
+            "glossary:gmv",
+            "qa_pair:qa_001",
+            "qa_pair:qa_007",
+            "qa_pair:qa_003",
+            "schema:payments",
+            "qa_pair:qa_011"
+          ],
+          "sql_calls": [
+            {
+              "seq": 1,
+              "sql": "SELECT u.city,\n       SUM(p.amount) AS pay_amount,\n       COUNT(*) AS order_count\nFROM payments p\nJOIN orders o ON o.id = p.order_id\nJOIN users u ON u.id = o.user_id\nWHERE p.paid_at >= '2026-01-01' AND p.paid_at < '2026-02-01'\nGROUP BY u.city\nORDER BY pay_amount DESC;"
+            },
+            {
+              "seq": 2,
+              "sql": "SELECT COUNT(DISTINCT u.city) AS city_count,\n       SUM(p.amount) AS total_amount,\n       COUNT(*) AS total_orders\nFROM payments p\nJOIN orders o ON o.id = p.order_id\nJOIN users u ON u.id = o.user_id\nWHERE p.paid_at >= '2026-01-01' AND p.paid_at < '2026-02-01';"
+            }
+          ],
+          "latency_s": 5.549,
+          "tokens": {
+            "input": 10514,
+            "output": 1149,
+            "total": 11663,
+            "cache_read": 9728
+          }
+        },
+        {
+          "turn_idx": 2,
+          "question": "只看上海呢",
+          "retrieval_query": "2026 年 1 月各城市的支付金额是多少？\n只看上海呢",
+          "injected_chunks": [
+            "qa_pair:qa_008",
+            "qa_pair:qa_004",
+            "qa_pair:qa_002",
+            "glossary:gmv",
+            "qa_pair:qa_003",
+            "qa_pair:qa_007",
+            "qa_pair:qa_001",
+            "qa_pair:qa_009"
+          ],
+          "sql_calls": [
+            {
+              "seq": 1,
+              "sql": "SELECT u.city,\n       SUM(p.amount) AS pay_amount,\n       COUNT(*) AS order_count\nFROM payments p\nJOIN orders o ON o.id = p.order_id\nJOIN users u ON u.id = o.user_id\nWHERE p.paid_at >= '2026-01-01' AND p.paid_at < '2026-02-01'\nGROUP BY u.city\nORDER BY pay_amount DESC;"
+            },
+            {
+              "seq": 2,
+              "sql": "SELECT COUNT(DISTINCT u.city) AS city_count,\n       SUM(p.amount) AS total_amount,\n       COUNT(*) AS total_orders\nFROM payments p\nJOIN orders o ON o.id = p.order_id\nJOIN users u ON u.id = o.user_id\nWHERE p.paid_at >= '2026-01-01' AND p.paid_at < '2026-02-01';"
+            },
+            {
+              "seq": 3,
+              "sql": "SELECT u.city,\n       SUM(p.amount) AS pay_amount,\n       COUNT(*) AS pay_orders,\n       COUNT(DISTINCT o.user_id) AS buyers,\n       ROUND(SUM(p.amount) / COUNT(*), 2) AS avg_order_value,\n       ROUND(SUM(p.amount) / COUNT(DISTINCT o.user_id), 2) AS arpu\nFROM payments p\nJOIN orders o ON o.id = p.order_id\nJOIN users u ON u.id = o.user_id\nWHERE p.paid_at >= '2026-01-01' AND p.paid_at < '2026-02-01'\n  AND u.city = '上海'\nGROUP BY u.city;"
+            },
+            {
+              "seq": 4,
+              "sql": "SELECT ROUND(SUM(r.amount), 2) AS refund_amount, COUNT(r.id) AS refund_cnt\nFROM payments p\nJOIN orders o ON o.id = p.order_id\nJOIN users u ON u.id = o.user_id\nLEFT JOIN refunds r ON r.payment_id = p.id\nWHERE p.paid_at >= '2026-01-01' AND p.paid_at < '2026-02-01'\n  AND u.city = '上海';"
+            },
+            {
+              "seq": 5,
+              "sql": "SELECT DATE_FORMAT(p.paid_at, '%Y-%m-%d') AS pay_date,\n       SUM(p.amount) AS pay_amount,\n       COUNT(*) AS pay_orders\nFROM payments p\nJOIN orders o ON o.id = p.order_id\nJOIN users u ON u.id = o.user_id\nWHERE p.paid_at >= '2026-01-01' AND p.paid_at < '2026-02-01'\n  AND u.city = '上海'\nGROUP BY pay_date\nORDER BY pay_date;"
+            }
+          ],
+          "latency_s": 5.827,
+          "tokens": {
+            "input": 23161,
+            "output": 2318,
+            "total": 25479,
+            "cache_read": 20352
+          }
+        }
+      ]
+    },
+    {
+      "id": "MT-08",
+      "run_idx": 2,
+      "question_type": null,
+      "generalize_layer": null,
+      "injected_chunks": [
+        "qa_pair:qa_005",
+        "schema:products",
+        "glossary:repurchase_rate",
+        "qa_pair:qa_008",
+        "qa_pair:qa_009",
+        "qa_pair:qa_006",
+        "schema:users",
+        "glossary:sell_through"
+      ],
+      "expected_chunks": [
+        "schema:users",
+        "schema:orders",
+        "schema:order_items",
+        "schema:products"
+      ],
+      "recall_hits": [
+        "schema:users",
+        "schema:products"
+      ],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT COUNT(DISTINCT o.user_id) AS digital_users\nFROM orders o\nJOIN order_items oi ON oi.order_id = o.id\nJOIN products p ON p.id = oi.product_id\nWHERE p.category = '数码'"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT u.gender, COUNT(DISTINCT o.user_id) AS users\nFROM orders o\nJOIN order_items oi ON oi.order_id = o.id\nJOIN products p ON p.id = oi.product_id\nJOIN users u ON u.id = o.user_id\nWHERE p.category = '数码'\nGROUP BY u.gender"
+        },
+        {
+          "seq": 3,
+          "sql": "SELECT COUNT(*) AS never_bought_digital\nFROM users u\nWHERE NOT EXISTS (\n    SELECT 1\n    FROM orders o\n    JOIN order_items oi ON oi.order_id = o.id\n    JOIN products p ON p.id = oi.product_id\n    WHERE o.user_id = u.id\n      AND p.category = '数码'\n)"
+        },
+        {
+          "seq": 4,
+          "sql": "SELECT\n  (SELECT COUNT(*) FROM users) AS total_users,\n  (SELECT COUNT(*) FROM users u WHERE NOT EXISTS (\n       SELECT 1 FROM orders o\n       JOIN order_items oi ON oi.order_id = o.id\n       JOIN products p ON p.id = oi.product_id\n       WHERE o.user_id = u.id AND p.category = '数码')) AS never_bought_digital,\n  (SELECT COUNT(*) FROM users u WHERE NOT EXISTS (\n       SELECT 1 FROM orders o WHERE o.user_id = u.id)) AS never_ordered_any"
+        },
+        {
+          "seq": 5,
+          "sql": "SELECT u.gender, COUNT(*) AS never_bought_digital\nFROM users u\nWHERE NOT EXISTS (\n    SELECT 1\n    FROM orders o\n    JOIN order_items oi ON oi.order_id = o.id\n    JOIN products p ON p.id = oi.product_id\n    WHERE o.user_id = u.id AND p.category = '数码'\n)\nGROUP BY u.gender"
+        }
+      ],
+      "sql_used": "SELECT u.gender, COUNT(*) AS never_bought_digital\nFROM users u\nWHERE NOT EXISTS (\n    SELECT 1\n    FROM orders o\n    JOIN order_items oi ON oi.order_id = o.id\n    JOIN products p ON p.id = oi.product_id\n    WHERE o.user_id = u.id AND p.category = '数码'\n)\nGROUP BY u.gender",
+      "sql_source": "last",
+      "gold_row_count": 1,
+      "model_row_count": 2,
+      "judge": "pass",
+      "pass_via": "text",
+      "text_matched": "11705",
+      "final_answer_text": "**没买过数码类目商品的用户有 11,705 人。**\n\n计算说明（基于本次查询结果）：\n- 用 `NOT EXISTS` 在 users 全表上做反查：该用户不存在任何一条\"关联到数码类目商品\"的订单明细，即从未买过数码商品；\n- 分母是全部在册用户 20,000 人（不是\"下过单的用户\"）——因为没下过单的用户当然也归入\"没买过数码\"；\n- 校验：8,295（买过） + 11,705（没买过） = 20,000，与用户表总行数吻合。\n\n补充拆分（另一次查询结果）：\n- 性别：男性 6,007 人、女性 5,698 人未买过数码商品；\n- 其中 5,208 人是从未下过任何订单的用户（完全沉默用户），占总未购买数码人群的约 44.5%——也就是说，\"没买数码\"的人里近一半根本没在平台上买过任何东西，而非\"买了别的类目唯独没买数码\"。",
+      "failure_mode": null,
+      "error_msg": null,
+      "latency_s": 8.196,
+      "tokens": {
+        "input": 37454,
+        "output": 1757,
+        "total": 39211,
+        "cache_read": 35200
+      },
+      "oversized": false,
+      "ended_with_failed_call": false,
+      "turns": [
+        {
+          "turn_idx": 1,
+          "question": "买过数码类目商品的用户有多少？",
+          "retrieval_query": "买过数码类目商品的用户有多少？",
+          "injected_chunks": [
+            "qa_pair:qa_005",
+            "schema:products",
+            "qa_pair:qa_009",
+            "glossary:repurchase_rate",
+            "glossary:arpu",
+            "schema:users",
+            "qa_pair:qa_002",
+            "glossary:sell_through"
+          ],
+          "sql_calls": [
+            {
+              "seq": 1,
+              "sql": "SELECT COUNT(DISTINCT o.user_id) AS digital_users\nFROM orders o\nJOIN order_items oi ON oi.order_id = o.id\nJOIN products p ON p.id = oi.product_id\nWHERE p.category = '数码'"
+            },
+            {
+              "seq": 2,
+              "sql": "SELECT u.gender, COUNT(DISTINCT o.user_id) AS users\nFROM orders o\nJOIN order_items oi ON oi.order_id = o.id\nJOIN products p ON p.id = oi.product_id\nJOIN users u ON u.id = o.user_id\nWHERE p.category = '数码'\nGROUP BY u.gender"
+            }
+          ],
+          "latency_s": 3.647,
+          "tokens": {
+            "input": 11921,
+            "output": 522,
+            "total": 12443,
+            "cache_read": 11264
+          }
+        },
+        {
+          "turn_idx": 2,
+          "question": "那没买过的呢",
+          "retrieval_query": "买过数码类目商品的用户有多少？\n那没买过的呢",
+          "injected_chunks": [
+            "qa_pair:qa_005",
+            "schema:products",
+            "glossary:repurchase_rate",
+            "qa_pair:qa_008",
+            "qa_pair:qa_009",
+            "qa_pair:qa_006",
+            "schema:users",
+            "glossary:sell_through"
+          ],
+          "sql_calls": [
+            {
+              "seq": 1,
+              "sql": "SELECT COUNT(DISTINCT o.user_id) AS digital_users\nFROM orders o\nJOIN order_items oi ON oi.order_id = o.id\nJOIN products p ON p.id = oi.product_id\nWHERE p.category = '数码'"
+            },
+            {
+              "seq": 2,
+              "sql": "SELECT u.gender, COUNT(DISTINCT o.user_id) AS users\nFROM orders o\nJOIN order_items oi ON oi.order_id = o.id\nJOIN products p ON p.id = oi.product_id\nJOIN users u ON u.id = o.user_id\nWHERE p.category = '数码'\nGROUP BY u.gender"
+            },
+            {
+              "seq": 3,
+              "sql": "SELECT COUNT(*) AS never_bought_digital\nFROM users u\nWHERE NOT EXISTS (\n    SELECT 1\n    FROM orders o\n    JOIN order_items oi ON oi.order_id = o.id\n    JOIN products p ON p.id = oi.product_id\n    WHERE o.user_id = u.id\n      AND p.category = '数码'\n)"
+            },
+            {
+              "seq": 4,
+              "sql": "SELECT\n  (SELECT COUNT(*) FROM users) AS total_users,\n  (SELECT COUNT(*) FROM users u WHERE NOT EXISTS (\n       SELECT 1 FROM orders o\n       JOIN order_items oi ON oi.order_id = o.id\n       JOIN products p ON p.id = oi.product_id\n       WHERE o.user_id = u.id AND p.category = '数码')) AS never_bought_digital,\n  (SELECT COUNT(*) FROM users u WHERE NOT EXISTS (\n       SELECT 1 FROM orders o WHERE o.user_id = u.id)) AS never_ordered_any"
+            },
+            {
+              "seq": 5,
+              "sql": "SELECT u.gender, COUNT(*) AS never_bought_digital\nFROM users u\nWHERE NOT EXISTS (\n    SELECT 1\n    FROM orders o\n    JOIN order_items oi ON oi.order_id = o.id\n    JOIN products p ON p.id = oi.product_id\n    WHERE o.user_id = u.id AND p.category = '数码'\n)\nGROUP BY u.gender"
+            }
+          ],
+          "latency_s": 4.549,
+          "tokens": {
+            "input": 25533,
+            "output": 1235,
+            "total": 26768,
+            "cache_read": 23936
+          }
+        }
+      ]
+    },
+    {
+      "id": "MT-01",
+      "run_idx": 3,
+      "question_type": null,
+      "generalize_layer": null,
+      "injected_chunks": [
+        "glossary:yoy_mom",
+        "qa_pair:qa_003",
+        "qa_pair:qa_008",
+        "qa_pair:qa_001",
+        "schema:products",
+        "glossary:arpu",
+        "qa_pair:qa_009",
+        "glossary:gmv"
+      ],
+      "expected_chunks": [
+        "glossary:yoy_mom",
+        "qa_pair:qa_003"
+      ],
+      "recall_hits": [
+        "glossary:yoy_mom",
+        "qa_pair:qa_003"
+      ],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT SUM(amount) AS gmv FROM payments WHERE paid_at >= '2026-09-01' AND paid_at < '2026-10-01'"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT DATE_FORMAT(paid_at, '%Y-%m') AS month, SUM(amount) AS gmv FROM payments WHERE paid_at >= '2026-08-01' AND paid_at < '2026-10-01' GROUP BY month ORDER BY month"
+        }
+      ],
+      "sql_used": "SELECT DATE_FORMAT(paid_at, '%Y-%m') AS month, SUM(amount) AS gmv FROM payments WHERE paid_at >= '2026-08-01' AND paid_at < '2026-10-01' GROUP BY month ORDER BY month",
+      "sql_source": "last",
+      "gold_row_count": 2,
+      "model_row_count": 2,
+      "judge": "pass",
+      "pass_via": "sql",
+      "text_matched": null,
+      "final_answer_text": "**环比为 −0.83%（下降）**\n\n计算明细：\n\n| 月份 | GMV（元） |\n| --- | --- |\n| 2026-08 | 16,164,482.43 |\n| 2026-09 | 16,029,955.34 |\n\n- 环比 =（本期 − 上期）÷ 上期 =（16,029,955.34 − 16,164,482.43）÷ 16,164,482.43 = **−134,527.09 ÷ 16,164,482.43 ≈ −0.83%**\n\n口径说明：\n- 按自然月聚合，对比期取上一年同期为同比、上一自然月为环比（此处为 2026-08 对 2026-09）。\n- GMV 口径同前：`SUM(payments.amount)` 按 `paid_at` 支付时间过滤，未冲减退款。\n- 结果来源：本次对 payments 表按月聚合的查询（2026-08 = 16,164,482.43，2026-09 = 16,029,955.34）。\n\n即 9 月 GMV 较 8 月小幅下滑约 0.83%，基本持平。",
+      "failure_mode": null,
+      "error_msg": null,
+      "latency_s": 4.935,
+      "tokens": {
+        "input": 17247,
+        "output": 1102,
+        "total": 18349,
+        "cache_read": 15744
+      },
+      "oversized": false,
+      "ended_with_failed_call": false,
+      "turns": [
+        {
+          "turn_idx": 1,
+          "question": "上个月 GMV 多少？",
+          "retrieval_query": "上个月 GMV 多少？",
+          "injected_chunks": [
+            "qa_pair:qa_003",
+            "qa_pair:qa_001",
+            "qa_pair:qa_008",
+            "glossary:gmv",
+            "glossary:arpu",
+            "qa_pair:qa_007",
+            "glossary:yoy_mom",
+            "qa_pair:qa_009"
+          ],
+          "sql_calls": [
+            {
+              "seq": 1,
+              "sql": "SELECT SUM(amount) AS gmv FROM payments WHERE paid_at >= '2026-09-01' AND paid_at < '2026-10-01'"
+            }
+          ],
+          "latency_s": 2.307,
+          "tokens": {
+            "input": 5121,
+            "output": 325,
+            "total": 5446,
+            "cache_read": 4736
+          }
+        },
+        {
+          "turn_idx": 2,
+          "question": "那环比呢",
+          "retrieval_query": "上个月 GMV 多少？\n那环比呢",
+          "injected_chunks": [
+            "glossary:yoy_mom",
+            "qa_pair:qa_003",
+            "qa_pair:qa_008",
+            "qa_pair:qa_001",
+            "schema:products",
+            "glossary:arpu",
+            "qa_pair:qa_009",
+            "glossary:gmv"
+          ],
+          "sql_calls": [
+            {
+              "seq": 1,
+              "sql": "SELECT SUM(amount) AS gmv FROM payments WHERE paid_at >= '2026-09-01' AND paid_at < '2026-10-01'"
+            },
+            {
+              "seq": 2,
+              "sql": "SELECT DATE_FORMAT(paid_at, '%Y-%m') AS month, SUM(amount) AS gmv FROM payments WHERE paid_at >= '2026-08-01' AND paid_at < '2026-10-01' GROUP BY month ORDER BY month"
+            }
+          ],
+          "latency_s": 2.628,
+          "tokens": {
+            "input": 12126,
+            "output": 777,
+            "total": 12903,
+            "cache_read": 11008
+          }
+        }
+      ]
+    },
+    {
+      "id": "MT-02",
+      "run_idx": 3,
+      "question_type": null,
+      "generalize_layer": null,
+      "injected_chunks": [
+        "qa_pair:qa_008",
+        "qa_pair:qa_001",
+        "qa_pair:qa_009",
+        "qa_pair:qa_007",
+        "glossary:avg_order_value",
+        "glossary:gmv",
+        "qa_pair:qa_003",
+        "schema:order_items"
+      ],
+      "expected_chunks": [
+        "glossary:avg_order_value",
+        "schema:payments"
+      ],
+      "recall_hits": [
+        "glossary:avg_order_value"
+      ],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT ROUND(SUM(amount) / COUNT(DISTINCT order_id), 2) AS avg_order_value, SUM(amount) AS gmv, COUNT(DISTINCT order_id) AS paid_orders FROM payments WHERE paid_at >= '2026-06-01' AND paid_at < '2026-07-01';"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT ROUND(SUM(amount) / COUNT(DISTINCT order_id), 2) AS avg_order_value, SUM(amount) AS gmv, COUNT(DISTINCT order_id) AS paid_orders FROM payments WHERE paid_at >= '2026-07-01' AND paid_at < '2026-08-01';"
+        }
+      ],
+      "sql_used": "SELECT ROUND(SUM(amount) / COUNT(DISTINCT order_id), 2) AS avg_order_value, SUM(amount) AS gmv, COUNT(DISTINCT order_id) AS paid_orders FROM payments WHERE paid_at >= '2026-07-01' AND paid_at < '2026-08-01';",
+      "sql_source": "last",
+      "gold_row_count": 1,
+      "model_row_count": 1,
+      "judge": "pass",
+      "pass_via": "text",
+      "text_matched": "2749.39",
+      "final_answer_text": "**2026 年 7 月客单价：2,749.39 元**\n\n| 月份 | GMV（元） | 支付订单数 | 客单价（元） |\n| --- | --- | --- | --- |\n| 2026-06 | 29,782,686.06 | 10,770 | 2,765.34 |\n| 2026-07 | 17,266,164.29 | 6,280 | 2,749.39 |\n\n计算口径同上（依据口径文档\"客单价\"）：\n- 分子 = 2026-07 成功支付金额合计 17,266,164.29 元（SUM(payments.amount)）\n- 分母 = 该月支付成功订单数 6,280 单（COUNT(DISTINCT order_id)）\n- 客单价 = 17,266,164.29 ÷ 6,280 ≈ **2,749.39 元**\n\n简要对比：7 月客单价环比 6 月下降约 15.95 元（-0.58%），基本持平；但 GMV 从 2,978 万降到 1,727 万（-42.0%），订单数从 10,770 单降到 6,280 单（-41.7%）——**金额下滑主要由订单量减少驱动，而非单笔消费能力的变化**。\n\n以上数字均来自本次对 mart 库 payments 表的实际查询结果。",
+      "failure_mode": null,
+      "error_msg": null,
+      "latency_s": 5.383,
+      "tokens": {
+        "input": 21323,
+        "output": 1254,
+        "total": 22577,
+        "cache_read": 19840
+      },
+      "oversized": false,
+      "ended_with_failed_call": false,
+      "turns": [
+        {
+          "turn_idx": 1,
+          "question": "2026 年 6 月的客单价是多少？",
+          "retrieval_query": "2026 年 6 月的客单价是多少？",
+          "injected_chunks": [
+            "qa_pair:qa_008",
+            "qa_pair:qa_001",
+            "glossary:gmv",
+            "qa_pair:qa_009",
+            "glossary:avg_order_value",
+            "schema:order_items",
+            "qa_pair:qa_003",
+            "qa_pair:qa_007"
+          ],
+          "sql_calls": [
+            {
+              "seq": 1,
+              "sql": "SELECT ROUND(SUM(amount) / COUNT(DISTINCT order_id), 2) AS avg_order_value, SUM(amount) AS gmv, COUNT(DISTINCT order_id) AS paid_orders FROM payments WHERE paid_at >= '2026-06-01' AND paid_at < '2026-07-01';"
+            }
+          ],
+          "latency_s": 2.537,
+          "tokens": {
+            "input": 6859,
+            "output": 410,
+            "total": 7269,
+            "cache_read": 6400
+          }
+        },
+        {
+          "turn_idx": 2,
+          "question": "那 7 月呢",
+          "retrieval_query": "2026 年 6 月的客单价是多少？\n那 7 月呢",
+          "injected_chunks": [
+            "qa_pair:qa_008",
+            "qa_pair:qa_001",
+            "qa_pair:qa_009",
+            "qa_pair:qa_007",
+            "glossary:avg_order_value",
+            "glossary:gmv",
+            "qa_pair:qa_003",
+            "schema:order_items"
+          ],
+          "sql_calls": [
+            {
+              "seq": 1,
+              "sql": "SELECT ROUND(SUM(amount) / COUNT(DISTINCT order_id), 2) AS avg_order_value, SUM(amount) AS gmv, COUNT(DISTINCT order_id) AS paid_orders FROM payments WHERE paid_at >= '2026-06-01' AND paid_at < '2026-07-01';"
+            },
+            {
+              "seq": 2,
+              "sql": "SELECT ROUND(SUM(amount) / COUNT(DISTINCT order_id), 2) AS avg_order_value, SUM(amount) AS gmv, COUNT(DISTINCT order_id) AS paid_orders FROM payments WHERE paid_at >= '2026-07-01' AND paid_at < '2026-08-01';"
+            }
+          ],
+          "latency_s": 2.845,
+          "tokens": {
+            "input": 14464,
+            "output": 844,
+            "total": 15308,
+            "cache_read": 13440
+          }
+        }
+      ]
+    },
+    {
+      "id": "MT-03",
+      "run_idx": 3,
+      "question_type": null,
+      "generalize_layer": null,
+      "injected_chunks": [
+        "qa_pair:qa_004",
+        "glossary:refund_rate",
+        "schema:refunds",
+        "glossary:net_sales",
+        "qa_pair:qa_008",
+        "qa_pair:qa_010",
+        "schema:order_items",
+        "schema:orders"
+      ],
+      "expected_chunks": [
+        "glossary:refund_rate",
+        "schema:refunds",
+        "schema:payments"
+      ],
+      "recall_hits": [
+        "glossary:refund_rate",
+        "schema:refunds"
+      ],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT ROUND(SUM(r.amount) / SUM(p.amount), 4) AS refund_rate, SUM(r.amount) AS refund_amount, SUM(p.amount) AS paid_amount FROM payments p LEFT JOIN refunds r ON r.payment_id = p.id WHERE p.paid_at >= '2026-09-01' AND p.paid_at < '2026-10-01'"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT COUNT(DISTINCT p.order_id) AS paid_orders, COUNT(DISTINCT r.order_id) AS refunded_orders, ROUND(COUNT(DISTINCT r.order_id) / COUNT(DISTINCT p.order_id), 4) AS refund_rate_order FROM payments p LEFT JOIN refunds r ON r.payment_id = p.id WHERE p.paid_at >= '2026-09-01' AND p.paid_at < '2026-10-01'"
+        },
+        {
+          "seq": 3,
+          "sql": "SELECT (SELECT COUNT(DISTINCT order_id) FROM payments WHERE paid_at >= '2026-09-01' AND paid_at < '2026-10-01') AS paid_orders_sep, (SELECT COUNT(DISTINCT order_id) FROM refunds WHERE refunded_at >= '2026-09-01' AND refunded_at < '2026-10-01') AS refunded_orders_sep, ROUND((SELECT COUNT(DISTINCT order_id) FROM refunds WHERE refunded_at >= '2026-09-01' AND refunded_at < '2026-10-01') / (SELECT COUNT(DISTINCT order_id) FROM payments WHERE paid_at >= '2026-09-01' AND paid_at < '2026-10-01'), 4) AS refund_rate_order_alt"
+        }
+      ],
+      "sql_used": "SELECT (SELECT COUNT(DISTINCT order_id) FROM payments WHERE paid_at >= '2026-09-01' AND paid_at < '2026-10-01') AS paid_orders_sep, (SELECT COUNT(DISTINCT order_id) FROM refunds WHERE refunded_at >= '2026-09-01' AND refunded_at < '2026-10-01') AS refunded_orders_sep, ROUND((SELECT COUNT(DISTINCT order_id) FROM refunds WHERE refunded_at >= '2026-09-01' AND refunded_at < '2026-10-01') / (SELECT COUNT(DISTINCT order_id) FROM payments WHERE paid_at >= '2026-09-01' AND paid_at < '2026-10-01'), 4) AS refund_rate_order_alt",
+      "sql_source": "last",
+      "gold_row_count": 1,
+      "model_row_count": 1,
+      "judge": "pass",
+      "pass_via": "text",
+      "text_matched": "0.0886",
+      "final_answer_text": "**2026 年 9 月退款率（订单口径）= 8.86%**\n\n| 指标 | 数值 |\n| --- | --- |\n| 支付成功订单数（9 月支付，`paid_at`） | 5,901 单 |\n| 其中有退款记录的订单数 | 523 单 |\n| **退款率（订单口径）** | **0.0886（8.86%）** |\n\n**口径说明**：\n- 订单口径 = 有退款记录的订单数 ÷ 支付成功订单数，SQL 为 `COUNT(DISTINCT refunds.order_id) / COUNT(DISTINCT payments.order_id)`，分子分母都按订单去重（不是退款笔数/支付笔数）；\n- 分子分母同源于 payments↔refunds 关联：以 9 月**支付成功**的订单为分母，其中产生过退款的订单为分子（退款不限完成时间），与上一问金额口径保持同一时间口径；\n- 退款来源仍是 refunds 表，未用 `orders.status='refunded'`（部分退款订单状态为 completed）。\n\n**补充（另一时间口径，供参考）**：若分子改为按**退款完成时间** `refunded_at` 落在 9 月统计，则 9 月的退款订单为 637 单，对应比值 637 ÷ 5,901 = **10.79%**。这属于“9 月发生的退款”视角，与“9 月支付订单中被退的比例”不是同一口径，两种算法的数值不同且都合法，回答时需注明。\n\n**两个口径对比**：金额口径 7.75% < 订单口径 8.86%，说明小额订单/部分退款的退款笔数占比高于其金额占比。\n\n*（数据来源：基于上述两次查询结果，数据快照截至 2026-09-30。）*",
+      "failure_mode": null,
+      "error_msg": null,
+      "latency_s": 10.288,
+      "tokens": {
+        "input": 25507,
+        "output": 2476,
+        "total": 27983,
+        "cache_read": 24064
+      },
+      "oversized": false,
+      "ended_with_failed_call": false,
+      "turns": [
+        {
+          "turn_idx": 1,
+          "question": "9 月的退款率是多少（金额口径）？",
+          "retrieval_query": "9 月的退款率是多少（金额口径）？",
+          "injected_chunks": [
+            "qa_pair:qa_004",
+            "glossary:refund_rate",
+            "schema:refunds",
+            "glossary:net_sales",
+            "qa_pair:qa_008",
+            "qa_pair:qa_010",
+            "qa_pair:qa_003",
+            "qa_pair:qa_009"
+          ],
+          "sql_calls": [
+            {
+              "seq": 1,
+              "sql": "SELECT ROUND(SUM(r.amount) / SUM(p.amount), 4) AS refund_rate, SUM(r.amount) AS refund_amount, SUM(p.amount) AS paid_amount FROM payments p LEFT JOIN refunds r ON r.payment_id = p.id WHERE p.paid_at >= '2026-09-01' AND p.paid_at < '2026-10-01'"
+            }
+          ],
+          "latency_s": 3.247,
+          "tokens": {
+            "input": 6712,
+            "output": 512,
+            "total": 7224,
+            "cache_read": 6400
+          }
+        },
+        {
+          "turn_idx": 2,
+          "question": "换成订单口径呢",
+          "retrieval_query": "9 月的退款率是多少（金额口径）？\n换成订单口径呢",
+          "injected_chunks": [
+            "qa_pair:qa_004",
+            "glossary:refund_rate",
+            "schema:refunds",
+            "glossary:net_sales",
+            "qa_pair:qa_008",
+            "qa_pair:qa_010",
+            "schema:order_items",
+            "schema:orders"
+          ],
+          "sql_calls": [
+            {
+              "seq": 1,
+              "sql": "SELECT ROUND(SUM(r.amount) / SUM(p.amount), 4) AS refund_rate, SUM(r.amount) AS refund_amount, SUM(p.amount) AS paid_amount FROM payments p LEFT JOIN refunds r ON r.payment_id = p.id WHERE p.paid_at >= '2026-09-01' AND p.paid_at < '2026-10-01'"
+            },
+            {
+              "seq": 2,
+              "sql": "SELECT COUNT(DISTINCT p.order_id) AS paid_orders, COUNT(DISTINCT r.order_id) AS refunded_orders, ROUND(COUNT(DISTINCT r.order_id) / COUNT(DISTINCT p.order_id), 4) AS refund_rate_order FROM payments p LEFT JOIN refunds r ON r.payment_id = p.id WHERE p.paid_at >= '2026-09-01' AND p.paid_at < '2026-10-01'"
+            },
+            {
+              "seq": 3,
+              "sql": "SELECT (SELECT COUNT(DISTINCT order_id) FROM payments WHERE paid_at >= '2026-09-01' AND paid_at < '2026-10-01') AS paid_orders_sep, (SELECT COUNT(DISTINCT order_id) FROM refunds WHERE refunded_at >= '2026-09-01' AND refunded_at < '2026-10-01') AS refunded_orders_sep, ROUND((SELECT COUNT(DISTINCT order_id) FROM refunds WHERE refunded_at >= '2026-09-01' AND refunded_at < '2026-10-01') / (SELECT COUNT(DISTINCT order_id) FROM payments WHERE paid_at >= '2026-09-01' AND paid_at < '2026-10-01'), 4) AS refund_rate_order_alt"
+            }
+          ],
+          "latency_s": 7.041,
+          "tokens": {
+            "input": 18795,
+            "output": 1964,
+            "total": 20759,
+            "cache_read": 17664
+          }
+        }
+      ]
+    },
+    {
+      "id": "MT-04",
+      "run_idx": 3,
+      "question_type": null,
+      "generalize_layer": null,
+      "injected_chunks": [
+        "qa_pair:qa_011",
+        "schema:payments",
+        "glossary:avg_order_value",
+        "qa_pair:qa_008",
+        "schema:order_items",
+        "qa_pair:qa_003",
+        "glossary:gmv",
+        "qa_pair:qa_010"
+      ],
+      "expected_chunks": [
+        "schema:payments"
+      ],
+      "recall_hits": [
+        "schema:payments"
+      ],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT method,\n       COUNT(*) AS order_count,\n       ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM payments), 2) AS pct\nFROM payments\nGROUP BY method\nORDER BY order_count DESC;"
+        }
+      ],
+      "sql_used": "SELECT method,\n       COUNT(*) AS order_count,\n       ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM payments), 2) AS pct\nFROM payments\nGROUP BY method\nORDER BY order_count DESC;",
+      "sql_source": "last",
+      "gold_row_count": 1,
+      "model_row_count": 3,
+      "judge": "pass",
+      "pass_via": "text",
+      "text_matched": "9.96",
+      "final_answer_text": "**银联的订单占比为 9.96%**。\n\n| 支付方式 | 订单数 | 占比 |\n| --- | --- | --- |\n| 银联 | 8,785 | 9.96% |\n\n说明：\n- 数据来源：上一步对 `payments` 表的查询结果 —— 银联成功支付订单 8,785 笔，除以支付总笔数 88,244，得 9.96%（保留两位小数）。\n- 计算口径：以支付成功流水为分母（一笔订单恰一条支付记录），`8,785 / 88,244 × 100 ≈ 9.96%`，是三种支付方式中占比最低的。",
+      "failure_mode": null,
+      "error_msg": null,
+      "latency_s": 3.992,
+      "tokens": {
+        "input": 20281,
+        "output": 925,
+        "total": 21206,
+        "cache_read": 18944
+      },
+      "oversized": false,
+      "ended_with_failed_call": false,
+      "turns": [
+        {
+          "turn_idx": 1,
+          "question": "各支付方式的订单占比是多少？",
+          "retrieval_query": "各支付方式的订单占比是多少？",
+          "injected_chunks": [
+            "qa_pair:qa_011",
+            "glossary:avg_order_value",
+            "qa_pair:qa_008",
+            "schema:payments",
+            "glossary:gmv",
+            "schema:order_items",
+            "qa_pair:qa_003",
+            "glossary:pay_conversion"
+          ],
+          "sql_calls": [
+            {
+              "seq": 1,
+              "sql": "SELECT method,\n       COUNT(*) AS order_count,\n       ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM payments), 2) AS pct\nFROM payments\nGROUP BY method\nORDER BY order_count DESC;"
+            }
+          ],
+          "latency_s": 2.59,
+          "tokens": {
+            "input": 7998,
+            "output": 373,
+            "total": 8371,
+            "cache_read": 7552
+          }
+        },
+        {
+          "turn_idx": 2,
+          "question": "银联的占比是多少",
+          "retrieval_query": "各支付方式的订单占比是多少？\n银联的占比是多少",
+          "injected_chunks": [
+            "qa_pair:qa_011",
+            "schema:payments",
+            "glossary:avg_order_value",
+            "qa_pair:qa_008",
+            "schema:order_items",
+            "qa_pair:qa_003",
+            "glossary:gmv",
+            "qa_pair:qa_010"
+          ],
+          "sql_calls": [
+            {
+              "seq": 1,
+              "sql": "SELECT method,\n       COUNT(*) AS order_count,\n       ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM payments), 2) AS pct\nFROM payments\nGROUP BY method\nORDER BY order_count DESC;"
+            }
+          ],
+          "latency_s": 1.402,
+          "tokens": {
+            "input": 12283,
+            "output": 552,
+            "total": 12835,
+            "cache_read": 11392
+          }
+        }
+      ]
+    },
+    {
+      "id": "MT-05",
+      "run_idx": 3,
+      "question_type": null,
+      "generalize_layer": null,
+      "injected_chunks": [
+        "qa_pair:qa_008",
+        "qa_pair:qa_001",
+        "glossary:items_per_order",
+        "qa_pair:qa_009",
+        "glossary:yoy_mom",
+        "glossary:avg_order_value",
+        "qa_pair:qa_007",
+        "qa_pair:qa_003"
+      ],
+      "expected_chunks": [
+        "glossary:items_per_order",
+        "schema:orders"
+      ],
+      "recall_hits": [
+        "glossary:items_per_order"
+      ],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT ROUND(SUM(amount) / COUNT(DISTINCT order_id), 2) AS avg_order_value, SUM(amount) AS gmv, COUNT(DISTINCT order_id) AS paid_orders FROM payments WHERE paid_at >= '2026-06-01' AND paid_at < '2026-07-01';"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT DATE_FORMAT(o.created_at, '%Y-%m') AS month, SUM(oi.quantity) AS total_qty, COUNT(DISTINCT oi.order_id) AS order_cnt, ROUND(SUM(oi.quantity) / COUNT(DISTINCT oi.order_id), 4) AS items_per_order FROM order_items oi JOIN orders o ON o.id = oi.order_id WHERE o.created_at >= '2026-06-01' AND o.created_at < '2026-10-01' GROUP BY month ORDER BY month;"
+        },
+        {
+          "seq": 3,
+          "sql": "SELECT DATE_FORMAT(created_at, '%Y-%m') AS month, SUM(item_count) AS total_qty, COUNT(*) AS order_cnt, ROUND(SUM(item_count) / COUNT(*), 4) AS items_per_order FROM orders WHERE created_at >= '2026-06-01' AND created_at < '2026-10-01' GROUP BY month ORDER BY month;"
+        }
+      ],
+      "sql_used": "SELECT DATE_FORMAT(created_at, '%Y-%m') AS month, SUM(item_count) AS total_qty, COUNT(*) AS order_cnt, ROUND(SUM(item_count) / COUNT(*), 4) AS items_per_order FROM orders WHERE created_at >= '2026-06-01' AND created_at < '2026-10-01' GROUP BY month ORDER BY month;",
+      "sql_source": "last",
+      "gold_row_count": 1,
+      "model_row_count": 4,
+      "judge": "pass",
+      "pass_via": "text",
+      "text_matched": "2.8321",
+      "final_answer_text": "**连带率（件单比）= 总购买件数 ÷ 订单数**\n\n由于上一轮问的是 6 月，而按数据快照锚点“今天”= 2026-09-30，“这个月”也可理解为 2026 年 9 月，我把两个月份都列出来：\n\n| 月份 | 总件数 | 订单数 | 连带率（件/单） |\n| --- | --- | --- | --- |\n| 2026-06（延续上文） | 34,240 | 12,090 | **2.8321** |\n| 2026-07 | 19,482 | 6,981 | 2.7907 |\n| 2026-08 | 19,276 | 6,922 | 2.7847 |\n| 2026-09（当前月） | 21,338 | 7,617 | **2.8014** |\n\n口径说明（口径 3）：\n- 精确口径为 `SUM(order_items.quantity) / COUNT(DISTINCT order_items.order_id)`，同时用 `SUM(orders.item_count)/COUNT(*)` 冗余列等价口径交叉验证，两次查询结果完全一致（来源：对 order_items + orders 的两条查询）。\n- 订单数做了去重，避免一条明细一行导致重复计数。\n- 注意与客单价区分：连带率是**件数**口径，客单价是**金额**口径；顺序上订单数按 `orders.created_at`（下单时间）归月，与上一轮客单价按支付时间归月不同，两者略有口径差异。\n\n需要我补充其它月份或按类目/品牌拆分连带率吗？",
+      "failure_mode": null,
+      "error_msg": null,
+      "latency_s": 7.779,
+      "tokens": {
+        "input": 20085,
+        "output": 1603,
+        "total": 21688,
+        "cache_read": 18560
+      },
+      "oversized": false,
+      "ended_with_failed_call": false,
+      "turns": [
+        {
+          "turn_idx": 1,
+          "question": "2026 年 6 月的客单价是多少？",
+          "retrieval_query": "2026 年 6 月的客单价是多少？",
+          "injected_chunks": [
+            "qa_pair:qa_008",
+            "qa_pair:qa_001",
+            "glossary:gmv",
+            "qa_pair:qa_009",
+            "glossary:avg_order_value",
+            "schema:order_items",
+            "qa_pair:qa_003",
+            "qa_pair:qa_007"
+          ],
+          "sql_calls": [
+            {
+              "seq": 1,
+              "sql": "SELECT ROUND(SUM(amount) / COUNT(DISTINCT order_id), 2) AS avg_order_value, SUM(amount) AS gmv, COUNT(DISTINCT order_id) AS paid_orders FROM payments WHERE paid_at >= '2026-06-01' AND paid_at < '2026-07-01';"
+            }
+          ],
+          "latency_s": 2.365,
+          "tokens": {
+            "input": 6825,
+            "output": 349,
+            "total": 7174,
+            "cache_read": 6400
+          }
+        },
+        {
+          "turn_idx": 2,
+          "question": "那这个月的连带率呢",
+          "retrieval_query": "2026 年 6 月的客单价是多少？\n那这个月的连带率呢",
+          "injected_chunks": [
+            "qa_pair:qa_008",
+            "qa_pair:qa_001",
+            "glossary:items_per_order",
+            "qa_pair:qa_009",
+            "glossary:yoy_mom",
+            "glossary:avg_order_value",
+            "qa_pair:qa_007",
+            "qa_pair:qa_003"
+          ],
+          "sql_calls": [
+            {
+              "seq": 1,
+              "sql": "SELECT ROUND(SUM(amount) / COUNT(DISTINCT order_id), 2) AS avg_order_value, SUM(amount) AS gmv, COUNT(DISTINCT order_id) AS paid_orders FROM payments WHERE paid_at >= '2026-06-01' AND paid_at < '2026-07-01';"
+            },
+            {
+              "seq": 2,
+              "sql": "SELECT DATE_FORMAT(o.created_at, '%Y-%m') AS month, SUM(oi.quantity) AS total_qty, COUNT(DISTINCT oi.order_id) AS order_cnt, ROUND(SUM(oi.quantity) / COUNT(DISTINCT oi.order_id), 4) AS items_per_order FROM order_items oi JOIN orders o ON o.id = oi.order_id WHERE o.created_at >= '2026-06-01' AND o.created_at < '2026-10-01' GROUP BY month ORDER BY month;"
+            },
+            {
+              "seq": 3,
+              "sql": "SELECT DATE_FORMAT(created_at, '%Y-%m') AS month, SUM(item_count) AS total_qty, COUNT(*) AS order_cnt, ROUND(SUM(item_count) / COUNT(*), 4) AS items_per_order FROM orders WHERE created_at >= '2026-06-01' AND created_at < '2026-10-01' GROUP BY month ORDER BY month;"
+            }
+          ],
+          "latency_s": 5.414,
+          "tokens": {
+            "input": 13260,
+            "output": 1254,
+            "total": 14514,
+            "cache_read": 12160
+          }
+        }
+      ]
+    },
+    {
+      "id": "MT-06",
+      "run_idx": 3,
+      "question_type": null,
+      "generalize_layer": null,
+      "injected_chunks": [
+        "qa_pair:qa_004",
+        "qa_pair:qa_003",
+        "qa_pair:qa_008",
+        "schema:refunds",
+        "glossary:net_sales",
+        "qa_pair:qa_010",
+        "glossary:gmv",
+        "glossary:refund_rate"
+      ],
+      "expected_chunks": [
+        "glossary:gmv",
+        "glossary:net_sales",
+        "schema:payments",
+        "schema:refunds"
+      ],
+      "recall_hits": [
+        "glossary:gmv",
+        "glossary:net_sales",
+        "schema:refunds"
+      ],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT SUM(amount) AS gmv, COUNT(*) AS pay_cnt, COUNT(DISTINCT order_id) AS order_cnt FROM payments WHERE paid_at >= '2026-09-01' AND paid_at < '2026-10-01';"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT SUM(amount) AS refund_amount, COUNT(*) AS refund_cnt FROM refunds WHERE refunded_at >= '2026-09-01' AND refunded_at < '2026-10-01';"
+        }
+      ],
+      "sql_used": "SELECT SUM(amount) AS refund_amount, COUNT(*) AS refund_cnt FROM refunds WHERE refunded_at >= '2026-09-01' AND refunded_at < '2026-10-01';",
+      "sql_source": "last",
+      "gold_row_count": 1,
+      "model_row_count": 1,
+      "judge": "pass",
+      "pass_via": "text",
+      "text_matched": "14460561.20",
+      "final_answer_text": "**没有。** 16,029,955.34 元是 GMV，**不冲减退款**——GMV 统计的就是统计期内成功支付的订单金额总和（按 payments.paid_at 过滤），退款单独记在 refunds 表里。\n\n如果你想看\"扣掉退款后的钱\"，那是另一个指标：**净销售额（net_sales）= GMV − 统计期内退款金额**。\n\n按该口径查了一次（第 2 次查询）：2026-09 完成退款 637 笔，退款金额 **1,569,394.14 元**，因此：\n\n| 指标 | 金额（元） | 口径 |\n| --- | --- | --- |\n| GMV | 16,029,955.34 | SUM(payments.amount)，按 paid_at 落在 2026-09 |\n| 退款金额 | 1,569,394.14 | SUM(refunds.amount)，按 refunded_at 落在 2026-09 |\n| 净销售额 | **14,460,561.20** | GMV − 退款金额（各自按自身时间轴） |\n\n两点提醒：\n1. 净销售额里 GMV 按支付时间、退款按退款完成时间，两条时间轴不同——9 月退的钱里有一部分是更早月份支付订单的退款（反之亦然），这符合净销售额的标准口径。\n2. 若你要的是\"退款率\"，还有金额口径和订单口径两种，且都要求分子分母同源（当期支付订单对应的退款 ÷ 当期支付金额），和上面的净销售额算法不同，需要的话我再单独算。",
+      "failure_mode": null,
+      "error_msg": null,
+      "latency_s": 6.302,
+      "tokens": {
+        "input": 19986,
+        "output": 1320,
+        "total": 21306,
+        "cache_read": 18560
+      },
+      "oversized": false,
+      "ended_with_failed_call": false,
+      "turns": [
+        {
+          "turn_idx": 1,
+          "question": "2026 年 9 月的 GMV 是多少？",
+          "retrieval_query": "2026 年 9 月的 GMV 是多少？",
+          "injected_chunks": [
+            "qa_pair:qa_003",
+            "qa_pair:qa_001",
+            "glossary:gmv",
+            "qa_pair:qa_004",
+            "qa_pair:qa_008",
+            "glossary:yoy_mom",
+            "qa_pair:qa_009",
+            "schema:users"
+          ],
+          "sql_calls": [
+            {
+              "seq": 1,
+              "sql": "SELECT SUM(amount) AS gmv, COUNT(*) AS pay_cnt, COUNT(DISTINCT order_id) AS order_cnt FROM payments WHERE paid_at >= '2026-09-01' AND paid_at < '2026-10-01';"
+            }
+          ],
+          "latency_s": 1.761,
+          "tokens": {
+            "input": 6394,
+            "output": 274,
+            "total": 6668,
+            "cache_read": 6016
+          }
+        },
+        {
+          "turn_idx": 2,
+          "question": "这个数扣掉退款了吗",
+          "retrieval_query": "2026 年 9 月的 GMV 是多少？\n这个数扣掉退款了吗",
+          "injected_chunks": [
+            "qa_pair:qa_004",
+            "qa_pair:qa_003",
+            "qa_pair:qa_008",
+            "schema:refunds",
+            "glossary:net_sales",
+            "qa_pair:qa_010",
+            "glossary:gmv",
+            "glossary:refund_rate"
+          ],
+          "sql_calls": [
+            {
+              "seq": 1,
+              "sql": "SELECT SUM(amount) AS gmv, COUNT(*) AS pay_cnt, COUNT(DISTINCT order_id) AS order_cnt FROM payments WHERE paid_at >= '2026-09-01' AND paid_at < '2026-10-01';"
+            },
+            {
+              "seq": 2,
+              "sql": "SELECT SUM(amount) AS refund_amount, COUNT(*) AS refund_cnt FROM refunds WHERE refunded_at >= '2026-09-01' AND refunded_at < '2026-10-01';"
+            }
+          ],
+          "latency_s": 4.54,
+          "tokens": {
+            "input": 13592,
+            "output": 1046,
+            "total": 14638,
+            "cache_read": 12544
+          }
+        }
+      ]
+    },
+    {
+      "id": "MT-07",
+      "run_idx": 3,
+      "question_type": null,
+      "generalize_layer": null,
+      "injected_chunks": [
+        "qa_pair:qa_008",
+        "qa_pair:qa_004",
+        "qa_pair:qa_002",
+        "glossary:gmv",
+        "qa_pair:qa_003",
+        "qa_pair:qa_007",
+        "qa_pair:qa_001",
+        "qa_pair:qa_009"
+      ],
+      "expected_chunks": [
+        "schema:payments",
+        "schema:orders",
+        "schema:users"
+      ],
+      "recall_hits": [],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT u.city, SUM(p.amount) AS pay_amount, COUNT(*) AS pay_orders\nFROM payments p\nJOIN orders o ON o.id = p.order_id\nJOIN users u ON u.id = o.user_id\nWHERE p.paid_at >= '2026-01-01' AND p.paid_at < '2026-02-01'\nGROUP BY u.city\nORDER BY pay_amount DESC;"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT COUNT(DISTINCT u.city) AS city_count,\n       SUM(p.amount) AS total_amount,\n       COUNT(*) AS total_orders\nFROM payments p\nJOIN orders o ON o.id = p.order_id\nJOIN users u ON u.id = o.user_id\nWHERE p.paid_at >= '2026-01-01' AND p.paid_at < '2026-02-01';"
+        },
+        {
+          "seq": 3,
+          "sql": "SELECT SUM(p.amount) AS pay_amount,\n       COUNT(*) AS pay_orders,\n       COUNT(DISTINCT o.user_id) AS pay_users,\n       ROUND(SUM(p.amount) / COUNT(*), 2) AS avg_order_value\nFROM payments p\nJOIN orders o ON o.id = p.order_id\nJOIN users u ON u.id = o.user_id\nWHERE p.paid_at >= '2026-01-01' AND p.paid_at < '2026-02-01'\n  AND u.city = '上海';"
+        },
+        {
+          "seq": 4,
+          "sql": "SELECT DATE_FORMAT(p.paid_at, '%Y-%m-%d') AS pay_date,\n       SUM(p.amount) AS pay_amount,\n       COUNT(*) AS pay_orders\nFROM payments p\nJOIN orders o ON o.id = p.order_id\nJOIN users u ON u.id = o.user_id\nWHERE p.paid_at >= '2026-01-01' AND p.paid_at < '2026-02-01'\n  AND u.city = '上海'\nGROUP BY pay_date\nORDER BY pay_date;"
+        },
+        {
+          "seq": 5,
+          "sql": "SELECT CEIL(DAY(p.paid_at) / 7) AS week_no,\n       CONCAT('2026-01-', LPAD((CEIL(DAY(p.paid_at)/7)-1)*7+1, 2, '0'), ' ~ ',\n              LPAD(LEAST(CEIL(DAY(p.paid_at)/7)*7, 31), 2, '0')) AS date_range,\n       SUM(p.amount) AS pay_amount,\n       COUNT(*) AS pay_orders\nFROM payments p\nJOIN orders o ON o.id = p.order_id\nJOIN users u ON u.id = o.user_id\nWHERE p.paid_at >= '2026-01-01' AND p.paid_at < '2026-02-01'\n  AND u.city = '上海'\nGROUP BY week_no, date_range\nORDER BY week_no;"
+        },
+        {
+          "seq": 6,
+          "sql": "SELECT DATE_FORMAT(p.paid_at, '%Y-%m-%d') AS pay_date, SUM(p.amount) AS pay_amount\nFROM payments p\nJOIN orders o ON o.id = p.order_id\nJOIN users u ON u.id = o.user_id\nWHERE p.paid_at >= '2026-01-01' AND p.paid_at < '2026-02-01' AND u.city = '上海'\nGROUP BY pay_date\nORDER BY pay_amount DESC\nLIMIT 3;"
+        }
+      ],
+      "sql_used": "SELECT DATE_FORMAT(p.paid_at, '%Y-%m-%d') AS pay_date, SUM(p.amount) AS pay_amount\nFROM payments p\nJOIN orders o ON o.id = p.order_id\nJOIN users u ON u.id = o.user_id\nWHERE p.paid_at >= '2026-01-01' AND p.paid_at < '2026-02-01' AND u.city = '上海'\nGROUP BY pay_date\nORDER BY pay_amount DESC\nLIMIT 3;",
+      "sql_source": "last",
+      "gold_row_count": 1,
+      "model_row_count": 3,
+      "judge": "pass",
+      "pass_via": "text",
+      "text_matched": "1559768.99",
+      "final_answer_text": "**2026 年 1 月 · 上海**\n\n口径：销售额 = `SUM(payments.amount)`，按支付成功时间过滤 2026-01-01 ~ 2026-01-31（左闭右开），再经 `orders` 关联到 `users.city = '上海'`。\n\n**整体指标（第 1 次查询）**\n\n| 指标 | 数值 |\n|---|---|\n| 支付金额（GMV） | **1,559,768.99 元** |\n| 支付订单数 | 646 笔 |\n| 付费用户数 | 431 人 |\n| 客单价 | 2,414.50 元 |\n\n- 上海在当月 20 个城市中排名**第 3**（北京 194.5 万 > 广州 164.7 万 > 上海 156.0 万），占当月全国总额 1,954.54 万元的约 **8.0%**。\n- 客单价 2,414.50 元，低于广州（约 3,033 元），高于北京（约 2,594 元，1945253.37/750）。\n\n**按周分布（第 3 次查询，按自然日 7 天切段）**\n\n| 周段 | 支付金额（元） | 订单数 |\n|---|---|---|\n| 01-01 ~ 01-07 | 367,389.66 | 163 |\n| 01-08 ~ 01-14 | 348,456.75 | 147 |\n| 01-15 ~ 01-21 | 383,973.87 | 116 |\n| 01-22 ~ 01-28 | 329,317.05 | 159 |\n| 01-29 ~ 01-31 | 130,631.66 | 61 |\n\n四周（1~28 日）金额较为均衡，均在 33~38 万元区间；最后 3 天 13.1 万元，日均约 4.35 万元，与前 28 天日均约 5.0 万元相比略低。\n\n**金额最高的 3 天（第 4 次查询）**\n\n| 日期 | 支付金额（元） |\n|---|---|\n| 2026-01-15 | 119,491.85 |\n| 2026-01-28 | 84,735.58 |\n| 2026-01-29 | 81,360.87 |\n\n1 月 15 日为当月峰值（11.95 万元、23 笔订单，客单价异常高，约 5,195 元/单），明显高于当月日均约 5.03 万元。\n\n说明：以上均为支付成功金额口径，未冲减退款；若需\"净销售额\"（GMV − 退款），可再关联 `refunds` 表计算。（逐日明细共 31 行，如需完整清单可再取。）",
+      "failure_mode": null,
+      "error_msg": null,
+      "latency_s": 11.796,
+      "tokens": {
+        "input": 34303,
+        "output": 3538,
+        "total": 37841,
+        "cache_read": 30592
+      },
+      "oversized": false,
+      "ended_with_failed_call": false,
+      "turns": [
+        {
+          "turn_idx": 1,
+          "question": "2026 年 1 月各城市的支付金额是多少？",
+          "retrieval_query": "2026 年 1 月各城市的支付金额是多少？",
+          "injected_chunks": [
+            "qa_pair:qa_008",
+            "qa_pair:qa_002",
+            "glossary:gmv",
+            "qa_pair:qa_001",
+            "qa_pair:qa_007",
+            "qa_pair:qa_003",
+            "schema:payments",
+            "qa_pair:qa_011"
+          ],
+          "sql_calls": [
+            {
+              "seq": 1,
+              "sql": "SELECT u.city, SUM(p.amount) AS pay_amount, COUNT(*) AS pay_orders\nFROM payments p\nJOIN orders o ON o.id = p.order_id\nJOIN users u ON u.id = o.user_id\nWHERE p.paid_at >= '2026-01-01' AND p.paid_at < '2026-02-01'\nGROUP BY u.city\nORDER BY pay_amount DESC;"
+            },
+            {
+              "seq": 2,
+              "sql": "SELECT COUNT(DISTINCT u.city) AS city_count,\n       SUM(p.amount) AS total_amount,\n       COUNT(*) AS total_orders\nFROM payments p\nJOIN orders o ON o.id = p.order_id\nJOIN users u ON u.id = o.user_id\nWHERE p.paid_at >= '2026-01-01' AND p.paid_at < '2026-02-01';"
+            }
+          ],
+          "latency_s": 5.351,
+          "tokens": {
+            "input": 10491,
+            "output": 1078,
+            "total": 11569,
+            "cache_read": 9728
+          }
+        },
+        {
+          "turn_idx": 2,
+          "question": "只看上海呢",
+          "retrieval_query": "2026 年 1 月各城市的支付金额是多少？\n只看上海呢",
+          "injected_chunks": [
+            "qa_pair:qa_008",
+            "qa_pair:qa_004",
+            "qa_pair:qa_002",
+            "glossary:gmv",
+            "qa_pair:qa_003",
+            "qa_pair:qa_007",
+            "qa_pair:qa_001",
+            "qa_pair:qa_009"
+          ],
+          "sql_calls": [
+            {
+              "seq": 1,
+              "sql": "SELECT u.city, SUM(p.amount) AS pay_amount, COUNT(*) AS pay_orders\nFROM payments p\nJOIN orders o ON o.id = p.order_id\nJOIN users u ON u.id = o.user_id\nWHERE p.paid_at >= '2026-01-01' AND p.paid_at < '2026-02-01'\nGROUP BY u.city\nORDER BY pay_amount DESC;"
+            },
+            {
+              "seq": 2,
+              "sql": "SELECT COUNT(DISTINCT u.city) AS city_count,\n       SUM(p.amount) AS total_amount,\n       COUNT(*) AS total_orders\nFROM payments p\nJOIN orders o ON o.id = p.order_id\nJOIN users u ON u.id = o.user_id\nWHERE p.paid_at >= '2026-01-01' AND p.paid_at < '2026-02-01';"
+            },
+            {
+              "seq": 3,
+              "sql": "SELECT SUM(p.amount) AS pay_amount,\n       COUNT(*) AS pay_orders,\n       COUNT(DISTINCT o.user_id) AS pay_users,\n       ROUND(SUM(p.amount) / COUNT(*), 2) AS avg_order_value\nFROM payments p\nJOIN orders o ON o.id = p.order_id\nJOIN users u ON u.id = o.user_id\nWHERE p.paid_at >= '2026-01-01' AND p.paid_at < '2026-02-01'\n  AND u.city = '上海';"
+            },
+            {
+              "seq": 4,
+              "sql": "SELECT DATE_FORMAT(p.paid_at, '%Y-%m-%d') AS pay_date,\n       SUM(p.amount) AS pay_amount,\n       COUNT(*) AS pay_orders\nFROM payments p\nJOIN orders o ON o.id = p.order_id\nJOIN users u ON u.id = o.user_id\nWHERE p.paid_at >= '2026-01-01' AND p.paid_at < '2026-02-01'\n  AND u.city = '上海'\nGROUP BY pay_date\nORDER BY pay_date;"
+            },
+            {
+              "seq": 5,
+              "sql": "SELECT CEIL(DAY(p.paid_at) / 7) AS week_no,\n       CONCAT('2026-01-', LPAD((CEIL(DAY(p.paid_at)/7)-1)*7+1, 2, '0'), ' ~ ',\n              LPAD(LEAST(CEIL(DAY(p.paid_at)/7)*7, 31), 2, '0')) AS date_range,\n       SUM(p.amount) AS pay_amount,\n       COUNT(*) AS pay_orders\nFROM payments p\nJOIN orders o ON o.id = p.order_id\nJOIN users u ON u.id = o.user_id\nWHERE p.paid_at >= '2026-01-01' AND p.paid_at < '2026-02-01'\n  AND u.city = '上海'\nGROUP BY week_no, date_range\nORDER BY week_no;"
+            },
+            {
+              "seq": 6,
+              "sql": "SELECT DATE_FORMAT(p.paid_at, '%Y-%m-%d') AS pay_date, SUM(p.amount) AS pay_amount\nFROM payments p\nJOIN orders o ON o.id = p.order_id\nJOIN users u ON u.id = o.user_id\nWHERE p.paid_at >= '2026-01-01' AND p.paid_at < '2026-02-01' AND u.city = '上海'\nGROUP BY pay_date\nORDER BY pay_amount DESC\nLIMIT 3;"
+            }
+          ],
+          "latency_s": 6.445,
+          "tokens": {
+            "input": 23812,
+            "output": 2460,
+            "total": 26272,
+            "cache_read": 20864
+          }
+        }
+      ]
+    },
+    {
+      "id": "MT-08",
+      "run_idx": 3,
+      "question_type": null,
+      "generalize_layer": null,
+      "injected_chunks": [
+        "qa_pair:qa_005",
+        "schema:products",
+        "glossary:repurchase_rate",
+        "qa_pair:qa_008",
+        "qa_pair:qa_009",
+        "qa_pair:qa_006",
+        "schema:users",
+        "glossary:sell_through"
+      ],
+      "expected_chunks": [
+        "schema:users",
+        "schema:orders",
+        "schema:order_items",
+        "schema:products"
+      ],
+      "recall_hits": [
+        "schema:users",
+        "schema:products"
+      ],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT COUNT(DISTINCT o.user_id) AS digital_users\nFROM orders o\nJOIN order_items oi ON oi.order_id = o.id\nJOIN products p ON p.id = oi.product_id\nWHERE p.category = '数码'"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT u.gender, COUNT(DISTINCT o.user_id) AS users_cnt\nFROM orders o\nJOIN order_items oi ON oi.order_id = o.id\nJOIN products p ON p.id = oi.product_id\nJOIN users u ON u.id = o.user_id\nWHERE p.category = '数码'\nGROUP BY u.gender"
+        },
+        {
+          "seq": 3,
+          "sql": "SELECT COUNT(*) AS never_digital_users\nFROM users u\nWHERE NOT EXISTS (\n    SELECT 1\n    FROM orders o\n    JOIN order_items oi ON oi.order_id = o.id\n    JOIN products p ON p.id = oi.product_id\n    WHERE o.user_id = u.id\n      AND p.category = '数码'\n);\n"
+        },
+        {
+          "seq": 4,
+          "sql": "SELECT COUNT(*) AS total_users FROM users;"
+        },
+        {
+          "seq": 5,
+          "sql": "SELECT u.gender, COUNT(*) AS never_digital_users\nFROM users u\nWHERE NOT EXISTS (\n    SELECT 1\n    FROM orders o\n    JOIN order_items oi ON oi.order_id = o.id\n    JOIN products p ON p.id = oi.product_id\n    WHERE o.user_id = u.id\n      AND p.category = '数码'\n)\nGROUP BY u.gender;"
+        }
+      ],
+      "sql_used": "SELECT u.gender, COUNT(*) AS never_digital_users\nFROM users u\nWHERE NOT EXISTS (\n    SELECT 1\n    FROM orders o\n    JOIN order_items oi ON oi.order_id = o.id\n    JOIN products p ON p.id = oi.product_id\n    WHERE o.user_id = u.id\n      AND p.category = '数码'\n)\nGROUP BY u.gender;",
+      "sql_source": "last",
+      "gold_row_count": 1,
+      "model_row_count": 2,
+      "judge": "pass",
+      "pass_via": "text",
+      "text_matched": "11705",
+      "final_answer_text": "## 结论\n\n**从未买过数码类目商品的用户共 11,705 人**（占全部 20,000 名在册用户的 58.5%）。\n\n（数据来源：本次 `${第1次查询}` 用 `NOT EXISTS` 从 users 表反向排除购买过数码商品的用户；`${第2次查询}` 取 users 全表总数 20,000。）\n\n## 两类用户对照\n\n| 分组 | 用户数 | 占比 |\n| --- | --- | --- |\n| 买过数码类目商品 | 8,295 | 41.5% |\n| 从未买过数码类目商品 | 11,705 | 58.5% |\n| **合计（在册用户）** | **20,000** | 100% |\n\n两组相加恰好等于 20,000，与用户表总行数吻合，说明口径自洽、无遗漏无重复。\n\n## 按性别拆分（未买过数码的用户）\n\n| 性别 | 用户数 |\n| --- | --- |\n| 男 | 6,007 |\n| 女 | 5,698 |\n| **合计** | **11,705** |\n\n## 口径说明\n\n- **\"没买过\"的判定**：用 `NOT EXISTS` 检查该用户在 orders → order_items → products 链路中是否存在 category = '数码' 的明细；NOT EXISTS 语义直接，不会因 LEFT JOIN 产生重复行或漏判，优于 `LEFT JOIN + IS NULL`。\n- **分母是全部在册用户**：包括注册后从未下过单的用户——他们自然也没买过数码商品。若只想看\"有下单行为但没买数码\"的用户，需额外加 `EXISTS(orders)` 条件，结果会小于 11,705。\n- **与上一问同口径**：上一问的 8,295 人未按订单状态过滤，本问也用同样宽松口径（不看订单状态、不看是否支付），两问可直接相加、互补。",
+      "failure_mode": null,
+      "error_msg": null,
+      "latency_s": 9.14,
+      "tokens": {
+        "input": 29380,
+        "output": 1976,
+        "total": 31356,
+        "cache_read": 27648
+      },
+      "oversized": false,
+      "ended_with_failed_call": false,
+      "turns": [
+        {
+          "turn_idx": 1,
+          "question": "买过数码类目商品的用户有多少？",
+          "retrieval_query": "买过数码类目商品的用户有多少？",
+          "injected_chunks": [
+            "qa_pair:qa_005",
+            "schema:products",
+            "qa_pair:qa_009",
+            "glossary:repurchase_rate",
+            "glossary:arpu",
+            "schema:users",
+            "qa_pair:qa_002",
+            "glossary:sell_through"
+          ],
+          "sql_calls": [
+            {
+              "seq": 1,
+              "sql": "SELECT COUNT(DISTINCT o.user_id) AS digital_users\nFROM orders o\nJOIN order_items oi ON oi.order_id = o.id\nJOIN products p ON p.id = oi.product_id\nWHERE p.category = '数码'"
+            },
+            {
+              "seq": 2,
+              "sql": "SELECT u.gender, COUNT(DISTINCT o.user_id) AS users_cnt\nFROM orders o\nJOIN order_items oi ON oi.order_id = o.id\nJOIN products p ON p.id = oi.product_id\nJOIN users u ON u.id = o.user_id\nWHERE p.category = '数码'\nGROUP BY u.gender"
+            }
+          ],
+          "latency_s": 3.68,
+          "tokens": {
+            "input": 7907,
+            "output": 585,
+            "total": 8492,
+            "cache_read": 7552
+          }
+        },
+        {
+          "turn_idx": 2,
+          "question": "那没买过的呢",
+          "retrieval_query": "买过数码类目商品的用户有多少？\n那没买过的呢",
+          "injected_chunks": [
+            "qa_pair:qa_005",
+            "schema:products",
+            "glossary:repurchase_rate",
+            "qa_pair:qa_008",
+            "qa_pair:qa_009",
+            "qa_pair:qa_006",
+            "schema:users",
+            "glossary:sell_through"
+          ],
+          "sql_calls": [
+            {
+              "seq": 1,
+              "sql": "SELECT COUNT(DISTINCT o.user_id) AS digital_users\nFROM orders o\nJOIN order_items oi ON oi.order_id = o.id\nJOIN products p ON p.id = oi.product_id\nWHERE p.category = '数码'"
+            },
+            {
+              "seq": 2,
+              "sql": "SELECT u.gender, COUNT(DISTINCT o.user_id) AS users_cnt\nFROM orders o\nJOIN order_items oi ON oi.order_id = o.id\nJOIN products p ON p.id = oi.product_id\nJOIN users u ON u.id = o.user_id\nWHERE p.category = '数码'\nGROUP BY u.gender"
+            },
+            {
+              "seq": 3,
+              "sql": "SELECT COUNT(*) AS never_digital_users\nFROM users u\nWHERE NOT EXISTS (\n    SELECT 1\n    FROM orders o\n    JOIN order_items oi ON oi.order_id = o.id\n    JOIN products p ON p.id = oi.product_id\n    WHERE o.user_id = u.id\n      AND p.category = '数码'\n);\n"
+            },
+            {
+              "seq": 4,
+              "sql": "SELECT COUNT(*) AS total_users FROM users;"
+            },
+            {
+              "seq": 5,
+              "sql": "SELECT u.gender, COUNT(*) AS never_digital_users\nFROM users u\nWHERE NOT EXISTS (\n    SELECT 1\n    FROM orders o\n    JOIN order_items oi ON oi.order_id = o.id\n    JOIN products p ON p.id = oi.product_id\n    WHERE o.user_id = u.id\n      AND p.category = '数码'\n)\nGROUP BY u.gender;"
+            }
+          ],
+          "latency_s": 5.46,
+          "tokens": {
+            "input": 21473,
+            "output": 1391,
+            "total": 22864,
+            "cache_read": 20096
+          }
+        }
+      ]
+    }
+  ]
+}

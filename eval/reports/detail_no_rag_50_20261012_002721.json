@@ -1,0 +1,2631 @@
+{
+  "tag": "no_rag_50",
+  "started_at": "2026-10-12 00:27:21",
+  "config": {
+    "dataset": "C:\\Users\\yhnt\\rg\\agent\\eval\\dataset\\eval_v1.jsonl",
+    "multiturn": false,
+    "top_n": 0,
+    "runs": 1,
+    "model": "deepseek-flash",
+    "temperature": 0,
+    "snapshot_anchor": "2026-09-30",
+    "retrieval": {
+      "top_k_each": 20,
+      "rrf_k": 60,
+      "enable_bm25": true,
+      "enable_dense": true,
+      "doc_types": null,
+      "rerank": false,
+      "rerank_pool": 0,
+      "rerank_model": null
+    },
+    "corpus": {
+      "commit": "3b98c3a",
+      "counts": {
+        "schema": 6,
+        "glossary": 11,
+        "qa_pair": 11
+      },
+      "total": 28
+    },
+    "replay_max_rows": 5000
+  },
+  "cases": [
+    {
+      "id": "EV-001",
+      "run_idx": 1,
+      "question_type": "time_window",
+      "generalize_layer": "hit",
+      "injected_chunks": [],
+      "expected_chunks": [
+        "schema:orders"
+      ],
+      "recall_hits": [],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT COLUMN_NAME, DATA_TYPE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='mart' AND TABLE_NAME='orders'"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT DATE(created_at) AS dt, COUNT(*) AS order_cnt FROM orders WHERE created_at >= '2026-03-01' AND created_at < '2026-03-16' GROUP BY dt ORDER BY dt"
+        }
+      ],
+      "sql_used": "SELECT DATE(created_at) AS dt, COUNT(*) AS order_cnt FROM orders WHERE created_at >= '2026-03-01' AND created_at < '2026-03-16' GROUP BY dt ORDER BY dt",
+      "sql_source": "last",
+      "gold_row_count": 15,
+      "model_row_count": 15,
+      "judge": "pass",
+      "pass_via": "sql",
+      "text_matched": null,
+      "final_answer_text": "**2026-03-01 至 2026-03-15 每日订单量**（基于 orders 表按 `created_at` 下单日期分组统计，口径为\"当日下单的全部订单，不区分订单状态\"）：\n\n| 日期 | 订单量 |\n|---|---|\n| 2026-03-01 | 225 |\n| 2026-03-02 | 238 |\n| 2026-03-03 | 232 |\n| 2026-03-04 | 253 |\n| 2026-03-05 | 259 |\n| 2026-03-06 | 288 |\n| 2026-03-07 | 236 |\n| 2026-03-08 | 256 |\n| 2026-03-09 | 244 |\n| 2026-03-10 | 254 |\n| 2026-03-11 | 280 |\n| 2026-03-12 | 265 |\n| 2026-03-13 | 278 |\n| 2026-03-14 | 231 |\n| 2026-03-15 | 260 |\n\n汇总与分析：\n- 15 天合计 **3 799 单**，日均约 **253 单**。\n- 最高为 3 月 6 日（288 单），最低为 3 月 1 日（225 单），波动幅度不大，没有明显单日异常。\n\n说明：以上数字来自一次 SQL 查询（`SELECT DATE(created_at), COUNT(*) FROM orders WHERE created_at >= '2026-03-01' AND created_at < '2026-03-16' GROUP BY dt`），按\"下单时间\"归属日期，不是按支付时间。若你需要的是\"支付成功订单量\"或\"完成订单量\"，口径会不同（前者应改用 payments 表的支付时间，后者可加 status 筛选），可以告诉我，我再按对应口径重算。",
+      "failure_mode": null,
+      "error_msg": null,
+      "latency_s": 5.274,
+      "tokens": {
+        "input": 6165,
+        "output": 969,
+        "total": 7134,
+        "cache_read": 5120
+      },
+      "oversized": false,
+      "ended_with_failed_call": false
+    },
+    {
+      "id": "EV-002",
+      "run_idx": 1,
+      "question_type": "multi_join",
+      "generalize_layer": "hit",
+      "injected_chunks": [],
+      "expected_chunks": [
+        "schema:payments",
+        "schema:orders",
+        "schema:users"
+      ],
+      "recall_hits": [],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT TABLE_NAME, COLUMN_NAME, DATA_TYPE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='mart' ORDER BY TABLE_NAME, ORDINAL_POSITION"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT COLUMN_NAME, DATA_TYPE, COLUMN_TYPE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='mart' AND TABLE_NAME IN ('users','orders') ORDER BY TABLE_NAME, ORDINAL_POSITION"
+        },
+        {
+          "seq": 3,
+          "sql": "SELECT status, COUNT(*) c FROM orders GROUP BY status"
+        },
+        {
+          "seq": 4,
+          "sql": "SELECT u.city, u.province, ROUND(SUM(p.amount),2) AS pay_amount, COUNT(DISTINCT p.order_id) AS paid_orders\nFROM payments p JOIN orders o ON p.order_id = o.id JOIN users u ON o.user_id = u.id\nGROUP BY u.city, u.province ORDER BY pay_amount DESC LIMIT 8"
+        },
+        {
+          "seq": 5,
+          "sql": "SELECT u.city, ROUND(SUM(o.order_amount),2) AS ord_amount, COUNT(*) AS ord_cnt\nFROM orders o JOIN users u ON o.user_id = u.id\nWHERE o.status <> 'cancelled'\nGROUP BY u.city ORDER BY ord_amount DESC LIMIT 8"
+        },
+        {
+          "seq": 6,
+          "sql": "SELECT u.city, ROUND(SUM(p.amount),2) AS pay_amount, ROUND(COALESCE(SUM(r.refund_amount),0),2) AS refund_amount,\n       ROUND(SUM(p.amount) - COALESCE(SUM(r.refund_amount),0),2) AS net_amount\nFROM payments p JOIN orders o ON p.order_id = o.id JOIN users u ON o.user_id = u.id\nLEFT JOIN refunds r ON r.order_id = o.id\nGROUP BY u.city ORDER BY net_amount DESC LIMIT 5"
+        },
+        {
+          "seq": 7,
+          "sql": "SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='mart' AND TABLE_NAME='refunds' ORDER BY ORDINAL_POSITION"
+        },
+        {
+          "seq": 8,
+          "sql": "SELECT u.city, ROUND(SUM(p.amount),2) AS pay_amount, ROUND(COALESCE(SUM(r.amount),0),2) AS refund_amount,\n       ROUND(SUM(p.amount) - COALESCE(SUM(r.amount),0),2) AS net_amount\nFROM payments p JOIN orders o ON p.order_id = o.id JOIN users u ON o.user_id = u.id\nLEFT JOIN refunds r ON r.order_id = o.id\nGROUP BY u.city ORDER BY net_amount DESC LIMIT 5"
+        }
+      ],
+      "sql_used": "SELECT u.city, ROUND(SUM(p.amount),2) AS pay_amount, ROUND(COALESCE(SUM(r.amount),0),2) AS refund_amount,\n       ROUND(SUM(p.amount) - COALESCE(SUM(r.amount),0),2) AS net_amount\nFROM payments p JOIN orders o ON p.order_id = o.id JOIN users u ON o.user_id = u.id\nLEFT JOIN refunds r ON r.order_id = o.id\nGROUP BY u.city ORDER BY net_amount DESC LIMIT 5",
+      "sql_source": "last",
+      "gold_row_count": 5,
+      "model_row_count": 5,
+      "judge": "fail",
+      "pass_via": null,
+      "text_matched": null,
+      "final_answer_text": "## 结论：销售额最高的前 5 个城市\n\n**口径 A：按支付成功金额（payments.amount 汇总，口径主推）**\n\n| 排名 | 城市 | 省份 | 支付成功金额（元） | 已支付订单数 |\n|---|---|---|---|---|\n| 1 | 北京 | 北京 | 24,273,359.25 | 9,017 |\n| 2 | 上海 | 上海 | 20,689,239.65 | 7,818 |\n| 3 | 广州 | 广东 | 20,143,583.25 | 7,175 |\n| 4 | 深圳 | 广东 | 19,912,874.49 | 7,304 |\n| 5 | 杭州 | 浙江 | 14,974,672.44 | 5,390 |\n\n**口径 B：按订单金额（orders.order_amount，剔除已取消订单）** —— 结果排序一致，仅数值略高（含未支付/退款订单）：\n\n北京 2,519.3 万 > 上海 2,152.2 万 > 广州 2,086.4 万 > 深圳 2,056.9 万 > 杭州 1,555.2 万。\n\n**口径 C：支付金额扣减退款（净销售额）**\n\n北京 2,152.4 万 > 上海 1,872.4 万 > 广州 1,826.8 万 > 深圳 1,817.7 万 > 杭州 1,346.9 万（退款额分别为 274.9 万 / 196.5 万 / 187.5 万 / 173.5 万 / 150.5 万）。\n\n**说明**\n- 数据来源：以 `payments` 支付流水关联 `orders`，再关联 `users` 取收货/注册城市字段 `users.city` 分组汇总（基于本次查询结果）。\n- 三种口径下 Top5 城市集合完全相同，只是名次与金额略有差异：净额口径下广州反超深圳升至第 3。\n- 与第 6 名差距明显（长沙/南京约 1,050–1,100 万，仅为第 5 名杭州的约 70%），梯队在杭州处断开。\n- 数据为 2025-10-01 至 2026-09-30 的静态快照，未做时间过滤，覆盖全部历史订单。",
+      "failure_mode": "other",
+      "error_msg": null,
+      "latency_s": 11.194,
+      "tokens": {
+        "input": 18913,
+        "output": 1827,
+        "total": 20740,
+        "cache_read": 16896
+      },
+      "oversized": false,
+      "ended_with_failed_call": false
+    },
+    {
+      "id": "EV-003",
+      "run_idx": 1,
+      "question_type": "glossary_trap",
+      "generalize_layer": "hit",
+      "injected_chunks": [],
+      "expected_chunks": [
+        "glossary:gmv",
+        "qa_pair:qa_003"
+      ],
+      "recall_hits": [],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT TABLE_NAME, COLUMN_NAME, DATA_TYPE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='mart' AND TABLE_NAME IN ('orders','payments','refunds') ORDER BY TABLE_NAME, ORDINAL_POSITION"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT DATE_FORMAT(paid_at,'%Y-%m') AS m, COUNT(*) AS pay_cnt, ROUND(SUM(amount),2) AS pay_gmv FROM payments WHERE paid_at >= '2026-09-01' AND paid_at < '2026-10-01' GROUP BY m"
+        },
+        {
+          "seq": 3,
+          "sql": "SELECT status, COUNT(*) c, ROUND(SUM(order_amount),2) amt FROM orders WHERE created_at >= '2026-09-01' AND created_at < '2026-10-01' GROUP BY status"
+        },
+        {
+          "seq": 4,
+          "sql": "SELECT ROUND(SUM(amount),2) AS refund_amt, COUNT(*) AS refund_cnt FROM refunds WHERE refunded_at >= '2026-09-01' AND refunded_at < '2026-10-01'"
+        }
+      ],
+      "sql_used": "SELECT ROUND(SUM(amount),2) AS refund_amt, COUNT(*) AS refund_cnt FROM refunds WHERE refunded_at >= '2026-09-01' AND refunded_at < '2026-10-01'",
+      "sql_source": "last",
+      "gold_row_count": 1,
+      "model_row_count": 1,
+      "judge": "pass",
+      "pass_via": "text",
+      "text_matched": "16029955.34",
+      "final_answer_text": "**2026 年 9 月（上个月，以 2026-09-30 为\"今天\"）GMV ≈ 1,603.00 万元**\n\n口径说明与数据来源（基于上述查询结果）：\n\n| 口径 | 金额（元） | 说明 |\n|---|---|---|\n| **支付成功 GMV（主口径）** | **16,029,955.34** | payments 表中 paid_at 落在 2026-09 的记录求和，共 5,901 笔 |\n| 下单 GMV（orders 表按下单时间） | 20,280,681.72 | 含全部状态，共 7,617 单 |\n| 其中剔除已取消 | 17,925,809.96 | 扣除 cancelled 的 2,354,871.76 元、965 单 |\n| 当月退款金额 | 1,569,394.14 | refunds 按 refunded_at 计，637 笔 |\n| 净 GMV（支付 − 退款） | 14,460,561.20 | 粗略净额，未做跨月匹配 |\n\n补充：9 月订单状态分布为 completed 3,766 单 / paid 1,052 单 / shipped 624 单 / pending 780 单 / cancelled 965 单 / refunded 430 单。\n\n需要提醒的是，16,029,955.34 元是**按支付流水时间**统计的金额；若你习惯用\"按下单时间且剔除取消单\"的口径，则是 17,925,809.96 元。两种口径差异较大，建议做同比/环比时固定使用同一种。需要我按其他口径（如按类目、按省份、或近 12 个月趋势）再拆分吗？",
+      "failure_mode": null,
+      "error_msg": null,
+      "latency_s": 6.836,
+      "tokens": {
+        "input": 6403,
+        "output": 1195,
+        "total": 7598,
+        "cache_read": 5504
+      },
+      "oversized": false,
+      "ended_with_failed_call": false
+    },
+    {
+      "id": "EV-004",
+      "run_idx": 1,
+      "question_type": "glossary_trap",
+      "generalize_layer": "hit",
+      "injected_chunks": [],
+      "expected_chunks": [
+        "glossary:refund_rate",
+        "schema:refunds",
+        "schema:payments"
+      ],
+      "recall_hits": [],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT table_name, column_name, data_type FROM information_schema.columns WHERE table_schema='mart' AND table_name IN ('orders','payments','refunds','order_items') ORDER BY table_name, ordinal_position"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT table_name, column_name, data_type FROM information_schema.columns WHERE table_schema='mart' AND table_name IN ('refunds','orders') ORDER BY table_name, ordinal_position"
+        },
+        {
+          "seq": 3,
+          "sql": "SELECT DATE_FORMAT(paid_at,'%Y-%m') AS m, COUNT(*) AS pay_cnt, ROUND(SUM(amount),2) AS pay_amt FROM payments GROUP BY m ORDER BY m"
+        },
+        {
+          "seq": 4,
+          "sql": "SELECT DATE_FORMAT(refunded_at,'%Y-%m') AS m, COUNT(*) AS rf_cnt, ROUND(SUM(amount),2) AS rf_amt FROM refunds GROUP BY m ORDER BY m"
+        },
+        {
+          "seq": 5,
+          "sql": "SELECT DATE_FORMAT(created_at,'%Y-%m') AS m, COUNT(*) AS ord_cnt, ROUND(SUM(order_amount),2) AS ord_amt FROM orders GROUP BY m ORDER BY m"
+        }
+      ],
+      "sql_used": "SELECT DATE_FORMAT(created_at,'%Y-%m') AS m, COUNT(*) AS ord_cnt, ROUND(SUM(order_amount),2) AS ord_amt FROM orders GROUP BY m ORDER BY m",
+      "sql_source": "last",
+      "gold_row_count": 1,
+      "model_row_count": 12,
+      "judge": "pass",
+      "pass_via": "text",
+      "text_matched": "0.0774",
+      "final_answer_text": "**2026 年 9 月退款率（金额口径）≈ 9.79%**\n\n口径说明：本库数据范围为 2025-10-01 ~ 2026-09-30，快照内只有一个 9 月，即 **2026-09**（且以 2026-09-30 为“今天”，该月数据完整）。\n\n计算方式（基于 payments/refunds 两张表的查询结果）：\n- 退款金额 = 9 月完成退款的 amount 合计（refunds.refunded_at 落在 2026-09）：**1,569,394.14 元**（637 笔）\n- 分母 = 9 月支付成功金额合计（payments.paid_at 落在 2026-09）：**16,029,955.34 元**（5,901 笔）\n\n> 退款率 = 1,569,394.14 ÷ 16,029,955.34 = **9.79%**\n\n参考对比（同一批查询结果）：\n| 口径 | 分子 | 分母 | 比率 |\n|---|---|---|---|\n| 金额/支付成功金额（推荐） | 1,569,394.14 | 16,029,955.34 | **9.79%** |\n| 金额/订单下单金额 | 1,569,394.14 | 20,280,681.72（7,617 单） | 7.74% |\n| 笔数/支付成功笔数 | 637 | 5,901 | 10.80% |\n\n补充说明：\n- 上面两个分母口径不同（支付金额按“实际收款时间”统计，订单金额按“下单时间”统计，且订单金额含未支付订单），所以比率有差异；若按“支付成功金额”口径，9 月退款率约 9.8%，与其他月份（多在 9%~10% 区间）基本持平。\n- 退款金额按“退款完成时间”归属月份，若某笔退款对应的是更早月份的订单，会体现在 9 月分子中，这属于常见的“按发生时间”统计口径；如需要“按原订单月份归属”的退款率，可以再帮你按订单维度关联计算。",
+      "failure_mode": null,
+      "error_msg": null,
+      "latency_s": 6.9,
+      "tokens": {
+        "input": 9239,
+        "output": 1295,
+        "total": 10534,
+        "cache_read": 7552
+      },
+      "oversized": false,
+      "ended_with_failed_call": false
+    },
+    {
+      "id": "EV-005",
+      "run_idx": 1,
+      "question_type": "multi_join",
+      "generalize_layer": "hit",
+      "injected_chunks": [],
+      "expected_chunks": [
+        "schema:orders",
+        "schema:order_items",
+        "schema:products",
+        "schema:users"
+      ],
+      "recall_hits": [],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT TABLE_NAME, COLUMN_NAME, DATA_TYPE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='mart' AND TABLE_NAME IN ('users','products','orders','order_items') ORDER BY TABLE_NAME, ORDINAL_POSITION"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT COLUMN_NAME, DATA_TYPE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='mart' AND TABLE_NAME='users' ORDER BY ORDINAL_POSITION"
+        },
+        {
+          "seq": 3,
+          "sql": "SELECT category, COUNT(*) AS cnt FROM products GROUP BY category ORDER BY cnt DESC"
+        },
+        {
+          "seq": 4,
+          "sql": "SELECT gender, COUNT(*) AS cnt FROM users GROUP BY gender"
+        },
+        {
+          "seq": 5,
+          "sql": "SELECT status, COUNT(*) AS cnt FROM orders GROUP BY status"
+        },
+        {
+          "seq": 6,
+          "sql": "SELECT COUNT(DISTINCT u.id) AS female_buyers_digital_all,\n       COUNT(DISTINCT CASE WHEN o.status <> 'cancelled' THEN u.id END) AS female_buyers_digital_excl_cancelled\nFROM users u\nJOIN orders o ON o.user_id = u.id\nJOIN order_items oi ON oi.order_id = o.id\nJOIN products p ON p.id = oi.product_id\nWHERE u.gender = '女' AND p.category = '数码'"
+        },
+        {
+          "seq": 7,
+          "sql": "WITH buyers AS (\n  SELECT DISTINCT u.id\n  FROM users u\n  JOIN orders o ON o.user_id = u.id\n  JOIN order_items oi ON oi.order_id = o.id\n  JOIN products p ON p.id = oi.product_id\n  WHERE u.gender = '女' AND p.category = '数码'\n)\nSELECT (SELECT COUNT(*) FROM users WHERE gender='女') AS female_total,\n       COUNT(*) AS female_buyers_digital\nFROM buyers"
+        },
+        {
+          "seq": 8,
+          "sql": "SELECT COUNT(DISTINCT u.id) AS female_buyers_digital_paid_or_later\nFROM users u\nJOIN orders o ON o.user_id = u.id\nJOIN order_items oi ON oi.order_id = o.id\nJOIN products p ON p.id = oi.product_id\nWHERE u.gender = '女' AND p.category = '数码'\n  AND o.status IN ('paid','shipped','completed','refunded')"
+        }
+      ],
+      "sql_used": "SELECT COUNT(DISTINCT u.id) AS female_buyers_digital_paid_or_later\nFROM users u\nJOIN orders o ON o.user_id = u.id\nJOIN order_items oi ON oi.order_id = o.id\nJOIN products p ON p.id = oi.product_id\nWHERE u.gender = '女' AND p.category = '数码'\n  AND o.status IN ('paid','shipped','completed','refunded')",
+      "sql_source": "last",
+      "gold_row_count": 1,
+      "model_row_count": 1,
+      "judge": "pass",
+      "pass_via": "text",
+      "text_matched": "4086",
+      "final_answer_text": "## 结论\n\n**买过数码类目商品的女性用户有 4,086 人。**\n\n## 口径与数据来源\n\n- **口径**：users.gender = '女' 的用户中，只要其名下存在至少一张包含「数码」类目商品的订单（order_items → products.category），即计为一个购买用户；按用户 ID 去重计数（COUNT(DISTINCT)）。订单状态不限。\n- **查询路径**：users ⋈ orders（user_id）⋈ order_items（order_id）⋈ products（product_id），筛选 category='数码'。\n- 数据来源：本次对 mart 库的查询结果（第 1、2 次查询）。\n\n## 参考对照\n\n| 口径 | 女性数码购买用户数 |\n|---|---|\n| 全部订单（含取消） | **4,086** |\n| 剔除已取消订单（status ≠ cancelled） | 3,903 |\n| 仅计入已支付及之后状态（paid/shipped/completed/refunded） | 3,820 |\n\n同期库中女性用户总数为 **9,784 人**（users 表按 gender='女' 统计），即约 **41.8%**（4086/9784）的女性用户买过数码类目商品。",
+      "failure_mode": null,
+      "error_msg": null,
+      "latency_s": 8.593,
+      "tokens": {
+        "input": 13971,
+        "output": 1378,
+        "total": 15349,
+        "cache_read": 12288
+      },
+      "oversized": false,
+      "ended_with_failed_call": false
+    },
+    {
+      "id": "EV-006",
+      "run_idx": 1,
+      "question_type": "single_table",
+      "generalize_layer": "hit",
+      "injected_chunks": [],
+      "expected_chunks": [
+        "schema:users",
+        "schema:orders",
+        "schema:payments"
+      ],
+      "recall_hits": [],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT * FROM payments LIMIT 3"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT * FROM users LIMIT 3"
+        },
+        {
+          "seq": 3,
+          "sql": "SELECT * FROM orders LIMIT 3"
+        },
+        {
+          "seq": 4,
+          "sql": "SELECT COUNT(*) AS total_users, SUM(CASE WHEN paid_orders = 0 THEN 1 ELSE 0 END) AS never_paid_users FROM (SELECT u.id, COUNT(p.id) AS paid_orders FROM users u LEFT JOIN orders o ON o.user_id = u.id LEFT JOIN payments p ON p.order_id = o.id GROUP BY u.id) t"
+        },
+        {
+          "seq": 5,
+          "sql": "SELECT COUNT(*) AS never_paid_users FROM users u WHERE NOT EXISTS (SELECT 1 FROM orders o JOIN payments p ON p.order_id = o.id WHERE o.user_id = u.id)"
+        }
+      ],
+      "sql_used": "SELECT COUNT(*) AS never_paid_users FROM users u WHERE NOT EXISTS (SELECT 1 FROM orders o JOIN payments p ON p.order_id = o.id WHERE o.user_id = u.id)",
+      "sql_source": "last",
+      "gold_row_count": 1,
+      "model_row_count": 1,
+      "judge": "pass",
+      "pass_via": "sql",
+      "text_matched": null,
+      "final_answer_text": "**注册后从未成功支付的用户：5,639 人**（总注册用户 20,000 人，占比约 28.2%）。\n\n**口径说明**\n- 表 `payments` 记录的是成功支付流水（一笔成功支付恰一条），因此“成功支付”等价于用户名下订单在 `payments` 中有对应记录。\n- 计算方式：以 `users` 为主表，经 `orders.user_id` 关联订单，再 `LEFT JOIN payments ON order_id`，若该用户所有订单都没有任何支付流水，即视为“从未成功支付”。为避免一次查询出错，我用两种写法各查了一次：`LEFT JOIN + COUNT` 与 `NOT EXISTS`，结果一致，均为 **5,639**。\n- 金额/时间范围不影响该口径（全量快照统计），数据范围 2025-10-01 至 2026-09-30。\n\n如果你想把“已下单但从未支付”和“从未下过单”的注册用户再拆开看，我可以继续细分。",
+      "failure_mode": null,
+      "error_msg": null,
+      "latency_s": 5.945,
+      "tokens": {
+        "input": 10605,
+        "output": 772,
+        "total": 11377,
+        "cache_read": 9088
+      },
+      "oversized": false,
+      "ended_with_failed_call": false
+    },
+    {
+      "id": "EV-007",
+      "run_idx": 1,
+      "question_type": "time_window",
+      "generalize_layer": "hit",
+      "injected_chunks": [],
+      "expected_chunks": [
+        "schema:payments"
+      ],
+      "recall_hits": [],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT COLUMN_NAME, DATA_TYPE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='mart' AND TABLE_NAME IN ('payments','orders','refunds') ORDER BY TABLE_NAME, ORDINAL_POSITION"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT DATE(paid_at) AS pay_date,\n       COUNT(*) AS pay_cnt,\n       ROUND(SUM(amount), 2) AS pay_amount\nFROM payments\nWHERE paid_at >= DATE_SUB('2026-09-30', INTERVAL 6 DAY)\n  AND paid_at < DATE_ADD('2026-09-30', INTERVAL 1 DAY)\nGROUP BY pay_date\nORDER BY pay_date"
+        }
+      ],
+      "sql_used": "SELECT DATE(paid_at) AS pay_date,\n       COUNT(*) AS pay_cnt,\n       ROUND(SUM(amount), 2) AS pay_amount\nFROM payments\nWHERE paid_at >= DATE_SUB('2026-09-30', INTERVAL 6 DAY)\n  AND paid_at < DATE_ADD('2026-09-30', INTERVAL 1 DAY)\nGROUP BY pay_date\nORDER BY pay_date",
+      "sql_source": "last",
+      "gold_row_count": 7,
+      "model_row_count": 7,
+      "judge": "fail",
+      "pass_via": null,
+      "text_matched": null,
+      "final_answer_text": "**近 7 天每日支付金额**（口径：payments 表「支付成功」流水金额合计，即实付金额，未扣退款；以 2026-09-30 为“今天”，区间 2026-09-24 ~ 2026-09-30）：\n\n| 日期 | 支付笔数 | 支付金额（元） |\n|---|---|---|\n| 2026-09-24 | 119 | 361,052.63 |\n| 2026-09-25 | 110 | 327,140.05 |\n| 2026-09-26 | 101 | 294,036.13 |\n| 2026-09-27 | 105 | 223,230.42 |\n| 2026-09-28 | 89 | 240,685.58 |\n| 2026-09-29 | 85 | 269,905.25 |\n| 2026-09-30 | 115 | 357,377.71 |\n\n**小结**（基于上述一次查询结果计算）：\n- 7 天合计支付金额约 **207.34 万元**，合计 **724 笔**，日均约 **29.62 万元/天**。\n- 波动明显：9-24 最高（36.11 万元），9-27 最低（22.32 万元），近两日（9-29、9-30）回升至 27 万～36 万元。\n\n说明：支付流水表一笔成功支付恰一条记录，因此这里 COUNT(*) 即成功支付笔数；如需“净收入”，还需扣除 refunds 表中的退款金额，可以再帮你算。",
+      "failure_mode": "other",
+      "error_msg": null,
+      "latency_s": 5.557,
+      "tokens": {
+        "input": 6185,
+        "output": 934,
+        "total": 7119,
+        "cache_read": 5376
+      },
+      "oversized": false,
+      "ended_with_failed_call": false
+    },
+    {
+      "id": "EV-008",
+      "run_idx": 1,
+      "question_type": "glossary_trap",
+      "generalize_layer": "hit",
+      "injected_chunks": [],
+      "expected_chunks": [
+        "glossary:avg_order_value",
+        "schema:payments"
+      ],
+      "recall_hits": [],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT COLUMN_NAME, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA='mart' AND TABLE_NAME IN ('orders','payments') ORDER BY TABLE_NAME, ORDINAL_POSITION"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT status, COUNT(*) AS cnt FROM orders GROUP BY status"
+        },
+        {
+          "seq": 3,
+          "sql": "SELECT COUNT(*) AS pay_rows, COUNT(DISTINCT order_id) AS pay_orders FROM payments"
+        },
+        {
+          "seq": 4,
+          "sql": "SELECT DATE_FORMAT(created_at,'%Y-%m') AS m, COUNT(*) AS orders_cnt, ROUND(SUM(order_amount),2) AS amt\nFROM orders WHERE DATE_FORMAT(created_at,'%Y-%m')='2026-06'"
+        },
+        {
+          "seq": 5,
+          "sql": "SELECT DATE_FORMAT(paid_at,'%Y-%m') AS m, COUNT(*) AS pay_cnt, ROUND(SUM(amount),2) AS pay_amt\nFROM payments WHERE DATE_FORMAT(paid_at,'%Y-%m')='2026-06'"
+        },
+        {
+          "seq": 6,
+          "sql": "SELECT DATE_FORMAT(created_at,'%Y-%m') AS m, COUNT(*) AS orders_cnt, ROUND(SUM(order_amount),2) AS amt\nFROM orders WHERE created_at >= '2026-06-01' AND created_at < '2026-07-01' GROUP BY m"
+        },
+        {
+          "seq": 7,
+          "sql": "SELECT DATE_FORMAT(paid_at,'%Y-%m') AS m, COUNT(*) AS pay_cnt, ROUND(SUM(amount),2) AS pay_amt, ROUND(AVG(amount),2) AS aov\nFROM payments WHERE paid_at >= '2026-06-01' AND paid_at < '2026-07-01' GROUP BY m"
+        }
+      ],
+      "sql_used": "SELECT DATE_FORMAT(paid_at,'%Y-%m') AS m, COUNT(*) AS pay_cnt, ROUND(SUM(amount),2) AS pay_amt, ROUND(AVG(amount),2) AS aov\nFROM payments WHERE paid_at >= '2026-06-01' AND paid_at < '2026-07-01' GROUP BY m",
+      "sql_source": "last",
+      "gold_row_count": 1,
+      "model_row_count": 1,
+      "judge": "pass",
+      "pass_via": "text",
+      "text_matched": "2765.34",
+      "final_answer_text": "2026 年 6 月的客单价为 **2,765.34 元**。\n\n**口径说明**：客单价 = 当月支付成功总金额 ÷ 当月支付成功笔数，基于 payments 表（一笔成功支付恰一条记录，按 paid_at 落在 2026-06-01 至 2026-06-30 统计）。\n\n**明细（来自两次查询结果）**：\n| 月份 | 支付成功笔数 | 支付成功金额（元） | 客单价（元） |\n|---|---|---|---|\n| 2026-06 | 10,770 | 29,782,686.06 | 2,765.34 |\n\n**补充参考**：若按 orders 表口径（下单时间在 6 月、含全部状态订单的 order_amount 汇总）计算，6 月共 12,090 笔订单、金额 33,311,006.70 元，对应均值 2,755.21 元——两者差异源于该口径把未支付/已取消订单也计入了分母。\n\n通常电商业务说的\"客单价\"采用**支付成功口径**，即上面的 2,765.34 元。",
+      "failure_mode": null,
+      "error_msg": null,
+      "latency_s": 7.195,
+      "tokens": {
+        "input": 9257,
+        "output": 1304,
+        "total": 10561,
+        "cache_read": 8064
+      },
+      "oversized": false,
+      "ended_with_failed_call": false
+    },
+    {
+      "id": "EV-009",
+      "run_idx": 1,
+      "question_type": "aggregation",
+      "generalize_layer": "hit",
+      "injected_chunks": [],
+      "expected_chunks": [
+        "schema:orders"
+      ],
+      "recall_hits": [],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT COLUMN_NAME, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA='mart' AND TABLE_NAME IN ('orders','payments','order_items') ORDER BY TABLE_NAME, ORDINAL_POSITION"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT status, COUNT(*) AS cnt, MIN(order_time) AS min_t, MAX(order_time) AS max_t FROM orders GROUP BY status"
+        },
+        {
+          "seq": 3,
+          "sql": "SELECT status, COUNT(*) AS cnt, MIN(created_at) AS min_t, MAX(created_at) AS max_t FROM orders GROUP BY status"
+        },
+        {
+          "seq": 4,
+          "sql": "SELECT COUNT(*) AS total_users, COUNT(DISTINCT user_id) AS buyers FROM orders WHERE created_at >= '2026-01-01' AND created_at < '2026-07-01'"
+        },
+        {
+          "seq": 5,
+          "sql": "WITH h1 AS (\n  SELECT user_id, COUNT(*) AS ord_cnt\n  FROM orders\n  WHERE created_at >= '2026-01-01' AND created_at < '2026-07-01'\n    AND status <> 'cancelled'\n  GROUP BY user_id\n)\nSELECT COUNT(*) AS buyers,\n       SUM(ord_cnt >= 2) AS repeat_buyers,\n       ROUND(SUM(ord_cnt >= 2) / COUNT(*) * 100, 2) AS repeat_rate_pct\nFROM h1"
+        },
+        {
+          "seq": 6,
+          "sql": "WITH h1 AS (\n  SELECT user_id, COUNT(*) AS ord_cnt\n  FROM orders\n  WHERE created_at >= '2026-01-01' AND created_at < '2026-07-01'\n  GROUP BY user_id\n)\nSELECT COUNT(*) AS buyers_all_status,\n       SUM(ord_cnt >= 2) AS repeat_buyers,\n       ROUND(SUM(ord_cnt >= 2) / COUNT(*) * 100, 2) AS repeat_rate_pct\nFROM h1"
+        },
+        {
+          "seq": 7,
+          "sql": "WITH h1 AS (\n  SELECT user_id, COUNT(*) AS pay_cnt\n  FROM payments\n  WHERE paid_at >= '2026-01-01' AND paid_at < '2026-07-01'\n  GROUP BY user_id\n)\nSELECT COUNT(*) AS payers, SUM(pay_cnt >= 2) AS repeat_payers,\n       ROUND(SUM(pay_cnt >= 2) / COUNT(*) * 100, 2) AS repeat_rate_pct\nFROM h1"
+        },
+        {
+          "seq": 8,
+          "sql": "WITH h1 AS (\n  SELECT user_id,\n         SUM(CASE WHEN created_at >= '2026-01-01' AND created_at < '2026-07-01' AND status <> 'cancelled' THEN 1 ELSE 0 END) AS in_period,\n         SUM(CASE WHEN created_at < '2026-01-01' AND status <> 'cancelled' THEN 1 ELSE 0 END) AS before_period\n  FROM orders GROUP BY user_id\n)\nSELECT COUNT(*) AS buyers_in_h1,\n       SUM(in_period >= 2 OR (in_period >= 1 AND before_period >= 1)) AS repeat_buyers,\n       ROUND(SUM(in_period >= 2 OR (in_period >= 1 AND before_period >= 1)) / COUNT(*) * 100, 2) AS rate_pct\nFROM h1 WHERE in_period >= 1"
+        },
+        {
+          "seq": 9,
+          "sql": "WITH h1 AS (\n  SELECT o.user_id, COUNT(*) AS pay_cnt\n  FROM payments p JOIN orders o ON o.id = p.order_id\n  WHERE p.paid_at >= '2026-01-01' AND p.paid_at < '2026-07-01'\n  GROUP BY o.user_id\n)\nSELECT COUNT(*) AS payers, SUM(pay_cnt >= 2) AS repeat_payers,\n       ROUND(SUM(pay_cnt >= 2) / COUNT(*) * 100, 2) AS repeat_rate_pct\nFROM h1"
+        }
+      ],
+      "sql_used": "WITH h1 AS (\n  SELECT o.user_id, COUNT(*) AS pay_cnt\n  FROM payments p JOIN orders o ON o.id = p.order_id\n  WHERE p.paid_at >= '2026-01-01' AND p.paid_at < '2026-07-01'\n  GROUP BY o.user_id\n)\nSELECT COUNT(*) AS payers, SUM(pay_cnt >= 2) AS repeat_payers,\n       ROUND(SUM(pay_cnt >= 2) / COUNT(*) * 100, 2) AS repeat_rate_pct\nFROM h1",
+      "sql_source": "last",
+      "gold_row_count": 1,
+      "model_row_count": 1,
+      "judge": "pass",
+      "pass_via": "text",
+      "text_matched": "0.6925",
+      "final_answer_text": "## 结论：2026 年上半年（1–6 月）复购率约 **68.1%**\n\n**主口径：用户复购率 = 期内下单 ≥2 次的用户数 ÷ 期内下单用户数**（剔除已取消订单 `status <> 'cancelled'`）\n\n| 指标 | 数值 |\n|---|---|\n| H1 2026 下单用户数 | 11,920 |\n| 其中下单 ≥2 次的用户 | 8,111 |\n| **复购率** | **68.05%** |\n\n数据来源：查询 `orders` 表，`created_at` 落在 `2026-01-01 ~ 2026-06-30`，按 `user_id` 分组统计订单次数后计算占比。\n\n## 换口径的结果（供参考）\n\n复购率没有唯一标准口径，同一数据在几种常见算法下结果如下：\n\n| 口径 | 分子 / 分母 | 复购率 |\n|---|---|---|\n| ① 有效订单口径（主口径，剔除 cancelled） | 8,111 / 11,920 | **68.05%** |\n| ② 全部订单口径（含 cancelled/pending） | 8,480 / 12,246 | **69.25%** |\n| ③ 支付成功口径（`payments` 表按实付订单数，剔除未支付） | 7,969 / 11,796 | **67.56%** |\n| ④ 跨期复购口径（期内 ≥2 单，**或** 期前买过 + 期内买过） | 9,649 / 11,920 | **80.95%** |\n\n口径差异说明：\n- ②比①高，是因为把取消/待支付订单也算作“下过单”；\n- ③以 `payments` 的成功支付流水为准（一笔成功支付恰一条），是最严格的“真实成交”口径，分母和分子都最少；\n- ④是最宽松的“回头客”口径：只要用户在 H1 之前有过购买、H1 内又买了一次，也算复购，因此显著偏高。\n\n如果你日常汇报用的是某一种固定定义（例如\"自然月内支付成功次数≥2\"或\"30 天复购窗口\"），告诉我，我按那个口径重算。",
+      "failure_mode": null,
+      "error_msg": null,
+      "latency_s": 10.414,
+      "tokens": {
+        "input": 13382,
+        "output": 2089,
+        "total": 15471,
+        "cache_read": 11136
+      },
+      "oversized": false,
+      "ended_with_failed_call": false
+    },
+    {
+      "id": "EV-010",
+      "run_idx": 1,
+      "question_type": "single_table",
+      "generalize_layer": "hit",
+      "injected_chunks": [],
+      "expected_chunks": [
+        "schema:refunds"
+      ],
+      "recall_hits": [],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT * FROM refunds LIMIT 5"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT * FROM orders LIMIT 3"
+        },
+        {
+          "seq": 3,
+          "sql": "SELECT r.order_id, o.order_no, r.amount AS refund_amount, r.reason, r.refunded_at, o.status, o.user_id, u.name AS user_name, u.city, o.order_amount, o.created_at AS order_created_at\nFROM refunds r\nLEFT JOIN orders o ON o.id = r.order_id\nLEFT JOIN users u ON u.id = o.user_id\nORDER BY r.amount DESC\nLIMIT 3"
+        }
+      ],
+      "sql_used": "SELECT r.order_id, o.order_no, r.amount AS refund_amount, r.reason, r.refunded_at, o.status, o.user_id, u.name AS user_name, u.city, o.order_amount, o.created_at AS order_created_at\nFROM refunds r\nLEFT JOIN orders o ON o.id = r.order_id\nLEFT JOIN users u ON u.id = o.user_id\nORDER BY r.amount DESC\nLIMIT 3",
+      "sql_source": "last",
+      "gold_row_count": 3,
+      "model_row_count": 3,
+      "judge": "fail",
+      "pass_via": null,
+      "text_matched": null,
+      "final_answer_text": "退款金额最高的 3 笔订单如下（按 `refunds.amount` 降序，一单至多一条退款记录）：\n\n| 排名 | 订单号 | 退款金额(元) | 退款原因 | 退款完成时间 | 订单状态 | 下单用户 | 用户城市 | 订单金额(元) | 下单时间 |\n|---|---|---|---|---|---|---|---|---|---|\n| 1 | SO2026052400064563 | 48,931.52 | 七日无理由 | 2026-05-27 08:36:54 | refunded | 陈宁 (ID 1080) | 北京 | 48,931.52 | 2026-05-24 13:21:55 |\n| 2 | SO2026022600043307 | 40,469.03 | 七日无理由 | 2026-03-04 20:39:08 | refunded | 李雪梅 (ID 6744) | 广州 | 40,469.03 | 2026-02-26 04:59:13 |\n| 3 | SO2026022400042940 | 37,018.05 | 物流问题 | 2026-03-04 04:25:58 | refunded | 赵宇 (ID 4056) | 武汉 | 37,018.05 | 2026-02-24 14:17:20 |\n\n口径说明：\n- 金额均为「元」，取自 `refunds.amount`（退款记录金额），一单至多一条退款记录，故无需去重汇总。\n- 订单状态、订单金额、用户信息分别来自 `orders`、`users` 表的关联。\n- 这 3 笔均为全额退款（退款金额 = 订单金额）。\n\n数据来源：基于对 `refunds` 表按 `amount` 降序取前 3 名，并关联 `orders`、`users` 的查询结果。",
+      "failure_mode": "other",
+      "error_msg": null,
+      "latency_s": 4.008,
+      "tokens": {
+        "input": 6555,
+        "output": 718,
+        "total": 7273,
+        "cache_read": 5248
+      },
+      "oversized": false,
+      "ended_with_failed_call": false
+    },
+    {
+      "id": "EV-011",
+      "run_idx": 1,
+      "question_type": "aggregation",
+      "generalize_layer": "hit",
+      "injected_chunks": [],
+      "expected_chunks": [
+        "schema:payments"
+      ],
+      "recall_hits": [],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT COLUMN_NAME, DATA_TYPE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='mart' AND TABLE_NAME IN ('payments','orders') ORDER BY TABLE_NAME, ORDINAL_POSITION"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT method,\n       COUNT(*) AS pay_cnt,\n       ROUND(COUNT(*)*100.0/SUM(COUNT(*)) OVER (), 2) AS cnt_pct,\n       ROUND(SUM(amount), 2) AS pay_amt,\n       ROUND(SUM(amount)*100.0/SUM(SUM(amount)) OVER (), 2) AS amt_pct\nFROM payments\nGROUP BY method\nORDER BY pay_cnt DESC"
+        }
+      ],
+      "sql_used": "SELECT method,\n       COUNT(*) AS pay_cnt,\n       ROUND(COUNT(*)*100.0/SUM(COUNT(*)) OVER (), 2) AS cnt_pct,\n       ROUND(SUM(amount), 2) AS pay_amt,\n       ROUND(SUM(amount)*100.0/SUM(SUM(amount)) OVER (), 2) AS amt_pct\nFROM payments\nGROUP BY method\nORDER BY pay_cnt DESC",
+      "sql_source": "last",
+      "gold_row_count": 3,
+      "model_row_count": 3,
+      "judge": "fail",
+      "pass_via": null,
+      "text_matched": null,
+      "final_answer_text": "**各支付方式占比（按支付成功流水计，数据源：payments 表，共 88,244 笔成功支付）**\n\n| 支付方式 | 支付笔数 | 笔数占比 | 支付金额（元） | 金额占比 |\n|---|---|---|---|---|\n| 微信 | 48,482 | 54.94% | 131,830,750.12 | 54.83% |\n| 支付宝 | 30,977 | 35.10% | 84,370,774.14 | 35.09% |\n| 银联 | 8,785 | 9.96% | 24,249,573.23 | 10.09% |\n\n**结论**\n- 微信支付是绝对主力，笔数占 54.94%、金额占 54.83%，两项一致。\n- 支付宝次之，笔数 35.10%、金额 35.09%。\n- 银联笔数占 9.96%，但金额占比略高（10.09%），说明银联的笔均金额偏高：银联笔均约 2,760 元，微信约 2,719 元，支付宝约 2,724 元。\n\n**口径说明**\n- 数据来自 payments 表（一笔成功支付恰一条记录，故 88,244 条即全部成功支付笔数，未含未支付/失败订单）。\n- 占比的分母为全部成功支付流水，笔数占比按记录条数、金额占比按 payments.amount 实付金额汇总。\n- 数据为该库 2025-10-01 至 2026-09-30 的静态快照全量。",
+      "failure_mode": "other",
+      "error_msg": null,
+      "latency_s": 4.939,
+      "tokens": {
+        "input": 6078,
+        "output": 793,
+        "total": 6871,
+        "cache_read": 5120
+      },
+      "oversized": false,
+      "ended_with_failed_call": false
+    },
+    {
+      "id": "EV-012",
+      "run_idx": 1,
+      "question_type": "single_table",
+      "generalize_layer": "far",
+      "injected_chunks": [],
+      "expected_chunks": [
+        "schema:users"
+      ],
+      "recall_hits": [],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT COUNT(*) AS cnt, MIN(created_at) AS min_t, MAX(created_at) AS max_t FROM users"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT * FROM users LIMIT 3"
+        },
+        {
+          "seq": 3,
+          "sql": "SELECT COUNT(*) AS total, MIN(registered_at) AS min_t, MAX(registered_at) AS max_t,\n       SUM(registered_at >= '2025-01-01' AND registered_at < '2025-07-01') AS h1_2025\nFROM users"
+        },
+        {
+          "seq": 4,
+          "sql": "SELECT DATE_FORMAT(registered_at, '%Y') AS y, COUNT(*) AS cnt\nFROM users GROUP BY y ORDER BY y"
+        },
+        {
+          "seq": 5,
+          "sql": "SELECT DATE_FORMAT(registered_at, '%Y-%m') AS m, COUNT(*) AS cnt\nFROM users WHERE registered_at >= '2025-01-01' AND registered_at < '2025-07-01'\nGROUP BY m ORDER BY m"
+        }
+      ],
+      "sql_used": "SELECT DATE_FORMAT(registered_at, '%Y-%m') AS m, COUNT(*) AS cnt\nFROM users WHERE registered_at >= '2025-01-01' AND registered_at < '2025-07-01'\nGROUP BY m ORDER BY m",
+      "sql_source": "last",
+      "gold_row_count": 1,
+      "model_row_count": 6,
+      "judge": "pass",
+      "pass_via": "text",
+      "text_matched": "6053",
+      "final_answer_text": "**2025 年上半年（1—6 月）注册的用户为 6,053 人。**\n\n口径：`users.registered_at`（注册时间）落在 `2025-01-01` 至 `2025-06-30` 之间。\n\n分月明细（来源：按 `DATE_FORMAT(registered_at,'%Y-%m')` 分组的查询结果）：\n\n| 月份 | 注册用户数 |\n|---|---|\n| 2025-01 | 1,077 |\n| 2025-02 | 880 |\n| 2025-03 | 1,017 |\n| 2025-04 | 973 |\n| 2025-05 | 1,079 |\n| 2025-06 | 1,027 |\n| **合计** | **6,053** |\n\n补充说明：\n- users 表共 20,000 行，注册时间实际覆盖 2024-01-01 至 2025-08-31；其中 2024 年注册 11,921 人，2025 年（1—8 月）注册 8,079 人。\n- 请注意本库订单/支付等业务数据的快照区间是 2025-10-01 至 2026-09-30，用户注册时间早于该区间（最早 2024 年），属历史存量用户，两者口径不冲突。",
+      "failure_mode": null,
+      "error_msg": null,
+      "latency_s": 4.531,
+      "tokens": {
+        "input": 8532,
+        "output": 817,
+        "total": 9349,
+        "cache_read": 7424
+      },
+      "oversized": false,
+      "ended_with_failed_call": false
+    },
+    {
+      "id": "EV-013",
+      "run_idx": 1,
+      "question_type": "single_table",
+      "generalize_layer": "near",
+      "injected_chunks": [],
+      "expected_chunks": [
+        "schema:products"
+      ],
+      "recall_hits": [],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT * FROM products LIMIT 5"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT DISTINCT category FROM products"
+        },
+        {
+          "seq": 3,
+          "sql": "SELECT id, name, category, brand, price, listed_at FROM products WHERE category = '图书' ORDER BY price DESC LIMIT 3"
+        }
+      ],
+      "sql_used": "SELECT id, name, category, brand, price, listed_at FROM products WHERE category = '图书' ORDER BY price DESC LIMIT 3",
+      "sql_source": "last",
+      "gold_row_count": 3,
+      "model_row_count": 3,
+      "judge": "fail",
+      "pass_via": null,
+      "text_matched": null,
+      "final_answer_text": "**图书类目下原价最高的 3 个商品**（基于 products 表，按 `price`（原价，元）降序）：\n\n| 排名 | 商品 ID | 商品名称 | 品牌 | 原价（元） | 上架日期 |\n|---|---|---|---|---|---|\n| 1 | 1791 | 字里行 图书 Python编程入门口袋本 | 字里行 | 98.90 | 2025-03-28 |\n| 2 | 1945 | 墨白 图书 诗词选修订版 | 墨白 | 98.72 | 2025-04-28 |\n| 3 | 1781 | 墨白 图书 育儿手记精装版 | 墨白 | 98.51 | 2024-08-07 |\n\n口径说明：类目取 products.category = '图书'（全库共 8 个一级类目：图书/家居/数码/服饰/母婴/美妆/运动户外/食品），排序依据为商品表原价 `price`，未考虑折扣或实际成交价。数据来源：本次对 mart.products 的一次查询结果。\n\n可以看出图书类目整体价位偏低，最高原价也不足 100 元，与其他类目（如数码动辄数千元）差异明显——如果你还想看图书类目的实际成交价或销量情况，我可以再查。",
+      "failure_mode": "other",
+      "error_msg": null,
+      "latency_s": 3.601,
+      "tokens": {
+        "input": 6137,
+        "output": 501,
+        "total": 6638,
+        "cache_read": 4992
+      },
+      "oversized": false,
+      "ended_with_failed_call": false
+    },
+    {
+      "id": "EV-014",
+      "run_idx": 1,
+      "question_type": "single_table",
+      "generalize_layer": "near",
+      "injected_chunks": [],
+      "expected_chunks": [
+        "schema:orders"
+      ],
+      "recall_hits": [],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT COLUMN_NAME, DATA_TYPE, COLUMN_COMMENT FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA='mart' AND TABLE_NAME='orders' ORDER BY ORDINAL_POSITION"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT status, COUNT(*) AS order_count, ROUND(SUM(order_amount),2) AS amount\nFROM orders\nWHERE created_at >= '2026-05-01' AND created_at < '2026-06-01'\nGROUP BY status\nORDER BY order_count DESC"
+        }
+      ],
+      "sql_used": "SELECT status, COUNT(*) AS order_count, ROUND(SUM(order_amount),2) AS amount\nFROM orders\nWHERE created_at >= '2026-05-01' AND created_at < '2026-06-01'\nGROUP BY status\nORDER BY order_count DESC",
+      "sql_source": "last",
+      "gold_row_count": 6,
+      "model_row_count": 6,
+      "judge": "fail",
+      "pass_via": null,
+      "text_matched": null,
+      "final_answer_text": "**2026 年 5 月各状态订单笔数**（口径：按下单时间 `orders.created_at` 落在 2026-05-01 至 2026-05-31 统计，金额为订单应付金额 `order_amount` 求和）：\n\n| 状态 | 订单笔数 | 应付金额（元） |\n|---|---|---|\n| completed 已完成 | 4,905 | 12,990,257.48 |\n| shipped 已发货 | 647 | 1,760,426.58 |\n| cancelled 已取消 | 594 | 1,497,350.48 |\n| refunded 已全额退款 | 588 | 1,580,810.73 |\n| paid 已支付 | 551 | 1,320,478.97 |\n| pending 待支付 | 232 | 696,733.80 |\n| **合计** | **7,517** | **19,846,057.04** |\n\n数据来源：对 `orders` 表按 2026 年 5 月下单时间分组统计的一次查询结果。\n\n几点说明：\n- 状态取值来自订单状态枚举：pending 待支付 / paid 已支付 / shipped 已发货 / completed 已完成 / cancelled 已取消 / refunded 已全额退款，此处未做合并。\n- 金额为\"下单口径\"的订单应付金额，未剔除退款；若需\"实际收款口径\"，应按 `payments` 成功支付流水统计。\n- 5 月已完成订单（4,905 笔）占比约 65%，符合历史订单中大部分已完结的分布。",
+      "failure_mode": "other",
+      "error_msg": null,
+      "latency_s": 4.528,
+      "tokens": {
+        "input": 6230,
+        "output": 684,
+        "total": 6914,
+        "cache_read": 5376
+      },
+      "oversized": false,
+      "ended_with_failed_call": false
+    },
+    {
+      "id": "EV-015",
+      "run_idx": 1,
+      "question_type": "single_table",
+      "generalize_layer": "near",
+      "injected_chunks": [],
+      "expected_chunks": [
+        "schema:orders"
+      ],
+      "recall_hits": [],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT * FROM orders LIMIT 2"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT * FROM payments LIMIT 2"
+        },
+        {
+          "seq": 3,
+          "sql": "SELECT o.order_no, o.status, o.order_amount, o.item_count, o.created_at, p.amount AS paid_amount\nFROM orders o\nLEFT JOIN payments p ON p.order_id = o.id\nWHERE o.created_at >= '2026-08-01' AND o.created_at < '2026-09-01'\nORDER BY o.order_amount DESC\nLIMIT 5"
+        }
+      ],
+      "sql_used": "SELECT o.order_no, o.status, o.order_amount, o.item_count, o.created_at, p.amount AS paid_amount\nFROM orders o\nLEFT JOIN payments p ON p.order_id = o.id\nWHERE o.created_at >= '2026-08-01' AND o.created_at < '2026-09-01'\nORDER BY o.order_amount DESC\nLIMIT 5",
+      "sql_source": "last",
+      "gold_row_count": 5,
+      "model_row_count": 5,
+      "judge": "fail",
+      "pass_via": null,
+      "text_matched": null,
+      "final_answer_text": "**2026 年 8 月金额最高的 5 笔订单**（口径：按下单时间落在 2026-08-01 至 2026-08-31，取 orders 表订单金额 order_amount 排序；这 5 笔的实付金额与订单金额一致，见下表校验列）：\n\n| 排名 | 订单号 | 订单金额（元） | 件数 | 状态 | 下单时间 |\n|---|---|---|---|---|---|\n| 1 | SO2026080800087193 | 42,326.85 | 8 | completed | 2026-08-08 12:27:34 |\n| 2 | SO2026083000092107 | 39,628.50 | 5 | completed | 2026-08-30 17:52:12 |\n| 3 | SO2026082300090388 | 39,041.40 | 5 | completed | 2026-08-23 03:55:15 |\n| 4 | SO2026082300090539 | 38,776.79 | 6 | shipped | 2026-08-23 19:22:24 |\n| 5 | SO2026082600091079 | 37,322.10 | 6 | paid | 2026-08-26 05:49:23 |\n\n说明：\n- 数据来源为一次查询（orders 左连接 payments，按 order_amount 降序取前 5），5 笔均为已支付订单（payments 中有对应支付流水，实付金额与订单金额相同），因此无论按“下单金额”还是“实付金额”口径，排名结果一致。\n- 若你希望改按“实付金额（payments.amount）”或“净额（扣除退款）”口径统计，我可以再跑一次对比。",
+      "failure_mode": "other",
+      "error_msg": null,
+      "latency_s": 5.253,
+      "tokens": {
+        "input": 6434,
+        "output": 796,
+        "total": 7230,
+        "cache_read": 5376
+      },
+      "oversized": false,
+      "ended_with_failed_call": false
+    },
+    {
+      "id": "EV-016",
+      "run_idx": 1,
+      "question_type": "multi_join",
+      "generalize_layer": "near",
+      "injected_chunks": [],
+      "expected_chunks": [
+        "schema:payments",
+        "schema:orders",
+        "schema:users"
+      ],
+      "recall_hits": [],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT TABLE_NAME, COLUMN_NAME, DATA_TYPE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='mart' AND TABLE_NAME IN ('users','orders','payments') ORDER BY TABLE_NAME, ORDINAL_POSITION"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT u.city AS 城市, COUNT(*) AS 支付笔数, ROUND(SUM(p.amount),2) AS 支付金额\nFROM payments p\nJOIN orders o ON o.id = p.order_id\nJOIN users u ON u.id = o.user_id\nWHERE p.paid_at >= '2026-01-01' AND p.paid_at < '2026-02-01'\nGROUP BY u.city\nORDER BY 支付金额 DESC"
+        },
+        {
+          "seq": 3,
+          "sql": "SELECT COUNT(DISTINCT u.city) AS 城市数, COUNT(*) AS 支付笔数, ROUND(SUM(p.amount),2) AS 支付总金额\nFROM payments p JOIN orders o ON o.id=p.order_id JOIN users u ON u.id=o.user_id\nWHERE p.paid_at >= '2026-01-01' AND p.paid_at < '2026-02-01'"
+        },
+        {
+          "seq": 4,
+          "sql": "SELECT u.city AS 城市, COUNT(*) AS 支付笔数, ROUND(SUM(p.amount),2) AS 支付金额\nFROM payments p JOIN orders o ON o.id=p.order_id JOIN users u ON u.id=o.user_id\nWHERE p.paid_at >= '2026-01-01' AND p.paid_at < '2026-02-01'\nGROUP BY u.city ORDER BY 支付金额 DESC LIMIT 20 OFFSET 20"
+        }
+      ],
+      "sql_used": "SELECT u.city AS 城市, COUNT(*) AS 支付笔数, ROUND(SUM(p.amount),2) AS 支付金额\nFROM payments p JOIN orders o ON o.id=p.order_id JOIN users u ON u.id=o.user_id\nWHERE p.paid_at >= '2026-01-01' AND p.paid_at < '2026-02-01'\nGROUP BY u.city ORDER BY 支付金额 DESC LIMIT 20 OFFSET 20",
+      "sql_source": "last",
+      "gold_row_count": 20,
+      "model_row_count": 0,
+      "judge": "fail",
+      "pass_via": null,
+      "text_matched": null,
+      "final_answer_text": "2026 年 1 月共 20 个城市有支付成功记录，完整结果如下（已核对无遗漏，城市数 = 20，与明细行数一致）：\n\n**口径**：金额取 `payments.amount`（支付成功实付金额，即「按支付成功金额计」）；时间按支付时间 `paid_at` 落在 2026-01-01 ~ 2026-01-31；城市取自用户表 `users.city`（用户所在城市），通过 `orders.user_id` 关联。\n\n| 排名 | 城市 | 支付笔数 | 支付金额（元） |\n|---|---|---|---|\n| 1 | 北京 | 750 | 1,945,253.37 |\n| 2 | 广州 | 543 | 1,646,896.65 |\n| 3 | 上海 | 646 | 1,559,768.99 |\n| 4 | 深圳 | 596 | 1,487,295.15 |\n| 5 | 杭州 | 483 | 1,231,355.01 |\n| 6 | 南京 | 337 | 1,044,723.28 |\n| 7 | 重庆 | 310 | 825,040.68 |\n| 8 | 青岛 | 274 | 823,892.73 |\n| 9 | 宁波 | 260 | 822,420.64 |\n| 10 | 苏州 | 291 | 822,143.23 |\n| 11 | 郑州 | 287 | 817,514.65 |\n| 12 | 昆明 | 286 | 811,071.16 |\n| 13 | 成都 | 309 | 800,730.96 |\n| 14 | 西安 | 315 | 767,016.69 |\n| 15 | 武汉 | 292 | 761,817.23 |\n| 16 | 长沙 | 322 | 733,239.62 |\n| 17 | 沈阳 | 220 | 702,179.64 |\n| 18 | 无锡 | 248 | 695,357.71 |\n| 19 | 厦门 | 233 | 655,529.36 |\n| 20 | 大连 | 224 | 592,115.69 |\n\n**汇总**（基于第二次查询）：20 个城市合计支付 **7,226 笔**，支付金额合计 **19,545,362.44 元**。\n\n几点说明：\n- 北京以约 194.5 万元居首，广州、上海、深圳次之，前四城合计约占总额的 34%（1,945,253.37+1,646,896.65+1,559,768.99+1,487,295.15 = 6,639,214.16，占 33.97%）。\n- 该表按用户所在城市统计；若你希望按收货地址城市或省份维度看，我库里没有收货地址字段，只能退回用户城市，需要的话我可以改成按 `province` 出省份口径。\n- 金额未扣减退款，如需「净支付额 = 支付金额 − 退款金额」，我可以再关联 `refunds` 表算一版。",
+      "failure_mode": "other",
+      "error_msg": null,
+      "latency_s": 7.325,
+      "tokens": {
+        "input": 8832,
+        "output": 1471,
+        "total": 10303,
+        "cache_read": 7552
+      },
+      "oversized": false,
+      "ended_with_failed_call": false
+    },
+    {
+      "id": "EV-017",
+      "run_idx": 1,
+      "question_type": "multi_join",
+      "generalize_layer": "near",
+      "injected_chunks": [],
+      "expected_chunks": [
+        "schema:users",
+        "schema:orders",
+        "schema:order_items",
+        "schema:products"
+      ],
+      "recall_hits": [],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT TABLE_NAME, COLUMN_NAME, DATA_TYPE FROM information_schema.columns WHERE TABLE_SCHEMA='mart' AND TABLE_NAME IN ('users','orders','order_items','products') ORDER BY TABLE_NAME, ORDINAL_POSITION"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT COLUMN_NAME, DATA_TYPE FROM information_schema.columns WHERE TABLE_SCHEMA='mart' AND TABLE_NAME='users' ORDER BY ORDINAL_POSITION"
+        },
+        {
+          "seq": 3,
+          "sql": "SELECT id, name, gender, city, province, created_at FROM users WHERE city LIKE '%武汉%' LIMIT 5"
+        },
+        {
+          "seq": 4,
+          "sql": "SELECT city, COUNT(*) AS cnt FROM users WHERE city LIKE '%武汉%' GROUP BY city"
+        },
+        {
+          "seq": 5,
+          "sql": "SELECT status, COUNT(*) AS cnt FROM orders GROUP BY status"
+        },
+        {
+          "seq": 6,
+          "sql": "SELECT p.category,\n       COUNT(DISTINCT u.id) AS buyer_cnt,\n       COUNT(DISTINCT o.id) AS order_cnt,\n       SUM(oi.quantity) AS item_qty,\n       ROUND(SUM(oi.sale_amount),2) AS sale_amt\nFROM users u\nJOIN orders o ON o.user_id = u.id AND o.status <> 'cancelled'\nJOIN order_items oi ON oi.order_id = o.id\nJOIN products p ON p.id = oi.product_id\nWHERE u.city = '武汉'\nGROUP BY p.category\nORDER BY sale_amt DESC"
+        },
+        {
+          "seq": 7,
+          "sql": "SELECT COUNT(*) AS wuhan_users, SUM(city='武汉') AS wuhan_cnt FROM users"
+        }
+      ],
+      "sql_used": "SELECT COUNT(*) AS wuhan_users, SUM(city='武汉') AS wuhan_cnt FROM users",
+      "sql_source": "last",
+      "gold_row_count": 8,
+      "model_row_count": 1,
+      "judge": "fail",
+      "pass_via": null,
+      "text_matched": null,
+      "final_answer_text": "**武汉用户购买的类目（8 个一级类目全部覆盖）**\n\n数据口径：`users.city = '武汉'`（共 853 名武汉用户，全库 2 万用户）；通过 orders → order_items → products 关联到商品类目；已排除状态为 `cancelled` 的订单；金额为订单明细行小计 `sale_amount` 求和（元）。\n\n| 类目 | 购买用户数 | 订单数 | 商品件数 | 明细销售额 |\n|---|---|---|---|---|\n| 数码 | 331 | 667 | 1,362 | 5,460,491.69 |\n| 运动户外 | 334 | 678 | 1,401 | 1,911,585.18 |\n| 家居 | 340 | 666 | 1,277 | 983,846.21 |\n| 服饰 | 337 | 661 | 1,286 | 924,366.00 |\n| 母婴 | 338 | 706 | 1,315 | 628,170.26 |\n| 美妆 | 345 | 652 | 1,245 | 374,185.48 |\n| 食品 | 333 | 696 | 1,375 | 145,838.26 |\n| 图书 | 343 | 690 | 1,368 | 65,474.86 |\n\n**结论要点**\n- 武汉用户买过全部 8 个类目，没有遗漏的类目。\n- 数码是绝对主力：销售额 546.0 万元，占武汉用户明细销售额合计（约 1,049.8 万元）的 **52%**，但用户数/件数并不突出，说明客单价高。\n- 用户覆盖面最广的是美妆（345 人）、图书（343 人）、家居（340 人），人均消费额低，属于广覆盖、低客单的类目。\n- 数据来源：以上基于两次查询——武汉用户数（`users` 表筛选 city='武汉' 得 853 人）和按类目聚合的订单明细统计。\n\n如需换口径（例如按支付成功金额 payments 实付、或只看 completed 订单、或按 GMV 含退款），我可以再跑一版。",
+      "failure_mode": "other",
+      "error_msg": null,
+      "latency_s": 8.733,
+      "tokens": {
+        "input": 11183,
+        "output": 1434,
+        "total": 12617,
+        "cache_read": 9728
+      },
+      "oversized": false,
+      "ended_with_failed_call": false
+    },
+    {
+      "id": "EV-018",
+      "run_idx": 1,
+      "question_type": "multi_join",
+      "generalize_layer": "near",
+      "injected_chunks": [],
+      "expected_chunks": [
+        "schema:payments",
+        "schema:orders",
+        "schema:users"
+      ],
+      "recall_hits": [],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT TABLE_NAME, COLUMN_NAME, DATA_TYPE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = 'mart' AND TABLE_NAME IN ('payments','users') ORDER BY TABLE_NAME, ORDINAL_POSITION"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT method, COUNT(*) AS cnt FROM payments GROUP BY method ORDER BY cnt DESC"
+        },
+        {
+          "seq": 3,
+          "sql": "SELECT u.city, u.province, COUNT(DISTINCT u.id) AS user_cnt\nFROM payments p\nJOIN orders o ON o.id = p.order_id\nJOIN users u ON u.id = o.user_id\nWHERE p.method = '银联'\nGROUP BY u.city, u.province\nORDER BY user_cnt DESC"
+        },
+        {
+          "seq": 4,
+          "sql": "SELECT COUNT(DISTINCT u.id) AS total_users, COUNT(DISTINCT u.city) AS city_cnt\nFROM payments p\nJOIN orders o ON o.id = p.order_id\nJOIN users u ON u.id = o.user_id\nWHERE p.method = '银联'"
+        }
+      ],
+      "sql_used": "SELECT COUNT(DISTINCT u.id) AS total_users, COUNT(DISTINCT u.city) AS city_cnt\nFROM payments p\nJOIN orders o ON o.id = p.order_id\nJOIN users u ON u.id = o.user_id\nWHERE p.method = '银联'",
+      "sql_source": "last",
+      "gold_row_count": 20,
+      "model_row_count": 1,
+      "judge": "fail",
+      "pass_via": null,
+      "text_matched": null,
+      "final_answer_text": "## 银联支付用户的城市分布\n\n**口径说明**：取 `payments` 中 `method = '银联'` 的成功支付流水，经订单关联到下单用户，再按用户所在城市统计**去重用户数**（同一用户多笔银联支付只算 1 人）。数据为 2025-10-01 ~ 2026-09-30 静态快照，与相对时间无关。\n\n**汇总**：使用过银联支付的用户共 **5,613 人**，分布在 **20 个城市**（来源：第二条汇总查询的 total_users / city_cnt）。\n\n各城市人数（全部 20 个城市，求和 = 5,613，与总数完全吻合）：\n\n| 城市 | 省份 | 银联用户数 |\n|---|---|---|\n| 北京 | 北京 | 571 |\n| 上海 | 上海 | 488 |\n| 深圳 | 广东 | 463 |\n| 广州 | 广东 | 439 |\n| 杭州 | 浙江 | 355 |\n| 西安 | 陕西 | 280 |\n| 成都 | 四川 | 259 |\n| 南京 | 江苏 | 250 |\n| 长沙 | 湖南 | 248 |\n| 重庆 | 重庆 | 238 |\n| 苏州 | 江苏 | 222 |\n| 郑州 | 河南 | 219 |\n| 青岛 | 山东 | 217 |\n| 武汉 | 湖北 | 214 |\n| 昆明 | 云南 | 202 |\n| 无锡 | 江苏 | 199 |\n| 厦门 | 福建 | 197 |\n| 宁波 | 浙江 | 195 |\n| 沈阳 | 辽宁 | 189 |\n| 大连 | 辽宁 | 168 |\n\n**几个观察**：\n- 头部集中在一线城市：北京、上海、深圳、广州合计 1,961 人，占全部银联用户的 **34.9%**。\n- 江苏是入围城市最多的省份（南京、苏州、无锡 3 城，合计 671 人）。\n- 尾部城市（无锡、厦门、宁波、沈阳、大连）人数相近，均在 170~200 人区间。",
+      "failure_mode": "other",
+      "error_msg": null,
+      "latency_s": 8.266,
+      "tokens": {
+        "input": 10277,
+        "output": 1330,
+        "total": 11607,
+        "cache_read": 8832
+      },
+      "oversized": false,
+      "ended_with_failed_call": false
+    },
+    {
+      "id": "EV-019",
+      "run_idx": 1,
+      "question_type": "multi_join",
+      "generalize_layer": "far",
+      "injected_chunks": [],
+      "expected_chunks": [
+        "schema:refunds",
+        "schema:orders",
+        "schema:users"
+      ],
+      "recall_hits": [],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT * FROM refunds LIMIT 3"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT * FROM users LIMIT 3"
+        },
+        {
+          "seq": 3,
+          "sql": "SELECT * FROM orders LIMIT 2"
+        },
+        {
+          "seq": 4,
+          "sql": "SELECT u.id, u.name, ROUND(SUM(r.amount),2) AS refund_total, COUNT(*) AS refund_cnt\nFROM refunds r\nJOIN orders o ON o.id = r.order_id\nJOIN users u ON u.id = o.user_id\nGROUP BY u.id, u.name\nORDER BY refund_total DESC\nLIMIT 5"
+        }
+      ],
+      "sql_used": "SELECT u.id, u.name, ROUND(SUM(r.amount),2) AS refund_total, COUNT(*) AS refund_cnt\nFROM refunds r\nJOIN orders o ON o.id = r.order_id\nJOIN users u ON u.id = o.user_id\nGROUP BY u.id, u.name\nORDER BY refund_total DESC\nLIMIT 5",
+      "sql_source": "last",
+      "gold_row_count": 5,
+      "model_row_count": 5,
+      "judge": "fail",
+      "pass_via": null,
+      "text_matched": null,
+      "final_answer_text": "## 退款总额最高的 5 个用户\n\n口径说明：`refunds` 表本身不含用户字段，因此通过 `refunds.order_id → orders.user_id → users` 关联到用户，退款总额 = 该用户所有退款记录的 `amount` 之和（元）。\n\n| 排名 | 用户 ID | 姓名 | 退款总额（元） | 退款笔数 |\n|---|---|---|---|---|\n| 1 | 3132 | 武林 | 59,690.61 | 4 |\n| 2 | 6744 | 李雪梅 | 59,265.84 | 4 |\n| 3 | 5787 | 周辉 | 56,262.91 | 2 |\n| 4 | 87 | 何璐 | 51,909.99 | 2 |\n| 5 | 1080 | 陈宁 | 48,931.52 | 1 |\n\n数据来源：基于上述单次查询（`refunds` JOIN `orders` JOIN `users`，按 `SUM(amount)` 降序取前 5）。\n\n补充提示：第 5 名陈宁仅 1 笔退款即达 4.89 万元，属于单笔高额退款；而榜首武林、李雪梅均为 4 笔累计，退款频次较高但单笔金额相对较小——这两类用户的风险特征不同，如需进一步分析可拆分「退款金额」与「退款次数」两个维度，或结合订单总数计算退款率。",
+      "failure_mode": "other",
+      "error_msg": null,
+      "latency_s": 4.481,
+      "tokens": {
+        "input": 8281,
+        "output": 671,
+        "total": 8952,
+        "cache_read": 6912
+      },
+      "oversized": false,
+      "ended_with_failed_call": false
+    },
+    {
+      "id": "EV-020",
+      "run_idx": 1,
+      "question_type": "multi_join",
+      "generalize_layer": "near",
+      "injected_chunks": [],
+      "expected_chunks": [
+        "schema:order_items",
+        "schema:products",
+        "schema:orders"
+      ],
+      "recall_hits": [],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT TABLE_NAME, COLUMN_NAME, DATA_TYPE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='mart' ORDER BY TABLE_NAME, ORDINAL_POSITION"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT TABLE_NAME, COLUMN_NAME, DATA_TYPE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='mart' AND TABLE_NAME IN ('products','refunds','orders','payments') ORDER BY TABLE_NAME, ORDINAL_POSITION"
+        },
+        {
+          "seq": 3,
+          "sql": "SELECT id, name, category, brand, price, listed_at FROM products LIMIT 5"
+        },
+        {
+          "seq": 4,
+          "sql": "SELECT category, COUNT(*) AS cnt FROM products GROUP BY category ORDER BY cnt DESC"
+        },
+        {
+          "seq": 5,
+          "sql": "SELECT COLUMN_NAME, DATA_TYPE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='mart' AND TABLE_NAME='refunds'"
+        },
+        {
+          "seq": 6,
+          "sql": "SELECT o.status, COUNT(DISTINCT o.id) AS orders, SUM(oi.quantity) AS qty, ROUND(SUM(oi.sale_amount),2) AS sales\nFROM order_items oi\nJOIN orders o ON o.id = oi.order_id\nJOIN products p ON p.id = oi.product_id\nWHERE p.category = '美妆' AND o.created_at >= '2026-04-01' AND o.created_at < '2026-05-01'\nGROUP BY o.status"
+        },
+        {
+          "seq": 7,
+          "sql": "SELECT COUNT(*) AS total, SUM(CASE WHEN DATE_FORMAT(created_at,'%Y-%m')='2026-04' THEN 1 ELSE 0 END) AS apr\nFROM orders"
+        },
+        {
+          "seq": 8,
+          "sql": "SELECT multi_cnt, COUNT(*) AS orders FROM (\n  SELECT oi.order_id, COUNT(DISTINCT p.category) AS multi_cnt\n  FROM order_items oi JOIN products p ON p.id = oi.product_id\n  GROUP BY oi.order_id\n) t GROUP BY multi_cnt"
+        },
+        {
+          "seq": 9,
+          "sql": "SELECT o.status, COUNT(*) AS orders, ROUND(SUM(pay.amount),2) AS pay_amount\nFROM orders o\nJOIN payments pay ON pay.order_id = o.id\nWHERE o.created_at >= '2026-04-01' AND o.created_at < '2026-05-01'\nGROUP BY o.status"
+        },
+        {
+          "seq": 10,
+          "sql": "SELECT ROUND(SUM(oi.sale_amount),2) AS all_cat_sales,\n       ROUND(SUM(CASE WHEN p.category='美妆' THEN oi.sale_amount ELSE 0 END),2) AS beauty_sales\nFROM order_items oi\nJOIN orders o ON o.id = oi.order_id\nJOIN products p ON p.id = oi.product_id\nWHERE o.created_at >= '2026-04-01' AND o.created_at < '2026-05-01'"
+        }
+      ],
+      "sql_used": "SELECT ROUND(SUM(oi.sale_amount),2) AS all_cat_sales,\n       ROUND(SUM(CASE WHEN p.category='美妆' THEN oi.sale_amount ELSE 0 END),2) AS beauty_sales\nFROM order_items oi\nJOIN orders o ON o.id = oi.order_id\nJOIN products p ON p.id = oi.product_id\nWHERE o.created_at >= '2026-04-01' AND o.created_at < '2026-05-01'",
+      "sql_source": "last",
+      "gold_row_count": 1,
+      "model_row_count": 1,
+      "judge": "pass",
+      "pass_via": "text",
+      "text_matched": "762553.89",
+      "final_answer_text": "**2026 年 4 月「美妆」类目销售额：762,553.89 元**\n\n口径说明：以订单**下单时间**（orders.created_at）落在 2026-04-01 ~ 2026-04-30 归月，按订单明细行小计（order_items.sale_amount）关联 products.category='美妆' 汇总，**包含全部订单状态**（含已取消、已退款）。基于查询 order_items ⋈ orders ⋈ products 的结果。\n\n明细拆分（同一次查询，按订单状态分组）：\n\n| 订单状态 | 订单数 | 件数 | 销售额（元） |\n|---|---|---|---|\n| completed | 833 | 1,628 | 509,108.45 |\n| refunded | 101 | 208 | 64,778.48 |\n| shipped | 111 | 215 | 63,910.49 |\n| cancelled | 96 | 204 | 61,017.95 |\n| paid | 86 | 162 | 47,751.11 |\n| pending | 34 | 58 | 15,987.41 |\n| **合计** | — | **2,475** | **762,553.89** |\n\n几个可参考的口径变体：\n\n- **有效销售口径**（已完成+已发货+已支付：completed / shipped / paid）：**620,770.05 元**\n- **剔除取消和退款后**（即含 pending 未支付）：**636,757.46 元**\n- **占比**：当月全类目销售（所有品类合计）为 18,975,115.17 元，美妆占约 **4.0%**\n\n补充说明：库中 payments 是**按整单**记录的（一笔成功支付对应一个订单），而约 46% 的订单包含多个类目（多类目订单 36,191 单 / 100,000 单），因此无法把支付金额准确拆分到「美妆」单一类目，本回答的类目销售额均以明细行小计为口径；不涉及金额拆分的整单口径数据仅供参考：2026 年 4 月成功支付订单的支付流水合计约 1,698.86 万元（我的查询显示 497+593+4547+564 = 6,201 笔订单）。",
+      "failure_mode": null,
+      "error_msg": null,
+      "latency_s": 12.999,
+      "tokens": {
+        "input": 19904,
+        "output": 2259,
+        "total": 22163,
+        "cache_read": 17792
+      },
+      "oversized": false,
+      "ended_with_failed_call": false
+    },
+    {
+      "id": "EV-021",
+      "run_idx": 1,
+      "question_type": "aggregation",
+      "generalize_layer": "near",
+      "injected_chunks": [],
+      "expected_chunks": [
+        "schema:refunds"
+      ],
+      "recall_hits": [],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT * FROM refunds LIMIT 5"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT reason, COUNT(*) AS cnt, ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM refunds), 2) AS pct, ROUND(SUM(amount), 2) AS amt\nFROM refunds\nGROUP BY reason\nORDER BY cnt DESC"
+        }
+      ],
+      "sql_used": "SELECT reason, COUNT(*) AS cnt, ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM refunds), 2) AS pct, ROUND(SUM(amount), 2) AS amt\nFROM refunds\nGROUP BY reason\nORDER BY cnt DESC",
+      "sql_source": "last",
+      "gold_row_count": 5,
+      "model_row_count": 5,
+      "judge": "fail",
+      "pass_via": null,
+      "text_matched": null,
+      "final_answer_text": "## 各退款原因的数量与占比\n\n**口径**：基于 refunds 表全部 8,971 条退款记录（一单至多一条），按退款原因分组统计；占比 = 该原因退款笔数 ÷ 总退款笔数。\n\n| 退款原因 | 退款笔数 | 笔数占比 | 退款金额（元） |\n|---|---:|---:|---:|\n| 质量问题 | 2,679 | 29.86% | 6,961,441.07 |\n| 七日无理由 | 2,231 | 24.87% | 6,012,391.21 |\n| 物流问题 | 1,777 | 19.81% | 4,496,244.23 |\n| 错拍不想要 | 1,361 | 15.17% | 3,249,194.67 |\n| 其他 | 923 | 10.29% | 2,422,949.74 |\n| **合计** | **8,971** | **100.00%** | **23,142,220.92** |\n\n**要点**\n- 退款原因共 5 类，「质量问题」最多，占总退款笔数的 29.86%（2,679 笔），对应退款金额约 696.1 万元。\n- 前两大原因（质量问题 + 七日无理由）合计占 54.73%，是退款的主要来源。\n- 「物流问题」与「错拍不想要」分别占 19.81%、15.17%，客服/运营可优先从质量与履约环节着手治理。\n\n数据来源：对 mart.refunds 表按 reason 分组的聚合查询（笔数合计 8,971，与表描述的行数一致）。",
+      "failure_mode": "other",
+      "error_msg": null,
+      "latency_s": 3.466,
+      "tokens": {
+        "input": 5965,
+        "output": 581,
+        "total": 6546,
+        "cache_read": 4992
+      },
+      "oversized": false,
+      "ended_with_failed_call": false
+    },
+    {
+      "id": "EV-022",
+      "run_idx": 1,
+      "question_type": "aggregation",
+      "generalize_layer": "far",
+      "injected_chunks": [],
+      "expected_chunks": [
+        "schema:orders"
+      ],
+      "recall_hits": [],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT status, COUNT(*) AS cnt FROM orders GROUP BY status ORDER BY cnt DESC"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT * FROM orders LIMIT 3"
+        },
+        {
+          "seq": 3,
+          "sql": "SELECT DATE_FORMAT(created_at, '%Y-%m') AS month,\n       COUNT(*) AS order_cnt,\n       SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) AS completed_cnt\nFROM orders\nWHERE created_at >= '2026-04-01' AND created_at < '2026-07-01'\nGROUP BY month\nORDER BY month"
+        }
+      ],
+      "sql_used": "SELECT DATE_FORMAT(created_at, '%Y-%m') AS month,\n       COUNT(*) AS order_cnt,\n       SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) AS completed_cnt\nFROM orders\nWHERE created_at >= '2026-04-01' AND created_at < '2026-07-01'\nGROUP BY month\nORDER BY month",
+      "sql_source": "last",
+      "gold_row_count": 3,
+      "model_row_count": 3,
+      "judge": "pass",
+      "pass_via": "sql",
+      "text_matched": null,
+      "final_answer_text": "**2026 年二季度（4–6 月）订单量与已完成订单量**\n\n| 月份 | 订单量 | 已完成订单量 | 完成占比 |\n|---|---|---|---|\n| 2026-04 | 6,954 | 4,547 | 65.4% |\n| 2026-05 | 7,517 | 4,905 | 65.3% |\n| 2026-06 | 12,090 | 7,866 | 65.1% |\n| **合计** | **26,561** | **17,318** | **65.2%** |\n\n**口径说明**\n- 数据来源：orders 表（订单主表），按 `created_at`（下单时间）归属月份，筛选 `2026-04-01 ≤ created_at < 2026-07-01`。\n- “订单量”= 当期所有状态的订单数（含 completed / shipped / paid / pending / cancelled / refunded）。\n- “已完成订单量”= 其中 `status = 'completed'` 的订单数（状态为最新快照值，非历史累计口径）。\n- 上述数字来自一次 GROUP BY 查询的直接结果。\n\n**顺带观察**：二季度整体呈上升趋势，6 月订单量（12,090）较 4 月（6,954）增长约 74%，且三个月的“已完成”占比相当稳定，都在 65% 左右——说明增长来自订单规模本身，而非完成率变化。如需进一步拆分（如按类目、支付成功口径、或含退款口径），可以继续查。",
+      "failure_mode": null,
+      "error_msg": null,
+      "latency_s": 4.588,
+      "tokens": {
+        "input": 6247,
+        "output": 696,
+        "total": 6943,
+        "cache_read": 5248
+      },
+      "oversized": false,
+      "ended_with_failed_call": false
+    },
+    {
+      "id": "EV-023",
+      "run_idx": 1,
+      "question_type": "aggregation",
+      "generalize_layer": "far",
+      "injected_chunks": [],
+      "expected_chunks": [
+        "schema:orders",
+        "schema:users"
+      ],
+      "recall_hits": [],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT TABLE_NAME, COLUMN_NAME, DATA_TYPE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = 'mart' AND TABLE_NAME IN ('users','orders') ORDER BY TABLE_NAME, ORDINAL_POSITION"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT\n  (SELECT COUNT(*) FROM users) AS total_users,\n  (SELECT COUNT(DISTINCT user_id) FROM orders) AS ordered_users,\n  ROUND((SELECT COUNT(DISTINCT user_id) FROM orders) / (SELECT COUNT(*) FROM users) * 100, 2) AS pct_all_orders,\n  (SELECT COUNT(DISTINCT user_id) FROM orders WHERE status <> 'cancelled') AS ordered_users_excl_cancel,\n  (SELECT COUNT(DISTINCT o.user_id) FROM orders o JOIN payments p ON p.order_no = o.order_no) AS paid_users,\n  (SELECT COUNT(*) FROM orders WHERE user_id NOT IN (SELECT id FROM users)) AS orders_user_not_in_users"
+        },
+        {
+          "seq": 3,
+          "sql": "SELECT\n  (SELECT COUNT(*) FROM users) AS total_users,\n  (SELECT COUNT(DISTINCT user_id) FROM orders) AS ordered_users,\n  ROUND((SELECT COUNT(DISTINCT user_id) FROM orders) / (SELECT COUNT(*) FROM users) * 100, 2) AS pct_all_orders,\n  (SELECT COUNT(DISTINCT user_id) FROM orders WHERE status <> 'cancelled') AS users_excl_cancel,\n  (SELECT COUNT(*) FROM orders WHERE user_id NOT IN (SELECT id FROM users)) AS orphan_orders"
+        },
+        {
+          "seq": 4,
+          "sql": "SELECT TABLE_NAME, COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='mart' AND TABLE_NAME IN ('payments','refunds') ORDER BY TABLE_NAME, ORDINAL_POSITION"
+        },
+        {
+          "seq": 5,
+          "sql": "SELECT\n  (SELECT COUNT(DISTINCT o.user_id) FROM orders o JOIN payments p ON p.order_id = o.id) AS paid_users,\n  ROUND((SELECT COUNT(DISTINCT o.user_id) FROM orders o JOIN payments p ON p.order_id = o.id) / (SELECT COUNT(*) FROM users) * 100, 2) AS pct_paid_users"
+        },
+        {
+          "seq": 6,
+          "sql": "SELECT status, COUNT(*) AS cnt, COUNT(DISTINCT user_id) AS users FROM orders GROUP BY status ORDER BY cnt DESC"
+        }
+      ],
+      "sql_used": "SELECT status, COUNT(*) AS cnt, COUNT(DISTINCT user_id) AS users FROM orders GROUP BY status ORDER BY cnt DESC",
+      "sql_source": "last",
+      "gold_row_count": 1,
+      "model_row_count": 6,
+      "judge": "pass",
+      "pass_via": "text",
+      "text_matched": "73.96",
+      "final_answer_text": "**结论：约 73.96%**（14,792 / 20,000 人）的全部注册用户有过下单行为。\n\n## 计算口径与结果\n\n以「用户表全部注册用户」为分母，以「订单表中出现过该用户（去重，不限订单状态）」为分子：\n\n| 指标 | 数值 |\n|---|---|\n| 全部用户数（users 表行数） | 20,000 |\n| 有过下单行为的用户数（orders 表 DISTINCT user_id） | 14,792 |\n| **占比** | **73.96%** |\n\n## 按更严格口径的对比（供参考）\n\n| 口径 | 用户数 | 占全部用户 |\n|---|---|---|\n| 有过任意订单（含取消/退款） | 14,792 | 73.96% |\n| 剔除已取消订单（status <> 'cancelled'） | 14,491 | 72.46% |\n| 有过成功支付记录（orders JOIN payments） | 14,361 | 71.81% |\n\n订单状态分布（用于理解差异）：completed 64,038 单、shipped 8,926 单、cancelled 8,233 单、refunded 7,646 单、paid 7,634 单、pending 3,523 单。\n\n补充校验：orders 表中的 user_id 全部能在 users 表找到（孤儿订单 0 条），因此分子不会虚高，该比例是干净可比的。\n\n数据来源：以上均基于 mart 库 users / orders / payments 表的实时查询结果（订单数据为 2025-10-01 至 2026-09-30 的静态快照）。",
+      "failure_mode": null,
+      "error_msg": null,
+      "latency_s": 9.581,
+      "tokens": {
+        "input": 11889,
+        "output": 1604,
+        "total": 13493,
+        "cache_read": 10624
+      },
+      "oversized": false,
+      "ended_with_failed_call": false
+    },
+    {
+      "id": "EV-024",
+      "run_idx": 1,
+      "question_type": "aggregation",
+      "generalize_layer": "near",
+      "injected_chunks": [],
+      "expected_chunks": [
+        "schema:orders",
+        "schema:users"
+      ],
+      "recall_hits": [],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SHOW COLUMNS FROM users"
+        },
+        {
+          "seq": 2,
+          "sql": "SHOW COLUMNS FROM orders"
+        },
+        {
+          "seq": 3,
+          "sql": "SELECT * FROM users LIMIT 3"
+        },
+        {
+          "seq": 4,
+          "sql": "SELECT * FROM orders LIMIT 3"
+        },
+        {
+          "seq": 5,
+          "sql": "SELECT u.city,\n       COUNT(DISTINCT u.id) AS buyer_cnt,\n       COUNT(o.id) AS order_cnt,\n       ROUND(COUNT(o.id) / COUNT(DISTINCT u.id), 2) AS avg_orders_per_buyer\nFROM users u\nJOIN orders o ON o.user_id = u.id\nGROUP BY u.city\nORDER BY avg_orders_per_buyer DESC"
+        },
+        {
+          "seq": 6,
+          "sql": "SELECT COUNT(DISTINCT city) AS city_cnt FROM users;\n"
+        },
+        {
+          "seq": 7,
+          "sql": "SELECT COUNT(DISTINCT u.id) AS buyer_cnt, COUNT(o.id) AS order_cnt,\n       ROUND(COUNT(o.id)/COUNT(DISTINCT u.id), 2) AS avg_all\nFROM users u JOIN orders o ON o.user_id = u.id"
+        }
+      ],
+      "sql_used": "SELECT COUNT(DISTINCT u.id) AS buyer_cnt, COUNT(o.id) AS order_cnt,\n       ROUND(COUNT(o.id)/COUNT(DISTINCT u.id), 2) AS avg_all\nFROM users u JOIN orders o ON o.user_id = u.id",
+      "sql_source": "last",
+      "gold_row_count": 20,
+      "model_row_count": 1,
+      "judge": "fail",
+      "pass_via": null,
+      "text_matched": null,
+      "final_answer_text": "## 各城市下过单用户的平均下单次数\n\n**口径说明**：用户按 `users.city` 归属城市；\"下过单的用户\"= 在 `orders` 表中有至少一条订单记录的用户（不限订单状态）；\"下单次数\"= 该用户的订单条数。全城合计共 20 个城市（结果恰好 20 行，无遗漏）。\n\n| 城市 | 下过单用户数 | 订单总数 | 平均下单次数 |\n|---|---|---|---|\n| 厦门 | 515 | 3,745 | 7.27 |\n| 郑州 | 560 | 4,023 | 7.18 |\n| 青岛 | 517 | 3,616 | 6.99 |\n| 北京 | 1,469 | 10,145 | 6.91 |\n| 深圳 | 1,189 | 8,213 | 6.91 |\n| 宁波 | 506 | 3,489 | 6.90 |\n| 杭州 | 887 | 6,054 | 6.83 |\n| 南京 | 655 | 4,476 | 6.83 |\n| 苏州 | 612 | 4,173 | 6.82 |\n| 无锡 | 504 | 3,427 | 6.80 |\n| 重庆 | 639 | 4,332 | 6.78 |\n| 广州 | 1,211 | 8,144 | 6.73 |\n| 上海 | 1,336 | 8,903 | 6.66 |\n| 长沙 | 679 | 4,491 | 6.61 |\n| 成都 | 673 | 4,415 | 6.56 |\n| 大连 | 463 | 3,014 | 6.51 |\n| 西安 | 683 | 4,446 | 6.51 |\n| 武汉 | 638 | 4,148 | 6.50 |\n| 昆明 | 555 | 3,598 | 6.48 |\n| 沈阳 | 501 | 3,148 | 6.28 |\n\n**结论**\n- 全站整体：14,792 名下过单的用户共产生 100,000 笔订单，**人均 6.76 次**（基于第二次查询）。\n- 城市间差异很小：最高厦门 7.27 次，最低沈阳 6.28 次，都在 6.3–7.3 次的窄区间内，说明各城市用户的复购频次比较均衡。\n- 北京、深圳、上海、广州等一线城市虽然用户基数大（1,200–1,470 人），但人均下单次数并未明显更高，略低于或接近全站均值。\n\n数据来源：基于 `users JOIN orders` 按城市聚合的两次查询结果（本次快照数据范围 2025-10-01 至 2026-09-30）。如需改用\"仅统计已完成订单\"或\"按支付成功笔数\"的口径，可以再算一版。",
+      "failure_mode": "other",
+      "error_msg": null,
+      "latency_s": 8.942,
+      "tokens": {
+        "input": 11203,
+        "output": 1478,
+        "total": 12681,
+        "cache_read": 9472
+      },
+      "oversized": false,
+      "ended_with_failed_call": false
+    },
+    {
+      "id": "EV-025",
+      "run_idx": 1,
+      "question_type": "aggregation",
+      "generalize_layer": "near",
+      "injected_chunks": [],
+      "expected_chunks": [
+        "schema:orders",
+        "glossary:yoy_mom"
+      ],
+      "recall_hits": [],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT DATE_FORMAT(created_at, '%Y-%m') AS month, status, COUNT(*) AS cnt\nFROM orders\nWHERE created_at >= '2025-10-01' AND created_at < '2025-12-01'\nGROUP BY month, status\nORDER BY month, status"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT DATE_FORMAT(created_at, '%Y-%m') AS month, COUNT(*) AS order_cnt, SUM(amount) AS gmv\nFROM orders\nWHERE created_at >= '2025-10-01' AND created_at < '2025-12-01'\nGROUP BY month ORDER BY month"
+        },
+        {
+          "seq": 3,
+          "sql": "SELECT * FROM orders LIMIT 1"
+        },
+        {
+          "seq": 4,
+          "sql": "SELECT DATE_FORMAT(created_at, '%Y-%m') AS month,\n       COUNT(*) AS all_orders,\n       SUM(CASE WHEN status <> 'cancelled' THEN 1 ELSE 0 END) AS valid_orders,\n       SUM(order_amount) AS gmv\nFROM orders\nWHERE created_at >= '2025-10-01' AND created_at < '2025-12-01'\nGROUP BY month ORDER BY month"
+        }
+      ],
+      "sql_used": "SELECT DATE_FORMAT(created_at, '%Y-%m') AS month,\n       COUNT(*) AS all_orders,\n       SUM(CASE WHEN status <> 'cancelled' THEN 1 ELSE 0 END) AS valid_orders,\n       SUM(order_amount) AS gmv\nFROM orders\nWHERE created_at >= '2025-10-01' AND created_at < '2025-12-01'\nGROUP BY month ORDER BY month",
+      "sql_source": "last",
+      "gold_row_count": 1,
+      "model_row_count": 2,
+      "judge": "pass",
+      "pass_via": "text",
+      "text_matched": "77.5",
+      "final_answer_text": "**结论：2025 年 11 月订单量环比 10 月增长约 77.5%。**\n\n明细（基于对 orders 表按下单时间分组的查询）：\n\n| 月份 | 全部订单量 | 环比 | 剔除已取消订单 | 环比 |\n|---|---|---|---|---|\n| 2025-10 | 7,390 | — | 6,814 | — |\n| 2025-11 | 13,117 | **+77.5%** | 12,035 | +76.6% |\n\n计算过程：\n- 全部订单口径：(13,117 − 7,390) ÷ 7,390 = 5,727 ÷ 7,390 ≈ **+77.5%**，净增 5,727 单。\n- 剔除「已取消（cancelled）」口径：(12,035 − 6,814) ÷ 6,814 ≈ **+76.6%**。\n\n口径说明：本回答按 orders 表的下单时间（created_at）统计，包含 pending/paid/shipped/completed/cancelled/refunded 各状态的全部下单记录；若只看有效订单（剔除 cancelled），增幅为 76.6%。同期 GMV（订单金额合计）也从 2,056.3 万元升至 3,578.8 万元。11 月订单结构上各状态量级均同步放大（如 completed 从 4,889 单升至 8,557 单），说明增长是整体性的，而非某一状态异常波动所致。",
+      "failure_mode": null,
+      "error_msg": null,
+      "latency_s": 6.431,
+      "tokens": {
+        "input": 9040,
+        "output": 1078,
+        "total": 10118,
+        "cache_read": 7936
+      },
+      "oversized": false,
+      "ended_with_failed_call": false
+    },
+    {
+      "id": "EV-026",
+      "run_idx": 1,
+      "question_type": "time_window",
+      "generalize_layer": "near",
+      "injected_chunks": [],
+      "expected_chunks": [
+        "schema:refunds"
+      ],
+      "recall_hits": [],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT column_name, data_type FROM information_schema.columns WHERE table_schema = 'mart' AND table_name = 'refunds'"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT DATE(refunded_at) AS refund_date, COUNT(*) AS refund_cnt, ROUND(SUM(amount), 2) AS refund_amount\nFROM refunds\nWHERE refunded_at >= '2026-09-24' AND refunded_at < '2026-10-01'\nGROUP BY refund_date\nORDER BY refund_date"
+        }
+      ],
+      "sql_used": "SELECT DATE(refunded_at) AS refund_date, COUNT(*) AS refund_cnt, ROUND(SUM(amount), 2) AS refund_amount\nFROM refunds\nWHERE refunded_at >= '2026-09-24' AND refunded_at < '2026-10-01'\nGROUP BY refund_date\nORDER BY refund_date",
+      "sql_source": "last",
+      "gold_row_count": 7,
+      "model_row_count": 7,
+      "judge": "fail",
+      "pass_via": null,
+      "text_matched": null,
+      "final_answer_text": "**2026-09-24 ~ 09-30 每日退款金额**（口径：refunds 表按退款完成时间 refunded_at 归日，amount 直接求和；退款金额单位：元）\n\n| 日期 | 退款笔数 | 退款金额（元） |\n|---|---|---|\n| 2026-09-24 | 17 | 46,171.09 |\n| 2026-09-25 | 14 | 18,849.16 |\n| 2026-09-26 | 15 | 17,396.22 |\n| 2026-09-27 | 11 | 14,286.14 |\n| 2026-09-28 | 5 | 3,563.64 |\n| 2026-09-29 | 3 | 1,634.47 |\n| 2026-09-30 | 8 | 12,379.80 |\n| **合计** | **73** | **114,280.52** |\n\n说明：\n- 数据来源为对 mart 库 refunds 表的查询（按 DATE(refunded_at) 分组汇总，筛选区间 2026-09-24 00:00:00 至 2026-09-30 23:59:59）。\n- 口径为「退款完成时间」而非申请时间；库中一单至多一条退款记录，因此笔数即退款订单数。\n- 这 7 天退款呈明显回落趋势，9/24 单日 4.6 万元，为区间最高（占区间总额约 40%）；9/29 最低，仅 1,634.47 元。合计 114,280.52 元是我在本次结果上直接相加得到的，未另跑汇总查询。",
+      "failure_mode": "other",
+      "error_msg": null,
+      "latency_s": 5.119,
+      "tokens": {
+        "input": 6056,
+        "output": 918,
+        "total": 6974,
+        "cache_read": 5120
+      },
+      "oversized": false,
+      "ended_with_failed_call": false
+    },
+    {
+      "id": "EV-027",
+      "run_idx": 1,
+      "question_type": "time_window",
+      "generalize_layer": "near",
+      "injected_chunks": [],
+      "expected_chunks": [
+        "schema:orders"
+      ],
+      "recall_hits": [],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SHOW COLUMNS FROM orders"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT DATE_FORMAT(created_at, '%Y-%m') AS month, COUNT(*) AS order_cnt, SUM(amount) AS gmv, SUM(quantity) AS qty FROM orders GROUP BY month ORDER BY month"
+        },
+        {
+          "seq": 3,
+          "sql": "SELECT column_name, data_type FROM information_schema.columns WHERE table_schema='mart' AND table_name='orders' ORDER BY ordinal_position"
+        },
+        {
+          "seq": 4,
+          "sql": "SELECT DATE_FORMAT(created_at, '%Y-%m') AS month, COUNT(*) AS order_cnt, SUM(order_amount) AS gmv, SUM(item_count) AS items FROM orders GROUP BY month ORDER BY month"
+        },
+        {
+          "seq": 5,
+          "sql": "SELECT status, COUNT(*) AS cnt FROM orders GROUP BY status"
+        }
+      ],
+      "sql_used": "SELECT status, COUNT(*) AS cnt FROM orders GROUP BY status",
+      "sql_source": "last",
+      "gold_row_count": 12,
+      "model_row_count": 6,
+      "judge": "fail",
+      "pass_via": null,
+      "text_matched": null,
+      "final_answer_text": "已按「下单时间」统计。口径：**orders 表全部状态订单**（含已取消/退款），数据期 2025-10-01 ~ 2026-09-30（以 2026-09-30 为“今天”）。\n\n## 各月订单量趋势\n\n| 月份 | 订单量 | 环比 | GMV(元) | 商品件数 |\n|---|---|---|---|---|\n| 2025-10 | 7,390 | — | 20,562,695.90 | 21,089 |\n| 2025-11 | **13,117** | +77.5% | 35,788,434.94 | 37,085 |\n| 2025-12 | 8,885 | −32.3% | 24,245,193.21 | 24,857 |\n| 2026-01 | 8,098 | −8.9% | 21,904,183.30 | 22,608 |\n| 2026-02 | 6,469 | −20.1% | 17,678,770.48 | 18,342 |\n| 2026-03 | 7,960 | +23.1% | 21,914,224.91 | 22,595 |\n| 2026-04 | 6,954 | −12.6% | 18,975,115.17 | 19,344 |\n| 2026-05 | 7,517 | +8.1% | 19,846,058.04 | 20,705 |\n| 2026-06 | **12,090** | +60.8% | 33,311,006.70 | 34,240 |\n| 2026-07 | 6,981 | −42.3% | 19,405,769.41 | 19,482 |\n| 2026-08 | 6,922 | −0.8% | 18,536,846.07 | 19,276 |\n| 2026-09 | 7,617 | +10.0% | 20,280,681.72 | 21,338 |\n\n（以上数字来自对 orders 表按 DATE_FORMAT(created_at,'%Y-%m') 分组的一次查询，合计 100,000 单、GMV 约 2.36 亿元。）\n\n## 关键结论\n\n1. **全年月均约 8,333 单**，整体是「两个大促尖峰 + 其余月份平稳」的形态，没有明显的持续增长或衰退趋势。\n2. **两个绝对高峰**：2025-11（13,117 单，全年最高，约为均值的 1.57 倍）和 2026-06（12,090 单），对应双 11 和 618 大促，两者之后的一个月都出现明显的「透支式回落」（2025-12 −32%、2026-07 −42%）。\n3. **最低谷**：2026-02（6,469 单），符合春节淡季特征；2025-10、2026-04/08 也在 7,000 单以下的低位。\n4. GMV 与订单量的月度走势基本同步：大促月 GMV 占比高（2025-11 单月 GMV 3,579 万元，约占全期 15%），说明峰值主要靠订单量拉动，而不是客单价变化。\n\n需要的话，我可以再拆一层：剔除「已取消/已退款」后的**有效订单**趋势，或按订单状态、用户城市、商品类目做交叉分析。",
+      "failure_mode": "other",
+      "error_msg": null,
+      "latency_s": 8.04,
+      "tokens": {
+        "input": 8110,
+        "output": 1492,
+        "total": 9602,
+        "cache_read": 6656
+      },
+      "oversized": false,
+      "ended_with_failed_call": false
+    },
+    {
+      "id": "EV-028",
+      "run_idx": 1,
+      "question_type": "time_window",
+      "generalize_layer": "near",
+      "injected_chunks": [],
+      "expected_chunks": [
+        "schema:payments"
+      ],
+      "recall_hits": [],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT COLUMN_NAME, COLUMN_TYPE, COLUMN_COMMENT FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA='mart' AND TABLE_NAME IN ('orders','payments') ORDER BY TABLE_NAME, ORDINAL_POSITION"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT status, COUNT(*) AS cnt FROM orders GROUP BY status ORDER BY cnt DESC"
+        },
+        {
+          "seq": 3,
+          "sql": "SELECT COUNT(*) AS pay_cnt, SUM(amount) AS pay_amount\nFROM payments\nWHERE paid_at >= DATE_SUB('2026-09-30', INTERVAL 29 DAY)\n  AND paid_at < DATE_ADD('2026-09-30', INTERVAL 1 DAY)"
+        },
+        {
+          "seq": 4,
+          "sql": "SELECT COUNT(*) AS order_cnt, SUM(order_amount) AS amt\nFROM orders\nWHERE created_at >= DATE_SUB('2026-09-30', INTERVAL 29 DAY)\n  AND created_at < DATE_ADD('2026-09-30', INTERVAL 1 DAY)\n  AND status IN ('paid','shipped','completed','refunded')"
+        }
+      ],
+      "sql_used": "SELECT COUNT(*) AS order_cnt, SUM(order_amount) AS amt\nFROM orders\nWHERE created_at >= DATE_SUB('2026-09-30', INTERVAL 29 DAY)\n  AND created_at < DATE_ADD('2026-09-30', INTERVAL 1 DAY)\n  AND status IN ('paid','shipped','completed','refunded')",
+      "sql_source": "last",
+      "gold_row_count": 1,
+      "model_row_count": 1,
+      "judge": "pass",
+      "pass_via": "text",
+      "text_matched": "5901",
+      "final_answer_text": "**结论：最近 30 天（2026-09-01 ~ 2026-09-30，含当天）支付成功的订单共 5,901 笔，实付金额合计 16,029,955.34 元。**\n\n口径说明（基于 payments 表查询）：以**支付成功时间 paid_at** 落在窗口内、且为成功支付流水计数——一笔成功支付恰对应一条流水，故流水笔数 = 支付订单笔数。窗口取 `2026-09-01 00:00:00 ~ 2026-09-30 23:59:59`（含当天，共 30 天）。\n\n供参考的另一种口径（基于 orders 表查询）：若改为**按下单时间 created_at** 落在同一窗口、且订单状态为 paid/shipped/completed/refunded（即已支付过的订单），得到 5,872 笔、金额 15,941,532.30 元。两者相差 29 笔，原因是个别订单在 8 月 31 日下单、9 月 1 日才完成支付（支付时间晚于下单时间数分钟至数小时），因此按下单日会被排除在窗口外。\n\n如果你要的是“下单即算”的口径，请用 5,872 笔；如果按“钱实际到账”的口径，请用 5,901 笔。",
+      "failure_mode": null,
+      "error_msg": null,
+      "latency_s": 6.411,
+      "tokens": {
+        "input": 6975,
+        "output": 1205,
+        "total": 8180,
+        "cache_read": 5760
+      },
+      "oversized": false,
+      "ended_with_failed_call": false
+    },
+    {
+      "id": "EV-029",
+      "run_idx": 1,
+      "question_type": "glossary_trap",
+      "generalize_layer": "far",
+      "injected_chunks": [],
+      "expected_chunks": [
+        "schema:payments",
+        "schema:refunds",
+        "glossary:net_sales"
+      ],
+      "recall_hits": [],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT TABLE_NAME, COLUMN_NAME, DATA_TYPE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='mart' ORDER BY TABLE_NAME, ORDINAL_POSITION"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT TABLE_NAME, COLUMN_NAME, DATA_TYPE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='mart' AND TABLE_NAME IN ('refunds','orders') ORDER BY TABLE_NAME, ORDINAL_POSITION"
+        },
+        {
+          "seq": 3,
+          "sql": "SELECT\n  (SELECT ROUND(SUM(amount),2) FROM payments WHERE paid_at >= '2026-09-01' AND paid_at < '2026-10-01') AS paid_amt,\n  (SELECT COUNT(*) FROM payments WHERE paid_at >= '2026-09-01' AND paid_at < '2026-10-01') AS paid_cnt,\n  (SELECT ROUND(SUM(amount),2) FROM refunds WHERE refunded_at >= '2026-09-01' AND refunded_at < '2026-10-01') AS refund_amt,\n  (SELECT COUNT(*) FROM refunds WHERE refunded_at >= '2026-09-01' AND refunded_at < '2026-10-01') AS refund_cnt"
+        }
+      ],
+      "sql_used": "SELECT\n  (SELECT ROUND(SUM(amount),2) FROM payments WHERE paid_at >= '2026-09-01' AND paid_at < '2026-10-01') AS paid_amt,\n  (SELECT COUNT(*) FROM payments WHERE paid_at >= '2026-09-01' AND paid_at < '2026-10-01') AS paid_cnt,\n  (SELECT ROUND(SUM(amount),2) FROM refunds WHERE refunded_at >= '2026-09-01' AND refunded_at < '2026-10-01') AS refund_amt,\n  (SELECT COUNT(*) FROM refunds WHERE refunded_at >= '2026-09-01' AND refunded_at < '2026-10-01') AS refund_cnt",
+      "sql_source": "last",
+      "gold_row_count": 1,
+      "model_row_count": 1,
+      "judge": "pass",
+      "pass_via": "text",
+      "text_matched": "14460561.20",
+      "final_answer_text": "## 2026 年 9 月净销售额：**14,460,561.20 元**\n\n**口径说明**：净销售额 = 当月支付成功金额 − 当月退款金额，两者都按发生时间归属到月份（支付按 `paid_at`，退款按 `refunded_at`），金额单位为元。\n\n| 项目 | 数值 |\n|---|---|\n| 支付成功金额（`payments.amount`，9/1–9/30） | 16,029,955.34 元 |\n| 支付成功笔数 | 5,901 笔 |\n| 退款金额（`refunds.amount`，9/1–9/30） | 1,569,394.14 元 |\n| 退款笔数 | 637 笔 |\n| **净销售额** | **14,460,561.20 元** |\n\n数据来源：对 `payments`、`refunds` 两张表按 2026-09-01 至 2026-09-30 区间分别聚合后相减的一次查询结果（如上表所示）。\n\n补充说明：\n- 这里的退款是**按退款完成时间**落在 9 月来扣减的，因此与 9 月支付订单对应的订单退款（可能发生在 10 月）会有时间归属上的差异；如果你更希望按“9 月下单且已支付订单后来产生的退款”来扣减，口径会不一样，可以告诉我，我再换算法重算。\n- 退款的相对比例约为支付金额的 9.8%。",
+      "failure_mode": null,
+      "error_msg": null,
+      "latency_s": 6.833,
+      "tokens": {
+        "input": 8594,
+        "output": 1108,
+        "total": 9702,
+        "cache_read": 7552
+      },
+      "oversized": false,
+      "ended_with_failed_call": false
+    },
+    {
+      "id": "EV-030",
+      "run_idx": 1,
+      "question_type": "glossary_trap",
+      "generalize_layer": "near",
+      "injected_chunks": [],
+      "expected_chunks": [
+        "schema:refunds",
+        "schema:payments",
+        "glossary:refund_rate"
+      ],
+      "recall_hits": [],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT * FROM orders LIMIT 3"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT * FROM refunds LIMIT 3"
+        },
+        {
+          "seq": 3,
+          "sql": "SELECT o.status, COUNT(*) AS cnt\nFROM orders o\nWHERE o.created_at >= '2026-09-01' AND o.created_at < '2026-10-01'\nGROUP BY o.status"
+        },
+        {
+          "seq": 4,
+          "sql": "SELECT\n  COUNT(*) AS order_cnt,\n  SUM(CASE WHEN r.order_id IS NOT NULL THEN 1 ELSE 0 END) AS refund_order_cnt\nFROM orders o\nLEFT JOIN refunds r ON r.order_id = o.id\nWHERE o.created_at >= '2026-09-01' AND o.created_at < '2026-10-01'"
+        },
+        {
+          "seq": 5,
+          "sql": "SELECT \n  DATE_FORMAT(r.refunded_at, '%Y-%m') AS month,\n  COUNT(*) AS refund_cnt,\n  SUM(r.amount) AS refund_amt\nFROM refunds r\nWHERE r.refunded_at >= '2026-09-01' AND r.refunded_at < '2026-10-01'\nGROUP BY month"
+        },
+        {
+          "seq": 6,
+          "sql": "SELECT\n  SUM(CASE WHEN o.status = 'refunded' THEN 1 ELSE 0 END) AS status_refunded_cnt,\n  SUM(CASE WHEN o.status IN ('refunded','completed','shipped','paid') THEN 1 ELSE 0 END) AS valid_order_cnt,\n  SUM(o.order_amount) AS gmv\nFROM orders o\nWHERE o.created_at >= '2026-09-01' AND o.created_at < '2026-10-01'"
+        }
+      ],
+      "sql_used": "SELECT\n  SUM(CASE WHEN o.status = 'refunded' THEN 1 ELSE 0 END) AS status_refunded_cnt,\n  SUM(CASE WHEN o.status IN ('refunded','completed','shipped','paid') THEN 1 ELSE 0 END) AS valid_order_cnt,\n  SUM(o.order_amount) AS gmv\nFROM orders o\nWHERE o.created_at >= '2026-09-01' AND o.created_at < '2026-10-01'",
+      "sql_source": "last",
+      "gold_row_count": 1,
+      "model_row_count": 1,
+      "judge": "pass",
+      "pass_via": "text",
+      "text_matched": "0.0836",
+      "final_answer_text": "## 说明与结论\n\n**口径**：订单口径退款率 = 该月退款订单数 ÷ 该月下单订单数。9 月订单数（按下单时间 `created_at`，2026-09-01 ~ 2026-09-30）为 **7,617 单**（基于第 2 次查询结果）。\n\n由于\"退款订单\"有三种可对齐方式，结果略有差异（均基于真实查询）：\n\n| 口径 | 退款单数 | 退款率 |\n|---|---|---|\n| ① 9 月完成退款的订单 / 9 月下单订单（主口径） | 637 | **8.36%** |\n| ② 9 月下单、且已产生退款记录的订单 / 9 月下单订单 | 520 | 6.83% |\n| ③ 9 月下单订单中状态为 refunded 的订单 / 9 月下单订单 | 430 | 5.65% |\n\n**主要答案：2026 年 9 月订单口径退款率约 8.36%**（637 ÷ 7,617）。\n\n- 637 来自 `refunds` 表中 `refunded_at` 落在 2026-09 的退款记录数（一单至多一条），同期退款金额合计 1,569,394.14 元。\n- 7,617 来自 `orders` 表中 2026-09 下单的订单数。\n\n**金额参考口径**：9 月退款金额 1,569,394.14 元 ÷ 9 月下单金额 20,280,681.72 元 ≈ **7.74%**（注：分母含 cancelled 等未成交订单，仅供横向参考）。\n\n**补充说明**：口径③（状态字段）比口径①少 207 单，说明 `orders.status` 的 refunded 标记与 `refunds` 表并不完全一致（部分退款记录对应的订单状态仍为 completed/shipped），因此建议以 `refunds` 表为准。\n\n数据来源：本次对 `orders`、`refunds` 表的 4 次只读查询结果。",
+      "failure_mode": null,
+      "error_msg": null,
+      "latency_s": 9.872,
+      "tokens": {
+        "input": 9389,
+        "output": 1781,
+        "total": 11170,
+        "cache_read": 8192
+      },
+      "oversized": false,
+      "ended_with_failed_call": false
+    },
+    {
+      "id": "EV-031",
+      "run_idx": 1,
+      "question_type": "single_table",
+      "generalize_layer": "far",
+      "injected_chunks": [],
+      "expected_chunks": [
+        "schema:products"
+      ],
+      "recall_hits": [],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT * FROM products LIMIT 3"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT category AS 类目, COUNT(*) AS 商品数 FROM products GROUP BY category ORDER BY 商品数 DESC"
+        }
+      ],
+      "sql_used": "SELECT category AS 类目, COUNT(*) AS 商品数 FROM products GROUP BY category ORDER BY 商品数 DESC",
+      "sql_source": "last",
+      "gold_row_count": 8,
+      "model_row_count": 8,
+      "judge": "pass",
+      "pass_via": "sql",
+      "text_matched": null,
+      "final_answer_text": "**各类目商品数量**（基于 products 表按 category 分组统计）：\n\n| 类目 | 商品数 |\n|---|---|\n| 图书 | 250 |\n| 家居 | 250 |\n| 数码 | 250 |\n| 服饰 | 250 |\n| 母婴 | 250 |\n| 美妆 | 250 |\n| 运动户外 | 250 |\n| 食品 | 250 |\n| **合计** | **2000** |\n\n口径说明：按 products 表的一级类目（category）去重统计商品 ID 数量，共 8 个类目、每类各 250 个商品，总计 2000 个商品，与商品表总行数一致（数据来源：对 products 表按 category 分组的查询结果）。",
+      "failure_mode": null,
+      "error_msg": null,
+      "latency_s": 2.671,
+      "tokens": {
+        "input": 5755,
+        "output": 323,
+        "total": 6078,
+        "cache_read": 4864
+      },
+      "oversized": false,
+      "ended_with_failed_call": false
+    },
+    {
+      "id": "EV-032",
+      "run_idx": 1,
+      "question_type": "single_table",
+      "generalize_layer": "far",
+      "injected_chunks": [],
+      "expected_chunks": [
+        "schema:products"
+      ],
+      "recall_hits": [],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT COLUMN_NAME, DATA_TYPE, COLUMN_COMMENT FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = 'mart' AND TABLE_NAME = 'products'"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT COUNT(*) AS total_products,\n       SUM(CASE WHEN price > 500 THEN 1 ELSE 0 END) AS gt500_products,\n       ROUND(SUM(CASE WHEN price > 500 THEN 1 ELSE 0 END) / COUNT(*) * 100, 2) AS gt500_pct\nFROM products"
+        }
+      ],
+      "sql_used": "SELECT COUNT(*) AS total_products,\n       SUM(CASE WHEN price > 500 THEN 1 ELSE 0 END) AS gt500_products,\n       ROUND(SUM(CASE WHEN price > 500 THEN 1 ELSE 0 END) / COUNT(*) * 100, 2) AS gt500_pct\nFROM products",
+      "sql_source": "last",
+      "gold_row_count": 1,
+      "model_row_count": 1,
+      "judge": "pass",
+      "pass_via": "text",
+      "text_matched": "47.90",
+      "final_answer_text": "**结论：价格高于 500 元的商品占比为 47.90%（958 / 2000）。**\n\n- 口径说明：以 `products.price`（商品原价，单位元，库中为静态原价、无调价历史）为准，条件为 `price > 500`（严格大于，不含等于 500）。\n- 数据来源：对 `products` 表的查询结果 —— 商品总数 2000，其中价格 > 500 元的 958 个，占比 958 ÷ 2000 = 47.90%。\n\n如需按类目（8 个一级类目）或品牌拆分看高价商品分布，我可以再进一步查询。",
+      "failure_mode": null,
+      "error_msg": null,
+      "latency_s": 3.35,
+      "tokens": {
+        "input": 6042,
+        "output": 464,
+        "total": 6506,
+        "cache_read": 5120
+      },
+      "oversized": false,
+      "ended_with_failed_call": false
+    },
+    {
+      "id": "EV-033",
+      "run_idx": 1,
+      "question_type": "single_table",
+      "generalize_layer": "near",
+      "injected_chunks": [],
+      "expected_chunks": [
+        "schema:refunds"
+      ],
+      "recall_hits": [],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT * FROM refunds ORDER BY refund_amount DESC LIMIT 5"
+        },
+        {
+          "seq": 2,
+          "sql": "SHOW COLUMNS FROM refunds"
+        },
+        {
+          "seq": 3,
+          "sql": "SELECT * FROM refunds LIMIT 3"
+        },
+        {
+          "seq": 4,
+          "sql": "SELECT id, order_id, amount, reason, refunded_at, DATE(refunded_at) AS refund_date\nFROM refunds\nORDER BY amount DESC\nLIMIT 5"
+        },
+        {
+          "seq": 5,
+          "sql": "SELECT COUNT(*) AS same_amount_cnt FROM refunds WHERE amount = (SELECT MAX(amount) FROM refunds)"
+        }
+      ],
+      "sql_used": "SELECT COUNT(*) AS same_amount_cnt FROM refunds WHERE amount = (SELECT MAX(amount) FROM refunds)",
+      "sql_source": "last",
+      "gold_row_count": 1,
+      "model_row_count": 1,
+      "judge": "fail",
+      "pass_via": null,
+      "text_matched": null,
+      "final_answer_text": "**最大一笔退款：2026-05-27，金额 48,931.52 元**\n\n明细如下（基于对 refunds 表按 amount 倒序查询的结果）：\n\n| 退款ID | 订单号 | 退款金额（元） | 退款原因 | 退款完成时间 |\n|---|---|---|---|---|\n| 5955 | 64563 | 48,931.52 | 七日无理由 | 2026-05-27 08:36:54 |\n\n说明：\n- 口径：按退款记录表 refunds.amount（退款金额，单位元）取最大值，该值在全部 8,971 条退款记录中唯一，不存在并列第一。\n- 该笔退款对应的退款完成日期为 **2026-05-27**（若你关心的是“退款发起/下单日期”，表中只有退款完成时间 refunded_at 一个时间字段，无法给出其他日期口径）。\n- 排在后面的几笔依次为：40,469.03 元（2026-03-04）、37,018.05 元（2026-03-04）、36,101.69 元（2026-09-15）。",
+      "failure_mode": "other",
+      "error_msg": null,
+      "latency_s": 5.374,
+      "tokens": {
+        "input": 11725,
+        "output": 632,
+        "total": 12357,
+        "cache_read": 9856
+      },
+      "oversized": false,
+      "ended_with_failed_call": false
+    },
+    {
+      "id": "EV-034",
+      "run_idx": 1,
+      "question_type": "multi_join",
+      "generalize_layer": "near",
+      "injected_chunks": [],
+      "expected_chunks": [
+        "schema:order_items",
+        "schema:products",
+        "schema:orders"
+      ],
+      "recall_hits": [],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT TABLE_NAME, COLUMN_NAME, DATA_TYPE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='mart' ORDER BY TABLE_NAME, ORDINAL_POSITION"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT COLUMN_NAME, DATA_TYPE, COLUMN_TYPE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='mart' AND TABLE_NAME IN ('products','orders') ORDER BY TABLE_NAME, ORDINAL_POSITION"
+        },
+        {
+          "seq": 3,
+          "sql": "SELECT status, COUNT(*) AS cnt FROM orders GROUP BY status"
+        },
+        {
+          "seq": 4,
+          "sql": "SELECT p.category,\n       ROUND(SUM(oi.sale_amount),2) AS sales_amount,\n       SUM(oi.quantity) AS qty,\n       COUNT(DISTINCT o.id) AS order_cnt\nFROM order_items oi\nJOIN orders o ON o.id = oi.order_id\nJOIN products p ON p.id = oi.product_id\nWHERE o.created_at >= '2026-01-01' AND o.created_at < '2026-04-01'\n  AND o.status NOT IN ('pending','cancelled')\nGROUP BY p.category\nORDER BY sales_amount DESC"
+        },
+        {
+          "seq": 5,
+          "sql": "SELECT p.category,\n       ROUND(SUM(oi.sale_amount),2) AS sales_amount,\n       SUM(oi.quantity) AS qty\nFROM order_items oi\nJOIN orders o ON o.id = oi.order_id\nJOIN products p ON p.id = oi.product_id\nWHERE o.created_at >= '2026-01-01' AND o.created_at < '2026-04-01'\nGROUP BY p.category\nORDER BY sales_amount DESC"
+        }
+      ],
+      "sql_used": "SELECT p.category,\n       ROUND(SUM(oi.sale_amount),2) AS sales_amount,\n       SUM(oi.quantity) AS qty\nFROM order_items oi\nJOIN orders o ON o.id = oi.order_id\nJOIN products p ON p.id = oi.product_id\nWHERE o.created_at >= '2026-01-01' AND o.created_at < '2026-04-01'\nGROUP BY p.category\nORDER BY sales_amount DESC",
+      "sql_source": "last",
+      "gold_row_count": 8,
+      "model_row_count": 8,
+      "judge": "fail",
+      "pass_via": null,
+      "text_matched": null,
+      "final_answer_text": "## 2026 年一季度（2026-01-01 ~ 2026-03-31）各类目销售情况\n\n**口径说明**：销售额 = `order_items.sale_amount`（行小计，已含折扣）按类目汇总；销量 = `sum(quantity)` 件数；统计范围排除未支付（pending）与已取消（cancelled）订单，即按 `orders.status IN ('paid','shipped','completed','refunded')` 的有效订单口径。类目取自 `products.category`。\n\n| 类目 | 销售额（元） | 销量（件） | 涉及订单数 |\n|---|---|---|---|\n| 数码 | 27,613,847.86 | 6,989 | 3,550 |\n| 运动户外 | 9,548,753.18 | 7,059 | 3,586 |\n| 家居 | 5,687,338.15 | 7,339 | 3,677 |\n| 服饰 | 5,114,776.53 | 7,093 | 3,652 |\n| 母婴 | 3,436,540.27 | 7,176 | 3,649 |\n| 美妆 | 2,175,847.63 | 7,023 | 3,599 |\n| 食品 | 739,649.10 | 6,854 | 3,496 |\n| 图书 | 355,947.67 | 7,246 | 3,619 |\n| **合计** | **54,672,700.39** | **56,779** | — |\n\n**要点**\n- 数码类目以约 2,761 万元销售额遥遥领先，占全季度有效销售额的约 50.5%，但销量（6,989 件）与其他类目相近，说明其客单价显著更高。\n- 销量分布相当均衡，各类目都在 6,800~7,400 件区间；图书销量不低（7,246 件）但销售额最低（约 35.6 万元），是典型低价高量类目。\n- 若把未支付/已取消订单也计入（全量订单口径），合计销售额为 62,503,027.79 元、销量 63,568 件；两者差额即为取消/未支付订单的贡献，建议对外汇报时使用上表有效订单口径。\n\n数据来源：基于 `order_items` 关联 `orders`、`products` 后按 `DATE` 区间 `2026-01-01 ~ 2026-03-31` 分组聚合的两次查询结果（有效订单口径、全量订单口径）。",
+      "failure_mode": "other",
+      "error_msg": null,
+      "latency_s": 8.996,
+      "tokens": {
+        "input": 9135,
+        "output": 1571,
+        "total": 10706,
+        "cache_read": 7552
+      },
+      "oversized": false,
+      "ended_with_failed_call": false
+    },
+    {
+      "id": "EV-035",
+      "run_idx": 1,
+      "question_type": "multi_join",
+      "generalize_layer": "far",
+      "injected_chunks": [],
+      "expected_chunks": [
+        "schema:refunds",
+        "schema:orders",
+        "schema:order_items",
+        "schema:products"
+      ],
+      "recall_hits": [],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT TABLE_NAME, COLUMN_NAME, DATA_TYPE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='mart' ORDER BY TABLE_NAME, ORDINAL_POSITION"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT TABLE_NAME, COLUMN_NAME, DATA_TYPE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='mart' AND TABLE_NAME IN ('products','refunds','orders') ORDER BY TABLE_NAME, ORDINAL_POSITION"
+        },
+        {
+          "seq": 3,
+          "sql": "WITH order_cat AS (\n  SELECT DISTINCT oi.order_id, p.category\n  FROM order_items oi JOIN products p ON p.id = oi.product_id\n)\nSELECT oc.category,\n       COUNT(DISTINCT oc.order_id) AS refund_order_cnt,\n       ROUND(SUM(r.amount), 2) AS refund_amount\nFROM order_cat oc\nJOIN refunds r ON r.order_id = oc.order_id\nGROUP BY oc.category\nORDER BY refund_amount DESC\nLIMIT 3"
+        },
+        {
+          "seq": 4,
+          "sql": "SELECT COUNT(*) AS refund_rows, COUNT(DISTINCT order_id) AS refund_orders, ROUND(SUM(amount),2) AS refund_total,\n       SUM(order_id IS NULL) AS null_order_rows\nFROM refunds"
+        },
+        {
+          "seq": 5,
+          "sql": "WITH order_cat AS (\n  SELECT DISTINCT oi.order_id, p.category\n  FROM order_items oi JOIN products p ON p.id = oi.product_id\n)\nSELECT oc.category,\n       COUNT(DISTINCT oc.order_id) AS refund_order_cnt,\n       ROUND(SUM(r.amount), 2) AS refund_amount\nFROM order_cat oc\nJOIN refunds r ON r.order_id = oc.order_id\nGROUP BY oc.category\nORDER BY refund_amount DESC"
+        }
+      ],
+      "sql_used": "WITH order_cat AS (\n  SELECT DISTINCT oi.order_id, p.category\n  FROM order_items oi JOIN products p ON p.id = oi.product_id\n)\nSELECT oc.category,\n       COUNT(DISTINCT oc.order_id) AS refund_order_cnt,\n       ROUND(SUM(r.amount), 2) AS refund_amount\nFROM order_cat oc\nJOIN refunds r ON r.order_id = oc.order_id\nGROUP BY oc.category\nORDER BY refund_amount DESC",
+      "sql_source": "last",
+      "gold_row_count": 3,
+      "model_row_count": 8,
+      "judge": "fail",
+      "pass_via": null,
+      "text_matched": null,
+      "final_answer_text": "## 结论：退款金额最高的 3 个类目\n\n| 排名 | 类目 | 涉及退款的订单数 | 退款金额（元） |\n|---|---|---|---|\n| 1 | 数码 | 1,593 | 12,936,059.63 |\n| 2 | 运动户外 | 1,567 | 5,743,959.13 |\n| 3 | 家居 | 1,586 | 4,078,331.64 |\n\n**口径说明**\n- 退款金额取自 `refunds.amount`（退款记录表中的实际退款金额，一单至多一条），按订单维度汇总。\n- 类目归属：通过 `order_items.product_id → products.category` 关联，先对每个订单取「去重后的类目集合」，再把该订单的退款金额计入其涉及的**每一个**类目——即跨类目订单的退款金额会被重复计入多个类目（按你要求的口径）。\n- 统计范围：全量静态快照（2025-10-01 ~ 2026-09-30），未做时间过滤。\n\n**结果来源**：以上数字来自同一句分组聚合查询（`refunds` JOIN 去重后的 `order_items+products` 类目映射，按 `category` 分组求和后倒序取前 3）。\n\n**两点提醒**\n1. 由于跨类目订单重复计数，8 个类目的退款金额相加（约 3,879 万元）会高于全库退款总额 2,314.22 万元（`refunds` 共 8,971 条、合计 23,142,220.92 元，该数字来自另一句单表汇总查询），这是该口径的正常现象。\n2. 各类目\"涉及退款的订单数\"相差不大（约 1,556~1,663 单），但金额差距悬殊——数码类目以约 15% 的退款订单数贡献了约 1/3 的退款金额，说明其单笔退款金额显著偏高，是退款风险的主要来源。",
+      "failure_mode": "other",
+      "error_msg": null,
+      "latency_s": 10.643,
+      "tokens": {
+        "input": 14820,
+        "output": 1490,
+        "total": 16310,
+        "cache_read": 13312
+      },
+      "oversized": false,
+      "ended_with_failed_call": false
+    },
+    {
+      "id": "EV-036",
+      "run_idx": 1,
+      "question_type": "multi_join",
+      "generalize_layer": "far",
+      "injected_chunks": [],
+      "expected_chunks": [
+        "schema:refunds",
+        "schema:payments"
+      ],
+      "recall_hits": [],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT * FROM refunds LIMIT 2"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT * FROM payments LIMIT 2"
+        },
+        {
+          "seq": 3,
+          "sql": "SELECT p.method AS 支付方式,\n       COUNT(*) AS 退款笔数,\n       ROUND(SUM(r.amount), 2) AS 退款金额\nFROM refunds r\nJOIN payments p ON p.id = r.payment_id\nWHERE r.refunded_at >= '2026-07-01' AND r.refunded_at < '2026-08-01'\nGROUP BY p.method\nORDER BY 退款金额 DESC"
+        },
+        {
+          "seq": 4,
+          "sql": "SELECT COUNT(*) AS 退款总笔数, ROUND(SUM(amount),2) AS 退款总金额,\n       SUM(payment_id IS NULL) AS payment_id为空数\nFROM refunds\nWHERE refunded_at >= '2026-07-01' AND refunded_at < '2026-08-01'"
+        }
+      ],
+      "sql_used": "SELECT COUNT(*) AS 退款总笔数, ROUND(SUM(amount),2) AS 退款总金额,\n       SUM(payment_id IS NULL) AS payment_id为空数\nFROM refunds\nWHERE refunded_at >= '2026-07-01' AND refunded_at < '2026-08-01'",
+      "sql_source": "last",
+      "gold_row_count": 3,
+      "model_row_count": 1,
+      "judge": "fail",
+      "pass_via": null,
+      "text_matched": null,
+      "final_answer_text": "**2026 年 7 月各支付方式退款情况**\n\n口径：以 `refunds`（退款记录表）的退款完成时间 `refunded_at` 落在 2026-07-01 ~ 2026-07-31 为统计范围，退款金额取退款记录金额，支付方式通过 `refunds.payment_id` 关联 `payments.method` 得到。\n\n| 支付方式 | 退款笔数 | 退款金额（元） |\n|---|---|---|\n| 微信 | 351 | 848,407.59 |\n| 支付宝 | 256 | 719,123.81 |\n| 银联 | 63 | 179,652.08 |\n| **合计** | **670** | **1,747,183.48** |\n\n要点：\n- 三种支付方式共 670 笔退款、合计 174.72 万元，其中微信最多（351 笔、84.84 万元，占金额约 48.6%），支付宝次之（256 笔、71.91 万元），银联最少（63 笔、17.97 万元）。\n- 数据来源：第 1 次查询（按 method 分组的聚合结果）；第 2 次查询校验了 7 月退款总数与各方式之和一致（670 笔 / 1,747,183.48 元），且无 `payment_id` 为空的退款记录，说明按支付方式拆分无遗漏、无重复。\n\n补充说明：该结果按“退款完成时间”归月；如果你希望按“原订单支付时间”归月，口径会不同，我可以再出一版。",
+      "failure_mode": "other",
+      "error_msg": null,
+      "latency_s": 6.027,
+      "tokens": {
+        "input": 8490,
+        "output": 920,
+        "total": 9410,
+        "cache_read": 7424
+      },
+      "oversized": false,
+      "ended_with_failed_call": false
+    },
+    {
+      "id": "EV-037",
+      "run_idx": 1,
+      "question_type": "multi_join",
+      "generalize_layer": "far",
+      "injected_chunks": [],
+      "expected_chunks": [
+        "schema:payments",
+        "schema:orders",
+        "schema:order_items",
+        "schema:products",
+        "schema:users"
+      ],
+      "recall_hits": [],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT TABLE_NAME, COLUMN_NAME, DATA_TYPE, COLUMN_COMMENT FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='mart' ORDER BY TABLE_NAME, ORDINAL_POSITION"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT TABLE_NAME, COLUMN_NAME, COLUMN_TYPE, COLUMN_COMMENT FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='mart' AND TABLE_NAME IN ('payments','products') ORDER BY TABLE_NAME, ORDINAL_POSITION"
+        },
+        {
+          "seq": 3,
+          "sql": "SELECT COLUMN_TYPE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='mart' AND TABLE_NAME='payments' AND COLUMN_NAME='method'"
+        },
+        {
+          "seq": 4,
+          "sql": "SELECT\n  COUNT(DISTINCT CASE WHEN wechat_orders > 0 AND book_orders > 0 THEN uid END) AS loose_cnt,\n  COUNT(DISTINCT CASE WHEN wechat_book > 0 THEN uid END) AS strict_cnt,\n  COUNT(DISTINCT uid) AS total_users\nFROM (\n  SELECT o.user_id AS uid,\n         SUM(CASE WHEN p.method='微信' THEN 1 ELSE 0 END) AS wechat_orders,\n         SUM(CASE WHEN pr.category='图书' THEN 1 ELSE 0 END) AS book_orders,\n         SUM(CASE WHEN p.method='微信' AND pr.category='图书' THEN 1 ELSE 0 END) AS wechat_book\n  FROM orders o\n  LEFT JOIN payments p ON p.order_id = o.id\n  LEFT JOIN order_items oi ON oi.order_id = o.id\n  LEFT JOIN products pr ON pr.id = oi.product_id\n  GROUP BY o.user_id\n) t"
+        },
+        {
+          "seq": 5,
+          "sql": "SELECT\n  (SELECT COUNT(DISTINCT o.user_id) FROM orders o JOIN payments p ON p.order_id=o.id WHERE p.method='微信') AS wechat_users,\n  (SELECT COUNT(DISTINCT o.user_id) FROM orders o JOIN order_items oi ON oi.order_id=o.id JOIN products pr ON pr.id=oi.product_id WHERE pr.category='图书') AS book_users,\n  (SELECT COUNT(DISTINCT p.method) FROM payments p) AS method_kinds"
+        }
+      ],
+      "sql_used": "SELECT\n  (SELECT COUNT(DISTINCT o.user_id) FROM orders o JOIN payments p ON p.order_id=o.id WHERE p.method='微信') AS wechat_users,\n  (SELECT COUNT(DISTINCT o.user_id) FROM orders o JOIN order_items oi ON oi.order_id=o.id JOIN products pr ON pr.id=oi.product_id WHERE pr.category='图书') AS book_users,\n  (SELECT COUNT(DISTINCT p.method) FROM payments p) AS method_kinds",
+      "sql_source": "last",
+      "gold_row_count": 1,
+      "model_row_count": 1,
+      "judge": "pass",
+      "pass_via": "text",
+      "text_matched": "7717",
+      "final_answer_text": "## 结论\n\n**微信支付过、且买过图书类目商品的用户：7,717 人**（占全部有订单用户的 52.2%，占微信支付用户的 63.2%，占图书买家的 92.3%）。\n\n## 口径与计算说明\n\n由于\"微信支付\"和\"买图书\"未限定必须发生在同一笔订单，我按两种口径都算了（数据源：`orders` ⋈ `payments` ⋈ `order_items` ⋈ `products`，`payments.method='微信'`，`products.category='图书'`）：\n\n| 口径 | 定义 | 用户数 |\n|---|---|---|\n| **宽松口径（推荐）** | 该用户至少有一笔微信支付成功的订单，且至少买过一次图书类目商品（可分别为不同订单） | **7,717** |\n| 严格口径 | 同一笔订单既是微信支付、又包含图书类目商品 | 5,614 |\n\n参考基数（同一批查询返回）：\n\n- 微信支付过的用户：12,214 人\n- 买过图书类目商品的用户：8,361 人\n- 有订单的用户合计：14,792 人\n\n也就是说，图书买家里有 92.3% 都至少用过一次微信支付；如果把条件收紧到\"微信支付的订单本身就是图书订单\"，人数降到 5,614 人。\n\n**注意**：以上\"买过\"是按下单记录统计的（订单状态未做支付成功过滤，因为只统计\"买\"的行为），\"微信支付\"则以 `payments` 表存在成功支付流水为准（该表一笔成功支付恰一条记录）。如需改成\"仅统计已支付/已完成订单中的图书消费\"或\"仅统计 2026 年以来的行为\"，可以告诉我，我再重新算。",
+      "failure_mode": null,
+      "error_msg": null,
+      "latency_s": 9.775,
+      "tokens": {
+        "input": 13038,
+        "output": 1510,
+        "total": 14548,
+        "cache_read": 11136
+      },
+      "oversized": false,
+      "ended_with_failed_call": false
+    },
+    {
+      "id": "EV-038",
+      "run_idx": 1,
+      "question_type": "multi_join",
+      "generalize_layer": "far",
+      "injected_chunks": [],
+      "expected_chunks": [
+        "schema:refunds",
+        "schema:orders",
+        "schema:users"
+      ],
+      "recall_hits": [],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SHOW COLUMNS FROM refunds"
+        },
+        {
+          "seq": 2,
+          "sql": "SHOW COLUMNS FROM orders"
+        },
+        {
+          "seq": 3,
+          "sql": "SHOW COLUMNS FROM users"
+        },
+        {
+          "seq": 4,
+          "sql": "SELECT table_name, column_name, data_type FROM information_schema.columns WHERE table_schema='mart' AND table_name IN ('refunds','orders','users') ORDER BY table_name, ordinal_position"
+        },
+        {
+          "seq": 5,
+          "sql": "SELECT u.city,\n       COUNT(*) AS refund_count,\n       ROUND(AVG(r.amount), 2) AS avg_refund_amount,\n       ROUND(SUM(r.amount), 2) AS total_refund_amount\nFROM refunds r\nJOIN orders o ON o.id = r.order_id\nJOIN users  u ON u.id = o.user_id\nGROUP BY u.city\nORDER BY avg_refund_amount DESC"
+        },
+        {
+          "seq": 6,
+          "sql": "SELECT COUNT(DISTINCT city) AS city_count FROM users"
+        },
+        {
+          "seq": 7,
+          "sql": "SELECT u.city,\n       COUNT(*) AS refund_count,\n       ROUND(AVG(r.amount), 2) AS avg_refund_amount\nFROM refunds r\nJOIN orders o ON o.id = r.order_id\nJOIN users  u ON u.id = o.user_id\nGROUP BY u.city\nORDER BY avg_refund_amount ASC\nLIMIT 5"
+        }
+      ],
+      "sql_used": "SELECT u.city,\n       COUNT(*) AS refund_count,\n       ROUND(AVG(r.amount), 2) AS avg_refund_amount\nFROM refunds r\nJOIN orders o ON o.id = r.order_id\nJOIN users  u ON u.id = o.user_id\nGROUP BY u.city\nORDER BY avg_refund_amount ASC\nLIMIT 5",
+      "sql_source": "last",
+      "gold_row_count": 20,
+      "model_row_count": 5,
+      "judge": "fail",
+      "pass_via": null,
+      "text_matched": null,
+      "final_answer_text": "共 20 个城市，上面的列表已经覆盖全部城市。以下是结果。\n\n## 各城市平均每笔退款金额\n\n**口径**：以 refunds 表的每条退款记录为一笔，退款金额取 `refunds.amount`（元），通过 `order_id` 关联订单、再关联用户所在城市后求平均值；均为退款记录口径（非支付/订单口径）。\n\n| 城市 | 退款笔数 | 平均每笔退款金额(元) | 退款总额(元) |\n|---|---|---|---|\n| 北京 | 912 | 3014.93 | 2,749,618.19 |\n| 宁波 | 304 | 2896.19 | 880,442.05 |\n| 武汉 | 356 | 2786.51 | 991,997.52 |\n| 杭州 | 565 | 2663.82 | 1,505,057.47 |\n| 沈阳 | 294 | 2648.36 | 778,618.34 |\n| 青岛 | 347 | 2635.95 | 914,674.24 |\n| 广州 | 717 | 2615.48 | 1,875,299.45 |\n| 重庆 | 381 | 2561.69 | 976,005.28 |\n| 长沙 | 415 | 2528.24 | 1,049,219.76 |\n| 南京 | 413 | 2515.59 | 1,038,940.33 |\n| 西安 | 373 | 2504.14 | 934,044.21 |\n| 上海 | 796 | 2468.88 | 1,965,228.31 |\n| 深圳 | 705 | 2461.65 | 1,735,463.80 |\n| 昆明 | 348 | 2433.16 | 846,741.14 |\n| 成都 | 413 | 2424.04 | 1,001,127.75 |\n| 厦门 | 335 | 2415.81 | 809,297.86 |\n| 苏州 | 344 | 2413.84 | 830,362.16 |\n| 郑州 | 386 | 2408.24 | 929,581.35 |\n| 无锡 | 310 | 2377.93 | 737,158.96 |\n| 大连 | 257 | 2308.73 | 593,342.75 |\n\n**要点**\n- 平均每笔退款金额最高的是北京（3014.93 元），最低的是大连（2308.73 元），城市间差距约 700 元，整体在 2300～3000 元区间。\n- 退款笔数最多的是北京（912 笔），最少的是大连（257 笔），退款总额也大致随笔数变化（北京 274.96 万元最高，大连 59.33 万元最低）。\n- 数据来源：以上为基于 20 个城市各查询一次汇总的结果（首次查询返回前 20 行，经确认用户表恰好只有 20 个城市，故为完整清单）。样本为 8971 条退款记录，其中能通过订单关联到用户的记录数即各城市笔数之和。\n\n如果需要按“省份”或按“退款原因”拆分，或者改成“平均每单退款金额（按订单去重）”，我可以继续查。",
+      "failure_mode": "other",
+      "error_msg": null,
+      "latency_s": 8.08,
+      "tokens": {
+        "input": 11507,
+        "output": 1491,
+        "total": 12998,
+        "cache_read": 9856
+      },
+      "oversized": false,
+      "ended_with_failed_call": false
+    },
+    {
+      "id": "EV-039",
+      "run_idx": 1,
+      "question_type": "multi_join",
+      "generalize_layer": "near",
+      "injected_chunks": [],
+      "expected_chunks": [
+        "schema:order_items",
+        "schema:products",
+        "schema:orders"
+      ],
+      "recall_hits": [],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT TABLE_NAME, COLUMN_NAME, DATA_TYPE, COLUMN_COMMENT FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA='mart' ORDER BY TABLE_NAME, ORDINAL_POSITION"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT COLUMN_NAME, DATA_TYPE, COLUMN_COMMENT FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA='mart' AND TABLE_NAME IN ('products','refunds','users') ORDER BY TABLE_NAME, ORDINAL_POSITION"
+        },
+        {
+          "seq": 3,
+          "sql": "SELECT p.category,\n       COUNT(DISTINCT o.id) AS order_cnt,\n       ROUND(SUM(oi.sale_amount),2) AS gmv\nFROM orders o\nJOIN payments pay ON pay.order_id = o.id\nJOIN order_items oi ON oi.order_id = o.id\nJOIN products p ON p.id = oi.product_id\nWHERE DATE_FORMAT(o.created_at,'%Y-%m') = '2026-06'\nGROUP BY p.category WITH ROLLUP"
+        },
+        {
+          "seq": 4,
+          "sql": "SELECT\n  SUM(CASE WHEN p.category='美妆' THEN oi.sale_amount ELSE 0 END) AS beauty,\n  SUM(oi.sale_amount) AS total,\n  ROUND(100*SUM(CASE WHEN p.category='美妆' THEN oi.sale_amount ELSE 0 END)/SUM(oi.sale_amount),2) AS pct\nFROM orders o\nJOIN payments pay ON pay.order_id=o.id\nJOIN order_items oi ON oi.order_id=o.id\nJOIN products p ON p.id=oi.product_id\nWHERE DATE_FORMAT(pay.paid_at,'%Y-%m')='2026-06'"
+        }
+      ],
+      "sql_used": "SELECT\n  SUM(CASE WHEN p.category='美妆' THEN oi.sale_amount ELSE 0 END) AS beauty,\n  SUM(oi.sale_amount) AS total,\n  ROUND(100*SUM(CASE WHEN p.category='美妆' THEN oi.sale_amount ELSE 0 END)/SUM(oi.sale_amount),2) AS pct\nFROM orders o\nJOIN payments pay ON pay.order_id=o.id\nJOIN order_items oi ON oi.order_id=o.id\nJOIN products p ON p.id=oi.product_id\nWHERE DATE_FORMAT(pay.paid_at,'%Y-%m')='2026-06'",
+      "sql_source": "last",
+      "gold_row_count": 1,
+      "model_row_count": 1,
+      "judge": "pass",
+      "pass_via": "text",
+      "text_matched": "4",
+      "final_answer_text": "**结论：2026 年 6 月美妆类目销售额约占全站销售额的 4.03%（按支付成功金额、按下单月归属口径）。**\n\n计算明细（基于 order_items 行小计 sale_amount，仅统计已存在支付流水 pay 的订单，即支付成功口径）：\n\n| 类目 | 销售额（元） |\n|---|---|\n| 数码 | 15,269,017.38 |\n| 运动户外 | 5,276,494.32 |\n| 家居 | 2,887,361.21 |\n| 服饰 | 2,744,141.46 |\n| 母婴 | 1,832,822.45 |\n| **美妆** | **1,201,657.10** |\n| 食品 | 393,790.96 |\n| 图书 | 194,138.03 |\n| **全站合计** | **29,799,422.91** |\n\n比例 = 1,201,657.10 ÷ 29,799,422.91 = **4.03%**（数据来源：上述按类目汇总查询，WHERE 条件为 `DATE_FORMAT(orders.created_at,'%Y-%m')='2026-06'`，JOIN payments 限定为支付成功订单）。\n\n口径说明与稳健性检验：\n- **销售额口径**：采用「订单明细行小计（unit_price × quantity）之和」，未扣除退款，未含运费/优惠（库中设计无运费与优惠券列）。\n- **时间口径**：按下单时间所在月归属。若改用「支付成功时间 paid_at 在 2026-06」的口径，美妆为 1,197,779.29 元、全站 29,782,686.06 元，占比 **4.02%**，与主口径几乎一致（差异仅来自 6 月末下单、7 月初支付的跨月订单）。\n- 两口径下结论一致：美妆在全站占比约 **4%**，是 8 个类目中规模较小的类目（高于图书、食品，低于其余五类）。",
+      "failure_mode": null,
+      "error_msg": null,
+      "latency_s": 9.228,
+      "tokens": {
+        "input": 13305,
+        "output": 1447,
+        "total": 14752,
+        "cache_read": 11520
+      },
+      "oversized": false,
+      "ended_with_failed_call": false
+    },
+    {
+      "id": "EV-040",
+      "run_idx": 1,
+      "question_type": "multi_join",
+      "generalize_layer": "near",
+      "injected_chunks": [],
+      "expected_chunks": [
+        "schema:refunds",
+        "schema:orders",
+        "schema:payments",
+        "schema:users"
+      ],
+      "recall_hits": [],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT * FROM payments LIMIT 3"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT * FROM refunds LIMIT 3"
+        },
+        {
+          "seq": 3,
+          "sql": "SELECT * FROM orders LIMIT 3"
+        },
+        {
+          "seq": 4,
+          "sql": "WITH refund_users AS (\n  SELECT DISTINCT o.user_id\n  FROM refunds r\n  JOIN orders o ON o.id = r.order_id\n)\nSELECT u.id AS user_id, u.name AS user_name, ROUND(SUM(p.amount), 2) AS total_paid\nFROM users u\nJOIN orders o ON o.user_id = u.id\nJOIN payments p ON p.order_id = o.id\nWHERE u.id NOT IN (SELECT user_id FROM refund_users)\nGROUP BY u.id, u.name\nORDER BY total_paid DESC\nLIMIT 5"
+        }
+      ],
+      "sql_used": "WITH refund_users AS (\n  SELECT DISTINCT o.user_id\n  FROM refunds r\n  JOIN orders o ON o.id = r.order_id\n)\nSELECT u.id AS user_id, u.name AS user_name, ROUND(SUM(p.amount), 2) AS total_paid\nFROM users u\nJOIN orders o ON o.user_id = u.id\nJOIN payments p ON p.order_id = o.id\nWHERE u.id NOT IN (SELECT user_id FROM refund_users)\nGROUP BY u.id, u.name\nORDER BY total_paid DESC\nLIMIT 5",
+      "sql_source": "last",
+      "gold_row_count": 5,
+      "model_row_count": 5,
+      "judge": "pass",
+      "pass_via": "sql",
+      "text_matched": null,
+      "final_answer_text": "## 从未退过款的用户中，累计支付金额 Top 5\n\n| 排名 | 用户 ID | 姓名 | 累计支付金额（元） |\n|---|---|---|---|\n| 1 | 10332 | 黄伟 | 111,673.94 |\n| 2 | 862 | 李旭 | 106,389.79 |\n| 3 | 8465 | 江海燕 | 94,653.66 |\n| 4 | 16993 | 林芳 | 94,625.10 |\n| 5 | 6629 | 谢海燕 | 92,026.33 |\n\n**口径说明**\n- **支付金额**：按 `payments` 表的实付金额 `amount` 汇总（该表一笔成功支付恰一条记录），即“支付成功金额”口径，单位为元。\n- **从未退款**：以用户维度判断，只要其名下任一订单出现在 `refunds` 表中（退款按订单维度记录，一单至多一条），即视为有退款记录并排除；剩余用户即从未退过款的用户。\n- 结果为上述 CTE 查询（按用户汇总支付金额倒序取前 5）的真实返回数据。\n\n如需进一步分析，比如同一批用户的订单量、客单价或所在城市分布，可以继续告诉我。",
+      "failure_mode": null,
+      "error_msg": null,
+      "latency_s": 5.128,
+      "tokens": {
+        "input": 6932,
+        "output": 899,
+        "total": 7831,
+        "cache_read": 5632
+      },
+      "oversized": false,
+      "ended_with_failed_call": false
+    },
+    {
+      "id": "EV-041",
+      "run_idx": 1,
+      "question_type": "aggregation",
+      "generalize_layer": "far",
+      "injected_chunks": [],
+      "expected_chunks": [
+        "glossary:arpu",
+        "schema:payments",
+        "schema:users"
+      ],
+      "recall_hits": [],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT * FROM orders LIMIT 2"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT * FROM payments LIMIT 2"
+        },
+        {
+          "seq": 3,
+          "sql": "SELECT DATE_FORMAT(p.paid_at,'%Y-%m') AS month, SUM(p.amount) AS revenue, COUNT(*) AS pay_cnt, COUNT(DISTINCT o.user_id) AS pay_users FROM payments p JOIN orders o ON o.id = p.order_id WHERE p.paid_at >= '2026-03-01' AND p.paid_at < '2026-05-01' GROUP BY month ORDER BY month"
+        },
+        {
+          "seq": 4,
+          "sql": "SELECT COUNT(*) AS total_users, SUM(created_at < '2026-03-01') AS users_before_mar, SUM(created_at < '2026-05-01') AS users_before_may FROM users"
+        },
+        {
+          "seq": 5,
+          "sql": "SELECT * FROM users LIMIT 2"
+        },
+        {
+          "seq": 6,
+          "sql": "SELECT DATE_FORMAT(created_at,'%Y-%m') AS month, COUNT(*) AS orders_cnt, SUM(order_amount) AS gmv, COUNT(DISTINCT user_id) AS order_users FROM orders WHERE created_at >= '2026-03-01' AND created_at < '2026-05-01' GROUP BY month ORDER BY month"
+        },
+        {
+          "seq": 7,
+          "sql": "SELECT COUNT(*) AS total_users, SUM(registered_at < '2026-03-01') AS users_before_mar, SUM(registered_at < '2026-04-01') AS users_before_apr, SUM(registered_at < '2026-05-01') AS users_before_may FROM users"
+        }
+      ],
+      "sql_used": "SELECT COUNT(*) AS total_users, SUM(registered_at < '2026-03-01') AS users_before_mar, SUM(registered_at < '2026-04-01') AS users_before_apr, SUM(registered_at < '2026-05-01') AS users_before_may FROM users",
+      "sql_source": "last",
+      "gold_row_count": 2,
+      "model_row_count": 1,
+      "judge": "fail",
+      "pass_via": null,
+      "text_matched": null,
+      "final_answer_text": "## 2026 年 3 月 vs 4 月 ARPU\n\nARPU（每用户平均收入）依赖两个口径：分子用哪个收入、分母用哪个人群。我把几种常见口径都算了一遍（数据源：payments 成功支付流水 + orders 下单用户）。\n\n### 核心结果\n\n| 口径 | 2026-03 | 2026-04 | 环比 |\n|---|---|---|---|\n| ① 支付金额 ÷ 当月付费用户数 | **3,968.69 元** | **3,833.53 元** | −3.4% |\n| ② 支付金额 ÷ 当月下单用户数 | 3,701.35 元 | 3,520.57 元 | −4.9% |\n| ③ 支付金额 ÷ 全量用户 20,000 | 975.31 元 | 847.40 元 | −13.1% |\n\n### 支撑数据（第 1、2 次查询：payments JOIN orders，按 paid_at 月份聚合）\n\n| 指标 | 2026-03 | 2026-04 |\n|---|---|---|\n| 支付成功金额 | 19,506,118.05 元 | 16,948,027.52 元 |\n| 支付笔数 | 7,105 | 6,200 |\n| 付费用户数（去重） | 4,915 | 4,421 |\n| 下单订单数 | 7,960 | 6,954 |\n| 下单金额 | 21,914,224.91 元 | 19,751,115.17 元 |\n| 下单用户数（去重） | 5,270 | 4,814 |\n\n### 口径说明\n\n- **收入**取 payments 表的**成功支付实付金额**（一笔成功支付恰一条记录），而不是订单表的下单金额——后者包含未支付/已退款订单，会虚高（3 月下单额比支付额高约 2,408,107 元，即 12.3% 的差额）。\n- **用户**方面：users 表共 20,000 人，且全部注册时间都早于 2026-03，所以 3、4 月的全量用户基数同为 20,000；付费/下单用户为当月行为去重人数。\n- 通常业务上说的 ARPU 是口径 ②（分母为月活跃用户），若公司口径是\"人均付费\"则是口径 ①。本库默认建议以**口径 ①或②**报告，口径 ③（除以全量注册用户）会显著偏低，仅在计算\"全站人均贡献\"时使用。\n\n**一句话结论**：按\"支付金额 ÷ 付费用户\"计，2026 年 3 月 ARPU 约 3,968.69 元，4 月约 3,833.53 元，环比下降约 3.4%；收入跌 13.1% 中约三分之一来自用户数减少、三分之二来自人均下滑。\n\n如果你有公司内部固定的 ARPU 口径（比如是否剔除退款、分母是全站用户还是活跃用户），告诉我，我可以按该口径重算。",
+      "failure_mode": "other",
+      "error_msg": null,
+      "latency_s": 13.399,
+      "tokens": {
+        "input": 12474,
+        "output": 2577,
+        "total": 15051,
+        "cache_read": 11136
+      },
+      "oversized": false,
+      "ended_with_failed_call": false
+    },
+    {
+      "id": "EV-042",
+      "run_idx": 1,
+      "question_type": "aggregation",
+      "generalize_layer": "far",
+      "injected_chunks": [],
+      "expected_chunks": [
+        "schema:products"
+      ],
+      "recall_hits": [],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT COLUMN_NAME, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = 'mart' AND TABLE_NAME = 'products' ORDER BY ORDINAL_POSITION"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT CASE WHEN price < 50 THEN '<50' WHEN price < 200 THEN '50-200' ELSE '>=200' END AS price_band,\n       COUNT(*) AS product_count\nFROM products\nGROUP BY price_band\nORDER BY FIELD(price_band, '<50', '50-200', '>=200')"
+        }
+      ],
+      "sql_used": "SELECT CASE WHEN price < 50 THEN '<50' WHEN price < 200 THEN '50-200' ELSE '>=200' END AS price_band,\n       COUNT(*) AS product_count\nFROM products\nGROUP BY price_band\nORDER BY FIELD(price_band, '<50', '50-200', '>=200')",
+      "sql_source": "last",
+      "gold_row_count": 3,
+      "model_row_count": 3,
+      "judge": "pass",
+      "pass_via": "sql",
+      "text_matched": null,
+      "final_answer_text": "各价格带的商品数（按商品表 `products` 的**原价** price 分档，区间取左闭右开：[0,50)、[50,200)、[200,+∞)）：\n\n| 价格带 | 商品数 |\n|---|---|\n| <50 | 166 |\n| 50-200 | 533 |\n| >=200 | 1301 |\n| **合计** | **2000** |\n\n说明：基于 products 表共 2000 行商品；三档合计 166+533+1301 = 2000，与全表行数一致，无遗漏。",
+      "failure_mode": null,
+      "error_msg": null,
+      "latency_s": 3.23,
+      "tokens": {
+        "input": 5850,
+        "output": 430,
+        "total": 6280,
+        "cache_read": 4864
+      },
+      "oversized": false,
+      "ended_with_failed_call": false
+    },
+    {
+      "id": "EV-043",
+      "run_idx": 1,
+      "question_type": "aggregation",
+      "generalize_layer": "far",
+      "injected_chunks": [],
+      "expected_chunks": [
+        "glossary:items_per_order",
+        "schema:orders"
+      ],
+      "recall_hits": [],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT * FROM orders LIMIT 3"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT * FROM order_items LIMIT 3"
+        },
+        {
+          "seq": 3,
+          "sql": "SELECT status, COUNT(*) AS cnt FROM orders GROUP BY status"
+        },
+        {
+          "seq": 4,
+          "sql": "SELECT DATE_FORMAT(created_at,'%Y-%m') AS month,\n       COUNT(*) AS order_cnt,\n       SUM(item_count) AS items_sum,\n       ROUND(SUM(item_count)/COUNT(*),3) AS attach_by_header\nFROM orders\nWHERE created_at >= '2026-04-01' AND created_at < '2026-07-01'\nGROUP BY month ORDER BY month"
+        },
+        {
+          "seq": 5,
+          "sql": "SELECT DATE_FORMAT(o.created_at,'%Y-%m') AS month,\n       COUNT(DISTINCT o.id) AS ord_cnt,\n       SUM(oi.quantity) AS qty,\n       COUNT(*) AS sku_lines,\n       ROUND(SUM(oi.quantity)/COUNT(DISTINCT o.id),3) AS attach_qty,\n       ROUND(COUNT(*)/COUNT(DISTINCT o.id),3) AS attach_sku\nFROM orders o JOIN order_items oi ON oi.order_id = o.id\nWHERE o.created_at >= '2026-04-01' AND o.created_at < '2026-07-01'\n  AND o.status <> 'cancelled'\nGROUP BY month ORDER BY month"
+        },
+        {
+          "seq": 6,
+          "sql": "SELECT DATE_FORMAT(created_at,'%Y-%m') AS month,\n       COUNT(*) AS ord_cnt,\n       ROUND(SUM(item_count)/COUNT(*),3) AS attach_incl_cancelled\nFROM orders\nWHERE created_at >= '2026-04-01' AND created_at < '2026-07-01'\nGROUP BY month ORDER BY month"
+        }
+      ],
+      "sql_used": "SELECT DATE_FORMAT(created_at,'%Y-%m') AS month,\n       COUNT(*) AS ord_cnt,\n       ROUND(SUM(item_count)/COUNT(*),3) AS attach_incl_cancelled\nFROM orders\nWHERE created_at >= '2026-04-01' AND created_at < '2026-07-01'\nGROUP BY month ORDER BY month",
+      "sql_source": "last",
+      "gold_row_count": 3,
+      "model_row_count": 3,
+      "judge": "fail",
+      "pass_via": null,
+      "text_matched": null,
+      "final_answer_text": "**2026 年 Q2（4–6 月）连带率如下**（口径：连带率 = 销售件数 ÷ 订单数，即平均每单购买件数；数据来自 `orders` 与 `order_items` 关联查询，基于下单时间归月）\n\n| 月份 | 订单数 | 销售件数 | **连带率（件/单）** | 参考：SKU 数/单 |\n|---|---|---|---|---|\n| 2026-04 | 6,426 | 17,877 | **2.78** | 1.50 |\n| 2026-05 | 6,923 | 19,074 | **2.76** | 1.49 |\n| 2026-06 | 11,137 | 31,589 | **2.84** | 1.50 |\n\n要点说明：\n- 三个月连带率都在 **2.8 件/单** 左右，Q2 整体约 **2.80**（合计 68,540 件 ÷ 24,486 单 ≈ 2.80）；6 月最高（2.84），5 月略低（2.76），波动很小。\n- 口径细节：上表**剔除了 status='cancelled'（已取消）订单**的统计。若把取消订单也计入分母，结果为 4 月 2.782、5 月 2.754、6 月 2.832 —— 数值几乎一致，说明取消订单的件数结构与整体接近，结论不受口径影响。\n- 如果你们的连带率定义为“平均每单购买的**商品种类数**（SKU 行数/订单数）”，则 Q2 三个月分别为 1.50、1.49、1.50 —— 即每单多为 1 种商品、少量多件，这与件数口径 2.8 的差异来自同款商品多件购买（`quantity` 加总所致），如订单 SO2025100100000001 是 1 件 + 3 件同款商品。\n\n如果你们内部用的是其他口径（如按支付成功订单、按支付时间归月，或按 GMV 口径），告诉我我可以按该口径重算。",
+      "failure_mode": "other",
+      "error_msg": null,
+      "latency_s": 7.521,
+      "tokens": {
+        "input": 9549,
+        "output": 1396,
+        "total": 10945,
+        "cache_read": 8192
+      },
+      "oversized": false,
+      "ended_with_failed_call": false
+    },
+    {
+      "id": "EV-044",
+      "run_idx": 1,
+      "question_type": "aggregation",
+      "generalize_layer": "far",
+      "injected_chunks": [],
+      "expected_chunks": [
+        "schema:order_items",
+        "schema:products"
+      ],
+      "recall_hits": [],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SHOW COLUMNS FROM order_items"
+        },
+        {
+          "seq": 2,
+          "sql": "SHOW COLUMNS FROM products"
+        },
+        {
+          "seq": 3,
+          "sql": "SELECT * FROM order_items LIMIT 3"
+        },
+        {
+          "seq": 4,
+          "sql": "SELECT * FROM products LIMIT 3"
+        },
+        {
+          "seq": 5,
+          "sql": "SELECT status, COUNT(*) AS cnt FROM orders GROUP BY status ORDER BY cnt DESC"
+        },
+        {
+          "seq": 6,
+          "sql": "SELECT category, COUNT(*) AS sku_cnt FROM products GROUP BY category ORDER BY sku_cnt DESC"
+        },
+        {
+          "seq": 7,
+          "sql": "WITH s AS (\n  SELECT p.category, p.name, SUM(oi.quantity) AS units, ROUND(SUM(oi.sale_amount),2) AS amt\n  FROM order_items oi\n  JOIN products p ON p.id = oi.product_id\n  JOIN orders o ON o.id = oi.order_id\n  WHERE o.status <> 'cancelled'\n  GROUP BY p.category, p.name\n), r AS (\n  SELECT *, ROW_NUMBER() OVER (PARTITION BY category ORDER BY units DESC, amt DESC) AS rn,\n            RANK() OVER (PARTITION BY category ORDER BY units DESC) AS rk\n  FROM s\n)\nSELECT category, name, units, amt, rk FROM r WHERE rn = 1 ORDER BY units DESC"
+        },
+        {
+          "seq": 8,
+          "sql": "WITH s AS (\n  SELECT p.category, p.name, SUM(oi.quantity) AS units\n  FROM order_items oi\n  JOIN products p ON p.id = oi.product_id\n  GROUP BY p.category, p.name\n), r AS (\n  SELECT *, ROW_NUMBER() OVER (PARTITION BY category ORDER BY units DESC) AS rn\n  FROM s\n)\nSELECT category, name, units FROM r WHERE rn = 1 ORDER BY units DESC"
+        }
+      ],
+      "sql_used": "WITH s AS (\n  SELECT p.category, p.name, SUM(oi.quantity) AS units\n  FROM order_items oi\n  JOIN products p ON p.id = oi.product_id\n  GROUP BY p.category, p.name\n), r AS (\n  SELECT *, ROW_NUMBER() OVER (PARTITION BY category ORDER BY units DESC) AS rn\n  FROM s\n)\nSELECT category, name, units FROM r WHERE rn = 1 ORDER BY units DESC",
+      "sql_source": "last",
+      "gold_row_count": 8,
+      "model_row_count": 8,
+      "judge": "pass",
+      "pass_via": "sql",
+      "text_matched": null,
+      "final_answer_text": "## 结论：每个类目销量最高的商品\n\n**口径说明**：销量 = `order_items.quantity` 累计件数（即卖出件数）；已剔除 `orders.status = 'cancelled'` 的取消订单；同一商品名在商品表内唯一，按商品聚合。\n\n| 类目 | 商品名 | 销量（件） | 该商品销售额（元） |\n|---|---|---|---|\n| 图书 | 纸间 图书 散文精选集插图本 | 5,401 | 207,613.25 |\n| 数码 | 蓝鲸 数码 机械键盘Pro版 | 5,289 | 26,454,714.60 |\n| 家居 | 素居 家居 懒人沙发经典款 | 5,275 | 1,729,125.01 |\n| 运动户外 | 岩语 运动户外 瑜伽垫透气款 | 5,202 | 13,034,263.61 |\n| 美妆 | 澜妆 美妆 精华液持久版 | 5,169 | 859,261.98 |\n| 服饰 | 织云 服饰 连衣裙加绒款 | 5,168 | 4,904,823.38 |\n| 母婴 | 小鹿斑 母婴 宝宝辅食机加大号 | 5,149 | 3,378,666.71 |\n| 食品 | 鲜工坊 食品 手工饼干礼盒装 | 5,075 | 665,441.80 |\n\n（数据来源：第 1 次查询，`order_items JOIN products JOIN orders`，用 `ROW_NUMBER() PARTITION BY category ORDER BY 销量 DESC` 取各类目第 1 名；8 个类目各 1 条，且 `RANK=1`，说明无并列第一。）\n\n## 几点补充\n\n1. **口径敏感性**：如果**不剔除取消订单**，8 个类目的冠军商品完全不变（只是件数各多约 300–500 件，如图书 5,909、数码 5,756）。所以结论对“是否剔除取消单”不敏感，比较稳健。\n2. **数码机械键盘**销量 5,289 件但销售额高达 2,645 万元，折算单价约 5,000 元/件；运动户外瑜伽垫同理（约 2,506 元/件）。这两条比较“反常”，怀疑是明细表 `unit_price`/`sale_amount` 字段中混入了异常高值，建议如需用于经营决策时先做单价合理性校验。\n3. 表中“销售额”仅为参考列，本次排序**只按件数**。若你要的“销量”其实指**销售额**口径，各类目冠军会不同，我可以再跑一版。",
+      "failure_mode": null,
+      "error_msg": null,
+      "latency_s": 10.727,
+      "tokens": {
+        "input": 11674,
+        "output": 1724,
+        "total": 13398,
+        "cache_read": 9984
+      },
+      "oversized": false,
+      "ended_with_failed_call": false
+    },
+    {
+      "id": "EV-045",
+      "run_idx": 1,
+      "question_type": "time_window",
+      "generalize_layer": "near",
+      "injected_chunks": [],
+      "expected_chunks": [
+        "schema:orders",
+        "glossary:yoy_mom"
+      ],
+      "recall_hits": [],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT QUARTER(created_at) AS q, status, COUNT(*) AS cnt\nFROM orders\nWHERE created_at >= '2026-01-01' AND created_at < '2026-07-01'\nGROUP BY q, status\nORDER BY q, cnt DESC"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT COUNT(*) AS total,\n       MIN(created_at) AS min_t, MAX(created_at) AS max_t\nFROM orders"
+        },
+        {
+          "seq": 3,
+          "sql": "SELECT CONCAT(YEAR(created_at), '-Q', QUARTER(created_at)) AS quarter,\n       COUNT(*) AS order_count\nFROM orders\nWHERE created_at >= '2026-01-01' AND created_at < '2026-07-01'\nGROUP BY quarter\nORDER BY quarter"
+        }
+      ],
+      "sql_used": "SELECT CONCAT(YEAR(created_at), '-Q', QUARTER(created_at)) AS quarter,\n       COUNT(*) AS order_count\nFROM orders\nWHERE created_at >= '2026-01-01' AND created_at < '2026-07-01'\nGROUP BY quarter\nORDER BY quarter",
+      "sql_source": "last",
+      "gold_row_count": 1,
+      "model_row_count": 2,
+      "judge": "pass",
+      "pass_via": "text",
+      "text_matched": "17.9",
+      "final_answer_text": "**2026 年二季度订单量 26,561 单，比一季度的 22,527 单增长了 17.9%。**\n\n计算明细（基于对 orders 表按下单时间分季度的汇总查询）：\n\n| 季度 | 订单量 |\n|---|---|\n| 2026 Q1（1–3 月） | 22,527 |\n| 2026 Q2（4–6 月） | 26,561 |\n\n增长率 = (26,561 − 22,527) ÷ 22,527 = **+17.91%**（净增 4,034 单）。\n\n口径说明：\n- 按 orders 表「下单时间（created_at）」统计，含全部订单状态（completed / shipped / refunded / cancelled / paid / pending），即\"下单量\"口径，未剔除取消和退款订单。\n- 数据为静态快照，范围为 2025-10-01 至 2026-09-30，两个季度均在数据覆盖范围内。\n\n如果你想要的是\"有效订单量\"（例如只算 completed + shipped + paid，剔除 cancelled / refunded / pending），结果会略有不同，可以再帮你算一版。",
+      "failure_mode": null,
+      "error_msg": null,
+      "latency_s": 4.364,
+      "tokens": {
+        "input": 6438,
+        "output": 752,
+        "total": 7190,
+        "cache_read": 5504
+      },
+      "oversized": false,
+      "ended_with_failed_call": false
+    },
+    {
+      "id": "EV-046",
+      "run_idx": 1,
+      "question_type": "time_window",
+      "generalize_layer": "near",
+      "injected_chunks": [],
+      "expected_chunks": [
+        "schema:payments"
+      ],
+      "recall_hits": [],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT * FROM payments LIMIT 3"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT DATE(paid_at) AS pay_date, COUNT(*) AS pay_cnt, ROUND(SUM(amount),2) AS pay_amount\nFROM payments\nWHERE paid_at >= '2026-08-25 00:00:00' AND paid_at < '2026-09-01 00:00:00'\nGROUP BY DATE(paid_at)\nORDER BY pay_date"
+        }
+      ],
+      "sql_used": "SELECT DATE(paid_at) AS pay_date, COUNT(*) AS pay_cnt, ROUND(SUM(amount),2) AS pay_amount\nFROM payments\nWHERE paid_at >= '2026-08-25 00:00:00' AND paid_at < '2026-09-01 00:00:00'\nGROUP BY DATE(paid_at)\nORDER BY pay_date",
+      "sql_source": "last",
+      "gold_row_count": 7,
+      "model_row_count": 7,
+      "judge": "fail",
+      "pass_via": null,
+      "text_matched": null,
+      "final_answer_text": "以下为 **2026-08-25 至 2026-08-31** 每天的支付金额（口径：`payments` 表中已成功支付的流水，按 `paid_at` 支付时间归日，金额为该日实付金额合计）：\n\n| 日期 | 支付笔数 | 支付金额（元） |\n|---|---|---|\n| 2026-08-25 | 194 | 517,306.05 |\n| 2026-08-26 | 218 | 583,420.29 |\n| 2026-08-27 | 189 | 527,127.86 |\n| 2026-08-28 | 217 | 604,505.61 |\n| 2026-08-29 | 179 | 447,805.13 |\n| 2026-08-30 | 177 | 455,185.39 |\n| 2026-08-31 | 186 | 551,424.83 |\n| **7 日合计** | **1,360** | **3,686,775.16** |\n\n说明：\n- 数据来源为 `payments` 表按 `paid_at` 分组的查询结果（7 行），一笔成功支付恰一条记录，故可直接代表支付金额。\n- 一周内单日最高为 8 月 28 日（604,505.61 元，217 笔），最低为 8 月 29 日（447,805.13 元，179 笔）。\n- 该口径**未扣除退款**；若需按“支付金额 − 退款金额”的净额口径统计，或需要按支付方式拆分，请告知，我可以再查一次。",
+      "failure_mode": "other",
+      "error_msg": null,
+      "latency_s": 3.545,
+      "tokens": {
+        "input": 6081,
+        "output": 648,
+        "total": 6729,
+        "cache_read": 5120
+      },
+      "oversized": false,
+      "ended_with_failed_call": false
+    },
+    {
+      "id": "EV-047",
+      "run_idx": 1,
+      "question_type": "time_window",
+      "generalize_layer": "far",
+      "injected_chunks": [],
+      "expected_chunks": [
+        "schema:users",
+        "schema:orders"
+      ],
+      "recall_hits": [],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT MIN(register_time) AS min_reg, MAX(register_time) AS max_reg FROM users"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT * FROM users LIMIT 3"
+        },
+        {
+          "seq": 3,
+          "sql": "SELECT * FROM orders LIMIT 3"
+        },
+        {
+          "seq": 4,
+          "sql": "SELECT MIN(registered_at) AS min_reg, MAX(registered_at) AS max_reg, COUNT(*) AS cnt FROM users"
+        },
+        {
+          "seq": 5,
+          "sql": "SELECT MIN(created_at) AS min_o, MAX(created_at) AS max_o, COUNT(*) AS cnt FROM orders"
+        },
+        {
+          "seq": 6,
+          "sql": "SELECT YEAR(registered_at) AS y, COUNT(*) AS c FROM users GROUP BY y ORDER BY y"
+        },
+        {
+          "seq": 7,
+          "sql": "WITH reg AS (\n  SELECT QUARTER(registered_at) AS q, COUNT(*) AS reg_users\n  FROM users\n  WHERE YEAR(registered_at) = 2025\n  GROUP BY q\n),\nord AS (\n  SELECT QUARTER(created_at) AS q, COUNT(DISTINCT user_id) AS order_users\n  FROM orders\n  WHERE YEAR(created_at) = 2025\n  GROUP BY q\n)\nSELECT CONCAT('2025Q', q.q) AS quarter,\n       COALESCE(reg.reg_users, 0) AS reg_users,\n       COALESCE(ord.order_users, 0) AS order_users\nFROM (SELECT 1 AS q UNION SELECT 2 UNION SELECT 3 UNION SELECT 4) q\nLEFT JOIN reg ON reg.q = q.q\nLEFT JOIN ord ON ord.q = q.q\nORDER BY q.q"
+        },
+        {
+          "seq": 8,
+          "sql": "SELECT DATE_FORMAT(registered_at, '%Y-%m') AS m, COUNT(*) AS c FROM users WHERE registered_at >= '2025-01-01' GROUP BY m ORDER BY m"
+        }
+      ],
+      "sql_used": "SELECT DATE_FORMAT(registered_at, '%Y-%m') AS m, COUNT(*) AS c FROM users WHERE registered_at >= '2025-01-01' GROUP BY m ORDER BY m",
+      "sql_source": "last",
+      "gold_row_count": 4,
+      "model_row_count": 8,
+      "judge": "fail",
+      "pass_via": null,
+      "text_matched": null,
+      "final_answer_text": "## 结果\n\n**2025 年各季度注册用户数与下单用户数**（查询口径见下）：\n\n| 季度 | 注册用户数 | 下单用户数（去重） |\n|---|---|---|\n| 2025Q1 | 2,974 | 0 |\n| 2025Q2 | 3,079 | 0 |\n| 2025Q3 | 2,026 | 0 |\n| 2025Q4 | 0 | 10,259 |\n\n## 口径与说明\n\n- **注册用户数**：`users.registered_at`（注册时间）落在该季度内的用户行数，按人数计。\n- **下单用户数**：`orders.created_at`（下单时间）落在该季度内、按 `COUNT(DISTINCT user_id)` 去重的下单用户数，**不限订单状态**（含已完成/已退款等）。\n- 季度划分用 MySQL 的 `YEAR()/QUARTER()`。\n\n## 需要特别提示的数据边界问题\n\n这份快照的数据范围并不覆盖整个 2025 自然年，两组指标的空档恰好错开，读数时请留意：\n\n1. **订单数据仅从 2025-10-01 开始**（`orders.created_at` 最小值为 2025-10-01，最大 2026-09-30）。因此 2025Q1–Q3 的下单用户数为 0 **并不是真实业务为 0，而是这段时间没有任何订单数据**。\n2. **用户注册数据只到 2025-08-31 结束**（`users.registered_at` 最小值 2024-01-01，最大值 2025-08-31）。因此 2025Q3 的 2,026 人实际只覆盖 7–8 月，**9 月缺失**；2025Q4 的 0 同样是数据未覆盖，而非无人注册。\n   - 逐月核对：2025-01～08 每月注册量分别为 1077、880、1017、973、1079、1027、989、1037，9–12 月无记录。\n3. 2025Q4 的下单用户 10,259 人覆盖 10–12 月三个完整月份，是这四个季度中唯一\"注册与下单都完整\"的……实际上 Q4 缺注册数据。\n\n**结论**：若你想比较\"注册 → 下单\"的转化，2025 年只有 10–12 月有订单数据，而注册数据在 8 月底就截止了，两者无重叠区间，无法在 2025 年内做同季度转化分析。建议改用 2026 年数据（订单完整）或明确限定\"以 snapshot 内可用区间为准\"。",
+      "failure_mode": "other",
+      "error_msg": null,
+      "latency_s": 9.898,
+      "tokens": {
+        "input": 10011,
+        "output": 1790,
+        "total": 11801,
+        "cache_read": 8704
+      },
+      "oversized": false,
+      "ended_with_failed_call": false
+    },
+    {
+      "id": "EV-048",
+      "run_idx": 1,
+      "question_type": "glossary_trap",
+      "generalize_layer": "far",
+      "injected_chunks": [],
+      "expected_chunks": [
+        "glossary:pay_conversion",
+        "schema:orders"
+      ],
+      "recall_hits": [],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT * FROM orders LIMIT 3"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT * FROM payments LIMIT 3"
+        },
+        {
+          "seq": 3,
+          "sql": "SELECT o.status, COUNT(*) AS cnt, SUM(CASE WHEN p.id IS NOT NULL THEN 1 ELSE 0 END) AS paid_cnt\nFROM orders o LEFT JOIN payments p ON p.order_id = o.id\nWHERE o.created_at >= '2026-09-01' AND o.created_at < '2026-10-01'\nGROUP BY o.status"
+        },
+        {
+          "seq": 4,
+          "sql": "SELECT COUNT(*) AS sep_orders,\n       SUM(CASE WHEN p.id IS NOT NULL THEN 1 ELSE 0 END) AS sep_paid_orders,\n       SUM(o.order_amount) AS order_amount,\n       SUM(p.amount) AS paid_amount\nFROM orders o LEFT JOIN payments p ON p.order_id = o.id\nWHERE o.created_at >= '2026-09-01' AND o.created_at < '2026-10-01'"
+        }
+      ],
+      "sql_used": "SELECT COUNT(*) AS sep_orders,\n       SUM(CASE WHEN p.id IS NOT NULL THEN 1 ELSE 0 END) AS sep_paid_orders,\n       SUM(o.order_amount) AS order_amount,\n       SUM(p.amount) AS paid_amount\nFROM orders o LEFT JOIN payments p ON p.order_id = o.id\nWHERE o.created_at >= '2026-09-01' AND o.created_at < '2026-10-01'",
+      "sql_source": "last",
+      "gold_row_count": 1,
+      "model_row_count": 1,
+      "judge": "pass",
+      "pass_via": "text",
+      "text_matched": "77.09",
+      "final_answer_text": "## 2026 年 9 月支付转化率\n\n**口径：按下单时间在 2026-09 的订单，其\"支付订单数 ÷ 下单订单数\"计算（订单只要有一条支付成功流水即计为已支付）**\n\n| 指标 | 数值 |\n|---|---|\n| 下单订单数 | 7,617 单 |\n| 其中已支付订单数 | 5,872 单 |\n| **订单支付转化率** | **77.09%**（5,872 ÷ 7,617） |\n| 下单金额 | 20,280,681.72 元 |\n| 实付金额 | 15,941,532.30 元 |\n| 金额口径转化率 | 78.60% |\n\n**按订单状态拆解（同期 7,617 单）**：\n- 已支付/流转中：paid 1,052、shipped 624、completed 3,766、refunded 430，合计 5,872 单（均有支付流水）\n- 未转化：pending 780 单、cancelled 965 单，合计 1,745 单\n\n数据来源：对 `orders` 与 `payments` 按 `order_id` 左连接，筛选 `created_at` 落在 2026-09-01 至 2026-09-30 的订单统计得出（两次查询结果一致：状态分组汇总与整体汇总的已支付单数均为 5,872）。\n\n**补充说明**\n1. 这里用的是\"下单订单数\"作分母，即**下单→支付**的转化率；若你的业务口径是\"支付订单数 ÷ 访问/加购数\"之类，需要另有人气或购物车数据，当前库里没有，无法计算。\n2. 本次只覆盖 2026-09 单月的横截面，退款订单（430 单）在其支付发生时已算作支付成功，未做剔除；若想看\"净转化\"（剔除退款），转化率会降为 71.45%（5,442 ÷ 7,617）。\n3. 若按\"支付时间\"而非\"下单时间\"归属月份，结果会略有差异（跨月支付/跨月下单的订单会被归到支付月），需要的话我可以再按 `paid_at` 口径跑一遍。",
+      "failure_mode": null,
+      "error_msg": null,
+      "latency_s": 7.619,
+      "tokens": {
+        "input": 6641,
+        "output": 1346,
+        "total": 7987,
+        "cache_read": 5632
+      },
+      "oversized": false,
+      "ended_with_failed_call": false
+    },
+    {
+      "id": "EV-049",
+      "run_idx": 1,
+      "question_type": "glossary_trap",
+      "generalize_layer": "far",
+      "injected_chunks": [],
+      "expected_chunks": [
+        "glossary:sell_through",
+        "schema:order_items",
+        "schema:products"
+      ],
+      "recall_hits": [],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT TABLE_NAME, COLUMN_NAME, DATA_TYPE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='mart' ORDER BY TABLE_NAME, ORDINAL_POSITION"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT TABLE_NAME, COLUMN_NAME, DATA_TYPE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='mart' AND TABLE_NAME IN ('products','refunds') ORDER BY TABLE_NAME, ORDINAL_POSITION"
+        },
+        {
+          "seq": 3,
+          "sql": "SELECT status, COUNT(*) AS cnt FROM orders GROUP BY status"
+        },
+        {
+          "seq": 4,
+          "sql": "WITH q3_sold AS (\n  SELECT DISTINCT oi.product_id\n  FROM order_items oi JOIN orders o ON o.id = oi.order_id\n  WHERE o.created_at >= '2026-07-01' AND o.created_at < '2026-10-01'\n    AND o.status <> 'cancelled'\n)\nSELECT\n  (SELECT COUNT(*) FROM q3_sold) AS sold_skus_q3,\n  (SELECT COUNT(*) FROM products) AS all_products,\n  (SELECT COUNT(*) FROM products WHERE listed_at <= '2026-09-30') AS listed_by_q3_end,\n  (SELECT COUNT(*) FROM products WHERE listed_at < '2026-07-01') AS listed_before_q3_start\nFROM DUAL"
+        },
+        {
+          "seq": 5,
+          "sql": "SELECT MIN(created_at) AS min_created, MAX(created_at) AS max_created,\n       MIN(listed_at) AS min_listed, MAX(listed_at) AS max_listed\nFROM orders JOIN products ON 1=1"
+        },
+        {
+          "seq": 6,
+          "sql": "SELECT MIN(listed_at) AS min_listed, MAX(listed_at) AS max_listed, COUNT(*) AS total FROM products"
+        },
+        {
+          "seq": 7,
+          "sql": "WITH q3_sold AS (\n  SELECT DISTINCT oi.product_id\n  FROM order_items oi JOIN orders o ON o.id = oi.order_id\n  WHERE o.created_at >= '2026-07-01' AND o.created_at < '2026-10-01'\n    AND o.status NOT IN ('cancelled','refunded')\n)\nSELECT COUNT(*) AS sold_skus_excl_refunded FROM q3_sold"
+        }
+      ],
+      "sql_used": "WITH q3_sold AS (\n  SELECT DISTINCT oi.product_id\n  FROM order_items oi JOIN orders o ON o.id = oi.order_id\n  WHERE o.created_at >= '2026-07-01' AND o.created_at < '2026-10-01'\n    AND o.status NOT IN ('cancelled','refunded')\n)\nSELECT COUNT(*) AS sold_skus_excl_refunded FROM q3_sold",
+      "sql_source": "last",
+      "gold_row_count": 1,
+      "model_row_count": 1,
+      "judge": "fail",
+      "pass_via": null,
+      "text_matched": null,
+      "final_answer_text": "## 2026 年三季度动销率：98.2%\n\n**口径**：动销率 = 期间内有销量的商品 SKU 数 ÷ 期间在架（可售）商品 SKU 数\n\n| 项目 | 数值 |\n|---|---|\n| Q3 动销 SKU 数（分子） | 1,964 |\n| 在架商品 SKU 数（分母） | 2,000 |\n| **动销率** | **1964 ÷ 2000 = 98.2%** |\n\n**计算说明**（基于上述两次查询结果）：\n- 期间：2026-07-01 至 2026-09-30（含），按 `orders.created_at` 归期；\n- 分子：`order_items` 中该期间出现过、且所属订单状态不为 `cancelled` 的 `product_id` 去重计数，得 1,964 个；\n- 分母：`products` 表中已上架商品数，共 2,000 个。经查所有商品上架日期在 2024-01-01 ~ 2025-09-15 之间，即三季度期间全部处于在架状态，故分母取全表 2,000。\n\n**口径敏感性提示**：\n- 若把口径收紧为「排除已取消 + 已退款订单」，动销 SKU 数为 1,951 个，动销率 = **97.6%**（第二、三次查询结果）。\n- 该结果对分母定义不敏感（因为期间没有新品上架）；若您的业务口径是「按销量件数达到某阈值才算动销」（如 ≥1 件），当前 98.2% 即按 ≥1 件计算，如需换阈值（如 ≥5 件、≥10 件）我可以再算一版。",
+      "failure_mode": "other",
+      "error_msg": null,
+      "latency_s": 20.103,
+      "tokens": {
+        "input": 12808,
+        "output": 1858,
+        "total": 14666,
+        "cache_read": 11392
+      },
+      "oversized": false,
+      "ended_with_failed_call": false
+    },
+    {
+      "id": "EV-050",
+      "run_idx": 1,
+      "question_type": "glossary_trap",
+      "generalize_layer": "far",
+      "injected_chunks": [],
+      "expected_chunks": [
+        "glossary:new_customers",
+        "schema:orders"
+      ],
+      "recall_hits": [],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT TABLE_NAME, COLUMN_NAME, DATA_TYPE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='mart' AND TABLE_NAME IN ('users','orders','payments') ORDER BY TABLE_NAME, ORDINAL_POSITION"
+        },
+        {
+          "seq": 2,
+          "sql": "SELECT status, COUNT(*) AS cnt, MIN(created_at) AS min_t, MAX(created_at) AS max_t FROM orders GROUP BY status"
+        },
+        {
+          "seq": 3,
+          "sql": "SELECT MIN(registered_at) AS min_reg, MAX(registered_at) AS max_reg, COUNT(*) AS users FROM users"
+        },
+        {
+          "seq": 4,
+          "sql": "WITH pay AS (\n  SELECT o.user_id, p.paid_at\n  FROM payments p JOIN orders o ON o.id = p.order_id\n),\nfirst_pay AS (\n  SELECT user_id, MIN(paid_at) AS first_paid FROM pay GROUP BY user_id\n),\nsep_buyers AS (\n  SELECT DISTINCT user_id FROM pay WHERE paid_at >= '2026-09-01' AND paid_at < '2026-10-01'\n)\nSELECT COUNT(*) AS sep_buyers,\n       SUM(CASE WHEN f.first_paid >= '2026-09-01' AND f.first_paid < '2026-10-01' THEN 1 ELSE 0 END) AS new_buyers,\n       ROUND(100*SUM(CASE WHEN f.first_paid >= '2026-09-01' AND f.first_paid < '2026-10-01' THEN 1 ELSE 0 END)/COUNT(*),2) AS new_share_pct\nFROM sep_buyers s JOIN first_pay f ON f.user_id = s.user_id"
+        },
+        {
+          "seq": 5,
+          "sql": "WITH pay AS (\n  SELECT o.user_id, p.paid_at FROM payments p JOIN orders o ON o.id = p.order_id\n),\nfirst_pay AS (SELECT user_id, MIN(paid_at) AS first_paid FROM pay GROUP BY user_id)\nSELECT DATE_FORMAT(p.paid_at,'%Y-%m') AS month,\n       COUNT(DISTINCT p.user_id) AS buyers,\n       COUNT(DISTINCT CASE WHEN f.first_paid >= DATE_FORMAT(p.paid_at,'%Y-%m-01')\n                             AND f.first_paid < DATE_ADD(DATE_FORMAT(p.paid_at,'%Y-%m-01'), INTERVAL 1 MONTH)\n                           THEN p.user_id END) AS new_buyers\nFROM pay p JOIN first_pay f ON f.user_id = p.user_id\nGROUP BY month ORDER BY month"
+        },
+        {
+          "seq": 6,
+          "sql": "WITH o AS (\n  SELECT user_id, created_at FROM orders\n),\nfirst_o AS (SELECT user_id, MIN(created_at) AS first_order FROM o GROUP BY user_id),\nsep AS (SELECT DISTINCT user_id FROM o WHERE created_at >= '2026-09-01' AND created_at < '2026-10-01')\nSELECT COUNT(*) AS sep_order_users,\n       SUM(CASE WHEN f.first_order >= '2026-09-01' AND f.first_order < '2026-10-01' THEN 1 ELSE 0 END) AS new_by_first_order,\n       ROUND(100*SUM(CASE WHEN f.first_order >= '2026-09-01' AND f.first_order < '2026-10-01' THEN 1 ELSE 0 END)/COUNT(*),2) AS pct\nFROM sep s JOIN first_o f ON f.user_id = s.user_id"
+        }
+      ],
+      "sql_used": "WITH o AS (\n  SELECT user_id, created_at FROM orders\n),\nfirst_o AS (SELECT user_id, MIN(created_at) AS first_order FROM o GROUP BY user_id),\nsep AS (SELECT DISTINCT user_id FROM o WHERE created_at >= '2026-09-01' AND created_at < '2026-10-01')\nSELECT COUNT(*) AS sep_order_users,\n       SUM(CASE WHEN f.first_order >= '2026-09-01' AND f.first_order < '2026-10-01' THEN 1 ELSE 0 END) AS new_by_first_order,\n       ROUND(100*SUM(CASE WHEN f.first_order >= '2026-09-01' AND f.first_order < '2026-10-01' THEN 1 ELSE 0 END)/COUNT(*),2) AS pct\nFROM sep s JOIN first_o f ON f.user_id = s.user_id",
+      "sql_source": "last",
+      "gold_row_count": 1,
+      "model_row_count": 1,
+      "judge": "pass",
+      "pass_via": "text",
+      "text_matched": "5.22",
+      "final_answer_text": "## 结论\n\n**2026 年 9 月新客占比 ≈ 5.5%**\n\n| 口径 | 9 月购买用户数 | 其中新客 | 新客占比 |\n|---|---|---|---|\n| **① 支付成功口径（推荐）** | 4,288 | 235 | **5.48%** |\n| ② 下单口径（含全部状态订单） | 5,134 | 268 | 5.22% |\n\n**所用口径说明：**\n- 新客 = 该用户的**首次支付成功时间**落在 2026-09-01 ~ 2026-09-30 之间；分母 = 9 月内有成功支付的去重用户数（payments 关联 orders，基于第 1 次查询结果）。\n- 口径 ② 为参考：新客按\"首次下单时间\"判定，分母为 9 月内下过任意状态订单的去重用户数。\n\n**一个需要注意的数据事实：**\nusers 表的注册时间最晚只到 **2025-08-31**（第 2 次探查：MIN=2024-01-01，MAX=2025-08-31），整个统计期内没有新增注册用户。所以如果把\"新客\"定义为\"统计期内新注册的用户\"，9 月新客数为 0 —— 这显然不是有业务意义的指标。因此这里采用**首单/首次支付口径**衡量\"新买家\"。\n\n**趋势参考（同一支付口径下的月度新客数）：**\n\n| 月份 | 购买用户 | 新客 | 新客占比 |\n|---|---|---|---|\n| 2025-10 | 4,646 | 4,646 | 100%（数据起点） |\n| 2025-11 | 6,599 | 3,735 | 56.6% |\n| 2025-12 | 5,266 | 1,439 | 27.3% |\n| 2026-01 | 4,957 | 957 | 19.3% |\n| 2026-06 | 6,291 | 635 | 10.1% |\n| 2026-08 | 4,278 | 266 | 6.2% |\n| **2026-09** | **4,288** | **235** | **5.5%** |\n\n可见新客占比自数据起点后持续衰减，2026-09 的 5.5% 属于常态低位，9 月大盘几乎完全靠老客复购支撑（约 94.5% 为老客）。\n\n（以上数字分别来自对 payments/orders/users 三次只读 SQL 查询的真实返回结果。）",
+      "failure_mode": null,
+      "error_msg": null,
+      "latency_s": 15.97,
+      "tokens": {
+        "input": 14377,
+        "output": 2890,
+        "total": 17267,
+        "cache_read": 12928
+      },
+      "oversized": false,
+      "ended_with_failed_call": false
+    }
+  ]
+}
