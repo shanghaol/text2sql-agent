@@ -35,6 +35,11 @@ MYSQL_RO_PASSWORD=$RO_PW
 JWT_SECRET=$JWT
 BYOK_MASTER_KEY=$BYOK
 INTERNAL_TOKEN=$INTERNAL
+
+# —— 模型缓存（fastembed）——
+# 必须指向稳定路径：%TEMP% 默认在重启后清空 → 运行时重新向 HuggingFace 下载
+# → 国内网络挂死（W4 部署实录）。模型文件一次性 rsync 到此目录。
+FASTEMBED_CACHE_DIR=/opt/text2sql/models/fastembed_cache
 # ⚠️ BYOK 原则：本文件【绝不】包含 DEEPSEEK_API_KEY（服务端不留站点级 key）
 EOF
 chmod 600 "$OUT"
