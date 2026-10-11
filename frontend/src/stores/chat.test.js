@@ -99,3 +99,21 @@ describe('applyChatEvent：SSE 事件 → 消息状态（§3.2 契约）', () =>
     expect(JSON.stringify(before)).toBe(snapshot)
   })
 })
+
+// 线上 bug 回归锁（2026-10-11）：pushAssistant 必须返回 store 数组内的响应式代理，
+// 而非 push 进去的原始对象——原始引用上的 Object.assign 绕过 Pinia reactive 拦截，
+// 导致流式文本不渲染（光标闪烁直到流结束）。
+describe('流式响应性契约（回归）', () => {
+  it('pushAssistant 返回数组内的响应式引用：外部 mutations 必须可见于 messages', async () => {
+    const { createPinia, setActivePinia } = await import('pinia')
+    setActivePinia(createPinia())
+    const { useChatStore, newAssistantMsg } = await import('./chat.js')
+    const store = useChatStore()
+    const raw = newAssistantMsg()
+    const proxied = store.pushAssistant(raw)
+    expect(proxied).not.toBe(raw)            // 返回的必须是 reactive 包装
+    expect(store.messages.at(-1)).toBe(proxied)
+    proxied.text = 'abc'                      // 外部写代理必须反映到 store
+    expect(store.messages.at(-1).text).toBe('abc')
+  })
+})

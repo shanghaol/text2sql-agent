@@ -99,7 +99,11 @@ export const useChatStore = defineStore('chat', {
 
     pushAssistant(msg) {
       this.messages.push(msg)
-      return msg
+      // 返回 store 数组内的响应式代理（不是原始对象）——流式更新必须走代理才能触发渲染。
+      // 教训（线上 bug 实录）：ChatView 持有 push 前的原始引用去 Object.assign，
+      // 绕过了 Pinia reactive 的 set 拦截 → Vue 收不到变更 → 光标闪烁但文本不出现，
+      // 直到其他响应式变更（streaming=false）触发整表重渲染才显示。
+      return this.messages[this.messages.length - 1]
     },
 
     /** 流事件落消息：reducer 出新对象，合并回响应式消息 */

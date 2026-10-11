@@ -37,7 +37,7 @@ async function send() {
   }
   draft.value = ''
   chat.pushUser(question)
-  const msg = chat.pushAssistant(newAssistantMsg())
+  const msg = chat.pushAssistant(newAssistantMsg()) // 响应式代理引用（见 chat.js pushAssistant 教训注释）
   chat.streaming = true
   controller = new AbortController()
 
