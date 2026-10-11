@@ -568,3 +568,90 @@ def test_runner_uses_judge_module_verdict_object():
         expected["failure_mode"],
         expected["error_msg"],
     )
+
+
+# ---------------------------------------------------------------------------
+# ⑥ W5 自举语料两行（§4.7，additive：不传/无命中时旧报告逐字节不变）
+# ---------------------------------------------------------------------------
+
+
+class _FakeRetriever:
+    """corpus_type_counts 只消费 rebuild() 缓存的 metas（不打 Chroma）。"""
+
+    def __init__(self, metas: list[dict]):
+        self.metas = metas
+
+
+def test_corpus_type_counts_from_retriever_metas():
+    retriever = _FakeRetriever(
+        [
+            {"doc_type": "schema"},
+            {"doc_type": "schema"},
+            {"doc_type": "glossary"},
+            {"doc_type": "qa_pair"},
+            {"doc_type": "qa_pair"},
+            {"doc_type": "qa_pair"},
+        ]
+    )
+    assert run_eval.corpus_type_counts(retriever) == {"schema": 2, "glossary": 1, "qa_pair": 3}
+
+
+def test_render_report_corpus_counts_line():
+    """运行配置节的语料片数行（W5 §4.7-2）：任意两次报告可对齐语料版本。"""
+    report = run_eval._render_report(
+        _make_args(multiturn=False),
+        Path("eval/dataset/eval_v1.jsonl"),
+        _single_records(),
+        started_at="2026-10-11 00:00:00",
+        corpus_counts={"schema": 6, "glossary": 11, "qa_pair": 11},
+    )
+    assert "- 语料：schema 6 / glossary 11 / qa_pair 11（共 28 片" in report
+
+
+def test_render_report_without_corpus_counts_unchanged():
+    """兼容锁：不传 corpus_counts（旧调用/直调）不输出语料行，其余结构不变。"""
+    report = run_eval._render_report(
+        _make_args(multiturn=False),
+        Path("eval/dataset/eval_v1.jsonl"),
+        _single_records(),
+        started_at="2026-10-11 00:00:00",
+    )
+    assert "- 语料：" not in report
+
+
+def test_is_absorbed_qa_chunk_boundaries():
+    """口径 = qa_pair:qa_NNN 且 NNN ≥ 012（三位数字，001~011 是人工语料）。"""
+    assert run_eval._is_absorbed_qa_chunk("qa_pair:qa_012")
+    assert run_eval._is_absorbed_qa_chunk("qa_pair:qa_999")
+    assert not run_eval._is_absorbed_qa_chunk("qa_pair:qa_011")
+    assert not run_eval._is_absorbed_qa_chunk("qa_pair:qa_000")
+    assert not run_eval._is_absorbed_qa_chunk("qa_pair:qa_12")  # 非三位，防错位编号
+    assert not run_eval._is_absorbed_qa_chunk("schema:qa_012")
+    assert not run_eval._is_absorbed_qa_chunk("qa_pair:orders")
+
+
+def test_absorbed_chunk_hits_only_counts_absorbed_injections():
+    records = _single_records()
+    records[0]["injected_chunks"] = ["qa_pair:qa_012", "schema:payments"]
+    records[1]["injected_chunks"] = ["qa_pair:qa_011"]  # 人工语料不算自举
+    records[2]["injected_chunks"] = []
+    hits = run_eval.absorbed_chunk_hits(records)
+    assert hits == {"EV-001": ["qa_pair:qa_012"]}
+
+
+def test_render_report_absorbed_section_only_when_nonempty():
+    records = _single_records()
+    baseline = run_eval._render_report(
+        _make_args(multiturn=False), Path("eval/dataset/eval_v1.jsonl"),
+        records, started_at="2026-10-11 00:00:00",
+    )
+    assert "自举语料命中" not in baseline  # 无命中 → 该节整体缺席（W3 报告可复现）
+
+    records[0]["injected_chunks"] = ["qa_pair:qa_012", "qa_pair:qa_015"]
+    with_hit = run_eval._render_report(
+        _make_args(multiturn=False), Path("eval/dataset/eval_v1.jsonl"),
+        records, started_at="2026-10-11 00:00:00",
+    )
+    assert "## 自举语料命中" in with_hit
+    assert "命中自举语料的题：EV-001（注入 qa_012+ 片：qa_pair:qa_012、qa_pair:qa_015）" in with_hit
+    assert "NNN ≥ 012" in with_hit

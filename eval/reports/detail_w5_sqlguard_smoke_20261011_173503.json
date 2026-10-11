@@ -1,0 +1,112 @@
+{
+  "tag": "w5_sqlguard_smoke",
+  "started_at": "2026-10-11 17:35:03",
+  "config": {
+    "dataset": "C:\\Users\\yhnt\\rg\\agent\\eval\\dataset\\eval_v1.jsonl",
+    "multiturn": false,
+    "top_n": 8,
+    "runs": 1,
+    "model": "deepseek-flash",
+    "temperature": 0,
+    "snapshot_anchor": "2026-09-30",
+    "retrieval": {
+      "top_k_each": 20,
+      "rrf_k": 60
+    },
+    "replay_max_rows": 5000
+  },
+  "cases": [
+    {
+      "id": "EV-001",
+      "run_idx": 1,
+      "question_type": "time_window",
+      "injected_chunks": [
+        "qa_pair:qa_001",
+        "qa_pair:qa_008",
+        "qa_pair:qa_007",
+        "glossary:gmv",
+        "glossary:avg_order_value",
+        "qa_pair:qa_003",
+        "qa_pair:qa_009",
+        "schema:order_items"
+      ],
+      "expected_chunks": [
+        "schema:orders"
+      ],
+      "recall_hits": [],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT DATE_FORMAT(created_at, '%Y-%m-%d') AS order_date, COUNT(*) AS order_count\nFROM orders\nWHERE created_at >= '2026-03-01' AND created_at < '2026-03-16'\nGROUP BY order_date\nORDER BY order_date;"
+        }
+      ],
+      "sql_used": "SELECT DATE_FORMAT(created_at, '%Y-%m-%d') AS order_date, COUNT(*) AS order_count\nFROM orders\nWHERE created_at >= '2026-03-01' AND created_at < '2026-03-16'\nGROUP BY order_date\nORDER BY order_date;",
+      "sql_source": "last",
+      "gold_row_count": 15,
+      "model_row_count": 15,
+      "judge": "pass",
+      "pass_via": "sql",
+      "text_matched": null,
+      "final_answer_text": "**2026-03-01 至 2026-03-15 每天订单量**（基于 orders 表，按 created_at 下单时间统计，口径：订单总量，含各状态订单）：\n\n| 日期 | 订单量 | 日期 | 订单量 |\n| --- | --- | --- | --- |\n| 03-01 | 225 | 03-09 | 244 |\n| 03-02 | 238 | 03-10 | 254 |\n| 03-03 | 232 | 03-11 | 280 |\n| 03-04 | 253 | 03-12 | 265 |\n| 03-05 | 259 | 03-13 | 278 |\n| 03-06 | 288 | 03-14 | 231 |\n| 03-07 | 236 | 03-15 | 260 |\n| 03-08 | 256 | — | — |\n\n**小结**\n- 15 天合计 **3,759 单**，日均约 **251 单**。\n- 峰值出现在 **03-06（288 单）**，其次 03-11（280）、03-13（278）；谷值为 **03-01（225 单）**。\n- 整体波动平稳，各天都在 225–288 单区间内，无异常尖峰或断档。\n\nSQL 说明：时间过滤采用左闭右开区间 `created_at >= '2026-03-01' AND created_at < '2026-03-16'`（含 3-15 全天），按天分组用 `DATE_FORMAT(created_at, '%Y-%m-%d')`。\n\n如需进一步看这 15 天的 GMV、支付订单数或客单价，我可以继续查询。",
+      "failure_mode": null,
+      "error_msg": null,
+      "latency_s": 2.703,
+      "tokens": {
+        "input": 7005,
+        "output": 538,
+        "total": 7543,
+        "cache_read": 6656
+      },
+      "oversized": false,
+      "ended_with_failed_call": false
+    },
+    {
+      "id": "EV-002",
+      "run_idx": 1,
+      "question_type": "multi_join",
+      "injected_chunks": [
+        "qa_pair:qa_002",
+        "glossary:net_sales",
+        "schema:users",
+        "qa_pair:qa_010",
+        "qa_pair:qa_009",
+        "schema:products",
+        "qa_pair:qa_008",
+        "schema:order_items"
+      ],
+      "expected_chunks": [
+        "schema:payments",
+        "schema:orders",
+        "schema:users"
+      ],
+      "recall_hits": [
+        "schema:users"
+      ],
+      "sql_calls": [
+        {
+          "seq": 1,
+          "sql": "SELECT u.city, SUM(p.amount) AS sales_amount\nFROM payments p\nJOIN orders o ON o.id = p.order_id\nJOIN users u ON u.id = o.user_id\nWHERE p.paid_at >= '2025-10-01' AND p.paid_at < '2026-10-01'\nGROUP BY u.city\nORDER BY sales_amount DESC\nLIMIT 5;"
+        }
+      ],
+      "sql_used": "SELECT u.city, SUM(p.amount) AS sales_amount\nFROM payments p\nJOIN orders o ON o.id = p.order_id\nJOIN users u ON u.id = o.user_id\nWHERE p.paid_at >= '2025-10-01' AND p.paid_at < '2026-10-01'\nGROUP BY u.city\nORDER BY sales_amount DESC\nLIMIT 5;",
+      "sql_source": "last",
+      "gold_row_count": 5,
+      "model_row_count": 5,
+      "judge": "pass",
+      "pass_via": "sql",
+      "text_matched": null,
+      "final_answer_text": "**销售额最高的前 5 个城市**（基于上述查询结果，口径：支付成功金额 SUM(payments.amount)，时间范围 2025-10-01 至 2026-09-30 全数据期）\n\n| 排名 | 城市 | 销售额（元） |\n| --- | --- | --- |\n| 1 | 北京 | 24,273,359.25 |\n| 2 | 上海 | 20,689,239.65 |\n| 3 | 广州 | 20,143,583.25 |\n| 4 | 深圳 | 19,912,874.49 |\n| 5 | 杭州 | 14,974,672.44 |\n\n**口径说明**：\n- 销售额采用 **payments.amount（支付成功金额）**，未使用 orders.order_amount（后者含未支付订单，会虚高）。\n- 通过 `payments → orders → users` 两次 JOIN 将支付流水关联到用户所在城市。\n- 时间以支付时间 paid_at 落在 2025-10-01 ~ 2026-09-30 内为准。\n\n**观察**：头部 5 城被一线城市 + 杭州占据，北京以约 2,427 万元居首，领先第二名上海约 358 万元；第 2~4 名（上海、广州、深圳）差距较小，均在 2,000 万元上下。",
+      "failure_mode": null,
+      "error_msg": null,
+      "latency_s": 3.091,
+      "tokens": {
+        "input": 9473,
+        "output": 471,
+        "total": 9944,
+        "cache_read": 9088
+      },
+      "oversized": false,
+      "ended_with_failed_call": false
+    }
+  ]
+}

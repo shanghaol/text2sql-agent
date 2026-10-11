@@ -3,6 +3,7 @@ package com.shanghl.text2sql.controller;
 import java.util.List;
 
 import com.shanghl.text2sql.common.ApiResponse;
+import com.shanghl.text2sql.dto.InternalFeedbackSample;
 import com.shanghl.text2sql.dto.InternalHistoryRow;
 import com.shanghl.text2sql.dto.InternalSearchResult;
 import com.shanghl.text2sql.service.HistoryService;
@@ -24,6 +25,7 @@ import java.security.MessageDigest;
  * "Agent 跨语言调 Java REST"叙事的 Java 侧落点（只读、低风险）。
  * 鉴权不走 JWT：X-Internal-Token（Java/Python 共享密钥，常量时间比较）+ X-User-Id
  * （Java 鉴权体系里由 Python 从自己的请求头透传回来）。配置为空 = 不校验（仅限开发机直连调试）。
+ * W5 增补：/feedback/samples 反馈自举样本接口（§4.2），只验 X-Internal-Token（见方法 Javadoc）。
  */
 @RestController
 @RequestMapping("/api/internal")
@@ -65,6 +67,27 @@ public class InternalController {
                         h.getAnswerText(), h.getStatus(), h.getCreatedAt()))
                 .toList();
         return ApiResponse.ok(new InternalSearchResult(records.size(), records));
+    }
+
+    /**
+     * 反馈自举样本（W5 设计 §4.2）：给 agent/rag/absorb_feedback.py 拉取点赞样本，
+     * 经六道质量门槛 + 双层去重后收录为 few-shot 语料（qa_pairs.md QA-012+）。
+     *
+     * 与上方 /history/search 的差异：那个是"按用户检索本人历史"——X-User-Id 必填，
+     * Python 侧透传的是终端用户身份；本接口是全库聚合的管理脚本用途（语料治理），
+     * 不持有任何用户上下文，因此只需要 X-Internal-Token，不需要也不接受 X-User-Id。
+     * 返回字段亦是最小集（不含 user_id / thread_id / answer_text，§6 风险 7）。
+     */
+    @GetMapping("/feedback/samples")
+    public ApiResponse<List<InternalFeedbackSample>> feedbackSamples(
+            @RequestParam(defaultValue = "200") @Positive(message = "limit 必须为正数") int limit,
+            @RequestHeader(value = "X-Internal-Token", required = false) String token) {
+        // 常量时间比较，与 /history/search 同款（时序侧信道）
+        if (!tokenMatches(token)) {
+            throw new com.shanghl.text2sql.common.BizException(com.shanghl.text2sql.common.ErrorCode.FORBIDDEN,
+                    "内部头缺失或 X-Internal-Token 错误");
+        }
+        return ApiResponse.ok(historyService.listFeedbackSamples(limit));
     }
 
     private boolean tokenMatches(String provided) {

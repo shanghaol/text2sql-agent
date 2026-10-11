@@ -66,6 +66,10 @@ RRF_K = 60
 # EV-012 起为泛化题。id 为零填充三位序号，字符串比较即数值比较。
 FEWSHOT_LAYER_LAST_ID = "EV-011"
 
+# W5 自举语料（§4.7-3）：qa_pairs.md 里 QA-012 起的片 = 用户点赞自动收录（absorb_feedback.py），
+# 001~011 是人工精挑语料。自举命中统计的口径 = injected_chunks ∩ {qa_pair:qa_NNN | NNN ≥ 012}。
+AUTO_ABSORB_MIN_NUMBER = 12
+
 _QUESTION_TYPE_ORDER = ("single_table", "multi_join", "aggregation", "time_window", "glossary_trap")
 
 # 声明段固定内容（§3.3：防数字被误读，五条写死在模板里；⑤ 为判定规则 v2 增补）
@@ -453,6 +457,37 @@ def _is_fewshot_layer(record: dict) -> bool:
     return record["id"].startswith("EV-") and record["id"] <= FEWSHOT_LAYER_LAST_ID
 
 
+def _is_absorbed_qa_chunk(chunk_id: str) -> bool:
+    """是否自举语料片：qa_pair:qa_NNN 且 NNN ≥ 012（W5 §4.6 自举从 012 起编号）。"""
+    if not chunk_id.startswith("qa_pair:qa_"):
+        return False
+    suffix = chunk_id.removeprefix("qa_pair:qa_")
+    return suffix.isdigit() and len(suffix) == 3 and int(suffix) >= AUTO_ABSORB_MIN_NUMBER
+
+
+def absorbed_chunk_hits(records: list[dict]) -> dict[str, list[str]]:
+    """自举语料命中统计（W5 §4.7-3，additive）：case id → 注入的自举片列表。
+
+    口径 = injected_chunks ∩ {qa_pair:qa_NNN | NNN ≥ 012}；只返回非空 case。
+    """
+    hits: dict[str, list[str]] = {}
+    for record in records:
+        absorbed = sorted({c for c in record["injected_chunks"] if _is_absorbed_qa_chunk(c)})
+        if absorbed:
+            hits[record["id"]] = absorbed
+    return hits
+
+
+def corpus_type_counts(retriever) -> dict[str, int]:
+    """从检索器缓存的 collection 元数据实拉统计语料片数（W5 §4.7-2 报告新增行）。
+
+    retriever.metas 是 rebuild() 时 collection.get() 的全量快照——语料版本
+    与本次评测实际注入同源，不额外打一次 Chroma。
+    """
+    counts: Counter = Counter(meta.get("doc_type", "") for meta in retriever.metas)
+    return {doc_type: counts.get(doc_type, 0) for doc_type in ("schema", "glossary", "qa_pair")}
+
+
 def _accuracy_table(records: list[dict], groups: list[tuple[str, list[dict]]]) -> list[str]:
     """分组准确率表（§3.3 v2）：SQL 级 pass/fail/error 计数 + SQL 级与答案级双列准确率。"""
     lines = [
@@ -472,8 +507,18 @@ def _accuracy_table(records: list[dict], groups: list[tuple[str, list[dict]]]) -
     return lines
 
 
-def _render_report(args: argparse.Namespace, dataset_path: Path, records: list[dict], started_at: str) -> str:
-    """§3.3 固定结构的 Markdown 汇总报告。"""
+def _render_report(
+    args: argparse.Namespace,
+    dataset_path: Path,
+    records: list[dict],
+    started_at: str,
+    corpus_counts: dict[str, int] | None = None,
+) -> str:
+    """§3.3 固定结构的 Markdown 汇总报告。
+
+    corpus_counts（W5 §4.7-2，additive）：语料片数统计，None 时不输出该行
+    （直调本函数的旧单测/兼容路径行为不变）；main() 从 retriever 实拉传入。
+    """
     n_records = len(records)
     _, failed, errored, acc = _split_accuracy(records)
     is_multiturn = bool(args.multiturn)
@@ -493,6 +538,14 @@ def _render_report(args: argparse.Namespace, dataset_path: Path, records: list[d
     lines.append(
         f"- 检索参数：top_k_each={RETRIEVAL_TOP_K_EACH}，RRF k={RRF_K}（与线上 hybrid_retriever 默认一致，§2.3 同构）"
     )
+    if corpus_counts is not None:
+        # W5 §4.7-2：语料片数进报告——语料从 28 片变 28+k 片后 top-8 竞争加剧，
+        # Recall 数字的变化是"检索环境改变"而非退化；此行让任意两次报告可对齐语料版本
+        total = sum(corpus_counts.values())
+        counts_text = " / ".join(
+            f"{doc_type} {corpus_counts.get(doc_type, 0)}" for doc_type in ("schema", "glossary", "qa_pair")
+        )
+        lines.append(f"- 语料：{counts_text}（共 {total} 片，索引自 data/rag_corpus 删除重建）")
     lines.append("")
 
     # —— 四指标汇总 · 执行准确率（SQL 级）——
@@ -760,6 +813,22 @@ def _render_report(args: argparse.Namespace, dataset_path: Path, records: list[d
             f" | {record['latency_s'] if record['latency_s'] is not None else '-'} | {record['tokens']['total']} |"
         )
     lines.append("")
+
+    # —— 自举语料命中（W5 §4.7-3，additive）——
+    # 仅当非空才输出：W3 时代（语料 001~011）的报告保持逐字节可复现
+    absorbed = absorbed_chunk_hits(records)
+    if absorbed:
+        lines.append("## 自举语料命中")
+        case_text = "、".join(absorbed)
+        chunks = sorted({chunk for chunk_list in absorbed.values() for chunk in chunk_list})
+        lines.append(
+            f"- 命中自举语料的题：{case_text}（注入 qa_012+ 片：{'、'.join(chunks)}）"
+        )
+        lines.append(
+            "- 口径：injected_chunks ∩ {qa_pair:qa_NNN | NNN ≥ 012}（012 起为用户点赞自举收录，W5 §4.7-3）"
+        )
+        lines.append("")
+
     lines.append(_DECLARATIONS)
     return "\n".join(lines) + "\n"
 
@@ -871,7 +940,10 @@ def main() -> None:
         "cases": records,
     }
     detail_path.write_text(json.dumps(detail, ensure_ascii=False, indent=2), encoding="utf-8")
-    report_path.write_text(_render_report(args, dataset_path, records, started_at), encoding="utf-8")
+    report_path.write_text(
+        _render_report(args, dataset_path, records, started_at, corpus_counts=corpus_type_counts(retriever)),
+        encoding="utf-8",
+    )
 
     _, failed, errored, acc = _split_accuracy(records)
     sql_pass, text_pass = _pass_via_counts(records)
