@@ -140,7 +140,7 @@ text2sql-agent/
 
 > **Text-to-SQL 智能数据分析助手**（Python / LangChain v1 / DeepSeek / Spring Boot / Vue3）—— 独立开发，已上线 [demo 链接]
 >
-> - 设计单 Agent + RAG 架构：三路语料检索（表结构/业务口径/few-shot 自举）+ BM25/向量混合检索（自实现 RRF 融合）；自建 50 条评测集（五类覆盖 + 示例/近例/远例三层），9 组单变量消融拆解各优化项贡献：RAG 整体 +12.7pp（SQL 级 14.0%→26.7%）、few-shot 路为最大单项（去掉 −16.7pp，示例层 −43pp 崩塌）、RRF k=60→10 调优 +4.6pp（26.7%→31.3%）；bge-reranker 重排为负结果（−4.0pp）但归因明确（schema 召回 +31pp 换 glossary −8.4pp）；答案级准确率（含 Agent 文本计算兜底）基线 53.3%、最佳 59.3%；多轮 8 题 83.3%
+> - 设计单 Agent + RAG 架构：三路语料检索（表结构/业务口径/few-shot 自举）+ BM25/向量混合检索（自实现 RRF 融合）；自建 50 条评测集（五类覆盖 + 示例/近例/远例三层），9 组单变量消融拆解各优化项贡献：RAG 整体 +12.7pp（SQL 级 14.0%→26.7%）、few-shot 路为最大单项（去掉 −16.7pp，示例层 −43pp 崩塌）、RRF k=60→10 调优 SQL 级 +4.6pp（26.7%→31.3%，3-run 方差 ±5pp 内的方向性观察）；bge-reranker 重排为负结果（−4.0pp）但归因明确（schema 召回 +31pp 换 glossary −8.4pp）；答案级准确率（含 Agent 文本计算兜底）基线 53.3%、最佳 59.3%；多轮 8 题 83.3%
 > - 实现四层 SQL 安全防线（只读账号/AST 白名单/强制 LIMIT/审计日志）与 SQL 执行前人工审批（Human-in-the-loop）；Java 网关 + Python Agent 双服务 Docker 部署
 
 ## 10. ⚙️ 待用户确认的默认项清单（逐条可否决）
