@@ -120,6 +120,7 @@ class HybridRetriever:
         rerank_pool: int = 0,
         quota: bool = False,
         quota_mode: str = "coverage",
+        rerank_scope: str = "all",
     ) -> list[RetrievedChunk]:
         """混合检索一个查询。
 
@@ -153,6 +154,8 @@ class HybridRetriever:
             )
         if quota and quota_mode not in ("coverage", "cap"):
             raise ValueError(f"quota_mode 非法：{quota_mode!r}（可选 coverage | cap）")
+        if rerank_scope not in ("all", "schema_only"):
+            raise ValueError(f"rerank_scope 非法：{rerank_scope!r}（可选 all | schema_only）")
 
         wanted = set(doc_types) if doc_types is not None else None
 
@@ -214,6 +217,20 @@ class HybridRetriever:
         # 默认路径的 rrf_score ≤ 2/(k+1) < 0.033，重排分是 cosine 级的 0~1）。
         # quota=True（W7 设计 §1.3）：对整池取 rerank 全序（预留段要能救回被重排
         # 挤出 top_n 的片，这正是配额的修复对象），再交覆盖配额选片。
+        if use_rerank and rerank_scope == "schema_only":
+            # C 行实验（W7 预注册）：只重排 schema 片——注入选集不变（成员=RRF top-8
+            # 基线锚），仅 schema 片内部按 rerank 分优化排序。纯生成侧对照行。
+            schema_chunks = [c for c in chunks if c.doc_type == "schema"]
+            other_chunks = [c for c in chunks if c.doc_type != "schema"]
+            ranked = reranker.rerank(query, [c.text for c in schema_chunks], top_n=len(schema_chunks))
+            rerank_by_id = {chunks[r["index"]].id: r["score"] for r in ranked}
+            rerank_schema = sorted(
+                (replace(c, rrf_score=float(rerank_by_id[c.id])) for c in schema_chunks),
+                key=lambda c: -c.rrf_score,
+            )
+            others_sorted = sorted(other_chunks, key=lambda c: -c.rrf_score)
+            chunks = [*rerank_schema, *others_sorted]
+            return chunks[:top_n]
         if use_rerank:
             pool_texts = [chunk.text for chunk in chunks]
             ranked = reranker.rerank(query, pool_texts, top_n=len(pool_texts) if quota else top_n)
