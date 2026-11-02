@@ -326,7 +326,7 @@ def _make_args(multiturn: bool) -> argparse.Namespace:
         # W6 消融开关（§3.4；默认全关 = 线上默认路径）
         rrf_k=None, no_bm25=False, no_dense=False, no_fewshot=False, rerank=False,
         # W7 配额开关（设计 §1.5；默认关）
-        quota=False,
+        quota=False, quota_mode="cap",
     )
 
 
@@ -705,6 +705,7 @@ def test_effective_retrieval_config_default_matches_online():
         "rerank_pool": 0,
         "rerank_model": None,
         "quota": False,
+            "quota_mode": "cap",
     }
 
 

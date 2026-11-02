@@ -211,7 +211,7 @@ def _describe_retrieval(retrieval_cfg: dict) -> str:
     if retrieval_cfg["rerank"]:
         bits.append(f"rerank={retrieval_cfg['rerank_model']}（pool={retrieval_cfg['rerank_pool']}）")
     if retrieval_cfg["quota"]:
-        bits.append(f"quota=开（mode={args.quota_mode}，W7 离线标定）")
+        bits.append(f"quota=开（mode={retrieval_cfg['quota_mode']}，W7 离线标定）")
     return "，".join(bits)
 
 
