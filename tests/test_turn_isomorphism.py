@@ -339,7 +339,8 @@ def test_retrieval_opts_passthrough_full_kwargs(monkeypatch, gate_env):
         "reranker": reranker,
         "rerank_pool": 16,
         "quota": True,
-                "quota_mode": "cap",
+        "quota_mode": "cap",
+        "rerank_scope": "all",
     }
 
 
