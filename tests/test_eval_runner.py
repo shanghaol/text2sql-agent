@@ -325,6 +325,8 @@ def _make_args(multiturn: bool) -> argparse.Namespace:
         multiturn=multiturn, compare=None,
         # W6 消融开关（§3.4；默认全关 = 线上默认路径）
         rrf_k=None, no_bm25=False, no_dense=False, no_fewshot=False, rerank=False,
+        # W7 配额开关（设计 §1.5；默认关）
+        quota=False,
     )
 
 
@@ -702,6 +704,7 @@ def test_effective_retrieval_config_default_matches_online():
         "rerank": False,
         "rerank_pool": 0,
         "rerank_model": None,
+        "quota": False,
     }
 
 
@@ -712,6 +715,7 @@ def test_effective_retrieval_config_reflects_ablation_flags():
     args.no_bm25 = True
     args.no_fewshot = True
     args.rerank = True
+    args.quota = True
     cfg = run_eval.effective_retrieval_config(args)
     assert cfg["rrf_k"] == 10
     assert cfg["enable_bm25"] is False
@@ -720,6 +724,7 @@ def test_effective_retrieval_config_reflects_ablation_flags():
     assert cfg["rerank"] is True
     assert cfg["rerank_pool"] == 16  # RERANK_POOL = 2×top_n 起点（设计 §4.2）
     assert cfg["rerank_model"] == "BAAI/bge-reranker-v2-m3"
+    assert cfg["quota"] is True  # W7：实际参数如实记录（§1.5）
 
 
 def test_build_retrieval_opts_maps_flags(monkeypatch: pytest.MonkeyPatch):
@@ -731,6 +736,7 @@ def test_build_retrieval_opts_maps_flags(monkeypatch: pytest.MonkeyPatch):
     args.rrf_k = 10
     args.no_fewshot = True
     args.rerank = True
+    args.quota = True
     opts = run_eval._build_retrieval_opts(args)
     assert opts is not None
     assert opts.rrf_k == 10
@@ -739,6 +745,7 @@ def test_build_retrieval_opts_maps_flags(monkeypatch: pytest.MonkeyPatch):
     assert opts.enable_dense is True
     assert opts.rerank_pool == 16
     assert isinstance(opts.reranker, rerank_mod.SiliconFlowReranker)
+    assert opts.quota is True  # W7：--quota → RetrievalOptions.quota 透传
     opts.reranker.close()
 
 

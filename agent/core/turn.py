@@ -39,6 +39,7 @@ class RetrievalOptions:
     enable_dense: bool = True  # False=纯 BM25（C 行）
     rerank_pool: int = 0  # >0 且 reranker 存在才开重排钩子（F 行 pool=16）
     reranker: object | None = None  # SiliconFlowReranker 实例；None=不重排
+    quota: bool = False  # W7：doc_type 覆盖配额（FQ 行 --rerank --quota）；需重排钩子在场
 
 
 @dataclass
@@ -85,7 +86,7 @@ def prepare_turn(
     retrieval_opts：W6 消融入口（设计 §3.4）。**同构红线：None（默认）时本函数
     的检索调用与 W4/W5 现行逐字节等价**——get_retriever() 无参调用、search 只传
     top_n；只有评测 runner 显式传入时才走参数化分支（get_retriever(rrf_k) +
-    search 全参透传，reranker 仅此路径可达——线上不接线，设计 §4.4）。
+    search 全参透传，reranker/quota 仅此路径可达——线上不接线，设计 §4.4）。
     """
     checkpointer = get_checkpointer()
     previous_question = previous_human_message(checkpointer, {"configurable": {"thread_id": thread_key}})
@@ -103,6 +104,7 @@ def prepare_turn(
             enable_dense=retrieval_opts.enable_dense,
             reranker=retrieval_opts.reranker,
             rerank_pool=retrieval_opts.rerank_pool,
+            quota=retrieval_opts.quota,
         )
     agent = build_agent(build_system_prompt(format_context_block(chunks)), api_key=api_key, hitl=hitl)
     return PreparedTurn(agent, {"configurable": {"thread_id": thread_key}}, chunks, retrieval_query)

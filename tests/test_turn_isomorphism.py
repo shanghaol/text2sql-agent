@@ -89,6 +89,7 @@ class FakeRetriever:
         enable_dense: bool = True,
         reranker=None,
         rerank_pool: int = 0,
+        quota: bool = False,
     ):
         self.calls.append((query, top_n))
         self.kwargs_calls.append(
@@ -101,6 +102,7 @@ class FakeRetriever:
                 "enable_dense": enable_dense,
                 "reranker": reranker,
                 "rerank_pool": rerank_pool,
+                "quota": quota,
             }
         )
         return list(self._chunks)
@@ -315,6 +317,7 @@ def test_retrieval_opts_passthrough_full_kwargs(monkeypatch, gate_env):
         enable_dense=True,
         rerank_pool=16,
         reranker=reranker,
+        quota=True,
     )
     turn_mod.prepare_turn("问题", "t-ablation", retrieval_opts=opts)
 
@@ -329,6 +332,7 @@ def test_retrieval_opts_passthrough_full_kwargs(monkeypatch, gate_env):
         "enable_dense": True,
         "reranker": reranker,
         "rerank_pool": 16,
+        "quota": True,
     }
 
 
@@ -343,7 +347,7 @@ def test_retrieval_opts_respects_explicit_top_n(monkeypatch, gate_env):
 
 
 def test_retrieval_opts_defaults_are_online_defaults(monkeypatch, gate_env):
-    """RetrievalOptions 裸构造 = 线上默认（rrf_k=None/双路开/不重排）——
+    """RetrievalOptions 裸构造 = 线上默认（rrf_k=None/双路开/不重排/无配额）——
     dataclass 默认值与 hybrid_retriever.search 默认值的一致性锁。"""
     opts = turn_mod.RetrievalOptions()
     assert opts.rrf_k is None
@@ -352,6 +356,7 @@ def test_retrieval_opts_defaults_are_online_defaults(monkeypatch, gate_env):
     assert opts.enable_dense is True
     assert opts.rerank_pool == 0
     assert opts.reranker is None
+    assert opts.quota is False
 
 
 def test_get_retriever_caches_by_k(monkeypatch):

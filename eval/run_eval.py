@@ -16,6 +16,7 @@ W4 起升级为"三方向 prepare_turn 看齐"——CLI（agent/main.py）、Fas
     .venv/Scripts/python.exe -m eval.run_eval --tag vs_control --compare eval/reports/detail_xxx.json
     .venv/Scripts/python.exe -m eval.run_eval --tag rrf_k_10 --rrf-k 10 --runs 3       # W6 消融 E 行
     .venv/Scripts/python.exe -m eval.run_eval --tag rerank_bge --rerank --runs 3       # W6 消融 F 行（需 SILICONFLOW_API_KEY）
+    .venv/Scripts/python.exe -m eval.run_eval --tag rerank_quota --rerank --quota --runs 3   # W7 FQ 行（doc_type 覆盖配额）
 
 产物（eval/reports/，进 git——报告是简历证据链）：
     report_<tag>_<ts>.md    Markdown 汇总（§3.3 固定结构，声明段五条写死在模板里）
@@ -146,6 +147,7 @@ def _ablation_flags_present(args: argparse.Namespace) -> bool:
         or getattr(args, "no_dense", False)
         or getattr(args, "no_fewshot", False)
         or getattr(args, "rerank", False)
+        or getattr(args, "quota", False)
     )
 
 
@@ -155,6 +157,7 @@ def _build_retrieval_opts(args: argparse.Namespace) -> RetrievalOptions | None:
     --rerank 在此构建 SiliconFlowReranker 实例（设计 §4.1/§4.4：仅评测侧接线，
     线上永不构造）——key 缺失时构造即抛 ValueError，main() 捕获后给中文指引退出
     （启动期失败，而不是跑了一半才在第一题上炸）。
+    --quota 与 --no-fewshot 的互斥校验在 _parse_args（argparse 启动期）完成。
     """
     if not _ablation_flags_present(args):
         return None
@@ -170,6 +173,7 @@ def _build_retrieval_opts(args: argparse.Namespace) -> RetrievalOptions | None:
         enable_dense=not args.no_dense,
         rerank_pool=rerank_pool,
         reranker=reranker,
+        quota=args.quota,
     )
 
 
@@ -189,6 +193,7 @@ def effective_retrieval_config(args: argparse.Namespace) -> dict:
         "rerank": rerank_enabled,
         "rerank_pool": RERANK_POOL if rerank_enabled else 0,
         "rerank_model": RERANK_MODEL if rerank_enabled else None,
+        "quota": bool(getattr(args, "quota", False)),
     }
 
 
@@ -203,6 +208,8 @@ def _describe_retrieval(retrieval_cfg: dict) -> str:
         bits.append(f"doc_types={'+'.join(retrieval_cfg['doc_types'])}（去 few-shot）")
     if retrieval_cfg["rerank"]:
         bits.append(f"rerank={retrieval_cfg['rerank_model']}（pool={retrieval_cfg['rerank_pool']}）")
+    if retrieval_cfg["quota"]:
+        bits.append("quota=开（doc_type 覆盖保底，W7 §1.3）")
     return "，".join(bits)
 
 
@@ -1031,7 +1038,17 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--no-dense", dest="no_dense", action="store_true", help="关向量路=纯 BM25 检索（消融 C 行：语义改写鲁棒性的损失）")
     parser.add_argument("--no-fewshot", dest="no_fewshot", action="store_true", help="过滤 qa_pair 片（doc_types=schema+glossary，消融 G 行：去 few-shot 自举）")
     parser.add_argument("--rerank", action="store_true", help=f"启用 rerank（SiliconFlow {RERANK_MODEL}，候选池 {RERANK_POOL}=2×top_n 起点，消融 F 行；需 .env 配 SILICONFLOW_API_KEY，仅评测侧）")
-    return parser.parse_args()
+    parser.add_argument("--quota", action="store_true", help="启用 doc_type 覆盖配额（W7 设计 §1.3，FQ 行：--rerank --quota）——重排允许改变顺序、不允许降低类型覆盖（相对 RRF top-8 基线锚）；需与 --rerank 同用")
+    args = parser.parse_args()
+    # W7 §1.5 启动期互斥校验：few-shot（qa_pair 片）被 --no-fewshot 过滤后，
+    # quota 还要为 qa_pair 保底覆盖是语义矛盾——直接报错退出，不跑一半才发现。
+    if args.quota and args.no_fewshot:
+        parser.error(
+            "--quota 与 --no-fewshot 不能同时使用：quota 会为 qa_pair（few-shot 示例片）"
+            "保底类型覆盖，而 --no-fewshot 已把 qa_pair 片全部过滤——"
+            "示例片被过滤了还保 qa 覆盖是语义矛盾（W7 设计 §1.5），请只保留其一"
+        )
+    return args
 
 
 def _local_now() -> datetime:

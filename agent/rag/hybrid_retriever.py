@@ -13,6 +13,17 @@ W6 改造（设计 §3.4 消融入口 + §4.2 rerank 钩子，全部默认关闭
 - rerank 钩子：融合候选池取 rerank_pool（=2×top_n，池=8 时 Recall 无提升空间），
   对池内片全文重排后取前 top_n；重排分写入 rrf_score 字段位置（明细可区分）。
 
+W7 改造（设计 §1.3/§1.5 doc_type 覆盖配额，默认关闭）：
+- search() 新参 quota：对 rerank 结果追加"类型覆盖保底"——配额是"重排允许改变
+  顺序、不允许降低类型覆盖"的最小干预语义（相对基线 RRF top-8 而言）：覆盖集
+  取 RRF top-8 出现过的 doc_type（基线行为锚），预留段给每个覆盖类型强制保底
+  rerank 分最高的 1 片（救回被重排挤出 top_n 的片），填充段按 rerank 全序补满，
+  输出仍按 rerank 分全局降序。规则实现在 agent/rag/quota.py（纯函数），
+  与离线标定工具共用同一份代码；
+- quota=True 但 rerank 钩子不在场（reranker=None 或 rerank_pool<=0）时抛
+  ValueError——配额是对重排结果的修正，无重排可调说明参数配错，早失败
+  （与"双路全关"同款哲学）。
+
 本模块被导入时自动执行一次 setup_jieba()（幂等），保证 BM25 分词质量。
 """
 
@@ -23,6 +34,7 @@ import jieba
 from rank_bm25 import BM25Okapi
 
 from agent.rag.jieba_dict import setup_jieba
+from agent.rag.quota import apply_coverage_quota, coverage_types
 
 if TYPE_CHECKING:  # 仅为类型标注，不引入运行时依赖
     from agent.rag.rerank import Reranker
@@ -106,6 +118,7 @@ class HybridRetriever:
         enable_dense: bool = True,
         reranker: "Reranker | None" = None,
         rerank_pool: int = 0,
+        quota: bool = False,
     ) -> list[RetrievedChunk]:
         """混合检索一个查询。
 
@@ -120,9 +133,23 @@ class HybridRetriever:
           （设计 §4.2：池必须大于注入数，pool=top_n 时重排只能换序救不回排位低的片）。
           rerank 失败**不降级**（fail-closed，设计 §4.1）：异常向上抛，由评测
           runner 题级 try/except 落 error 记录——静默回退原序会让消融变量失控。
+        - quota（W7 设计 §1.3，需 rerank 钩子在场）：doc_type 覆盖配额——
+          **重排允许改变顺序、不允许降低类型覆盖**的最小干预语义。覆盖集锚
+          RRF top-8（基线无 rerank 时会注入的类型，不新增基线没有的注入策略），
+          预留段为每个覆盖类型强制保底池内 rerank 分最高的 1 片（可救回被重排
+          挤出 top_n 的片——配额的修复对象），填充段按 rerank 全序补满剩余
+          槽位，输出仍按 rerank 分全局降序（选片规则在 agent/rag/quota.py 纯函数，
+          确定性：RRF 序 + rerank 序 + 池内 index 决胜）。quota=True 而重排钩子
+          不在场（reranker=None 或 rerank_pool<=0）时抛 ValueError——配额无重排
+          可调说明参数配错，早失败（与"双路全关"同款哲学）。
         """
         if not enable_bm25 and not enable_dense:
             raise ValueError("enable_bm25 与 enable_dense 不能同时为 False（双路全关检索恒空，多半是消融参数配错）")
+        if quota and (reranker is None or rerank_pool <= 0):
+            raise ValueError(
+                "quota=True 需要 rerank 钩子在场（reranker 且 rerank_pool>0）："
+                "配额是对重排结果的类型覆盖修正，无重排可调说明参数配错（W7 设计 §1.5）"
+            )
 
         wanted = set(doc_types) if doc_types is not None else None
 
@@ -182,12 +209,22 @@ class HybridRetriever:
         # —— rerank 钩子（设计 §4.2）：池内片全文重排 → 取前 top_n 注入 ——
         # 重排分写入 rrf_score 字段位置（RetrievedChunk 不加新字段，明细可区分：
         # 默认路径的 rrf_score ≤ 2/(k+1) < 0.033，重排分是 cosine 级的 0~1）。
+        # quota=True（W7 设计 §1.3）：对整池取 rerank 全序（预留段要能救回被重排
+        # 挤出 top_n 的片，这正是配额的修复对象），再交覆盖配额选片。
         if use_rerank:
-            ranked = reranker.rerank(query, [chunk.text for chunk in chunks], top_n=top_n)
+            pool_texts = [chunk.text for chunk in chunks]
+            ranked = reranker.rerank(query, pool_texts, top_n=len(pool_texts) if quota else top_n)
             reranked: list[RetrievedChunk] = []
             for index, score in ranked:
                 if not 0 <= index < len(chunks):
                     raise ValueError(f"reranker 返回的 index 越界（{index}，候选池 {len(chunks)} 片）")
                 reranked.append(replace(chunks[index], rrf_score=float(score)))
-            chunks = reranked[:top_n]
+            if quota:
+                # 覆盖集锚 RRF top-8（fused 即池的 RRF 全序，前 top_n = 基线行为锚）；
+                # apply_coverage_quota 输出仍按 rerank 分全局降序（设计 §1.3 第 4 步）
+                metas_by_id = {doc_id: self.metas[id_to_index[doc_id]] for doc_id, _ in fused}
+                coverage = coverage_types([doc_id for doc_id, _ in fused[:top_n]], metas_by_id)
+                chunks = apply_coverage_quota(reranked, [doc_id for doc_id, _ in fused], coverage, top_n)
+            else:
+                chunks = reranked[:top_n]
         return chunks
