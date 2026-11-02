@@ -1,4 +1,6 @@
-# Text-to-SQL 电商数据分析助手（W2）
+# Text-to-SQL 电商数据分析助手
+
+> **已上线**：https://sql.shanghl.club ｜ 评测：50+8 条，9 组消融（experiment-log W3/W6 段）｜ 测试：pytest 445 + vitest 45 + JUnit 48
 
 用自然语言问数据，单 Agent（LangChain v1 `create_agent` + DeepSeek）通过 **混合检索**（BM25 + 向量 + 自实现 RRF）获取表结构与业务口径，生成 **MySQL 只读 SQL** 查询电商数据集并回答。架构与决策依据见《开发需求Prompt-Text-to-SQL分析助手.md》与《W2设计-数据与检索层.md》。
 
@@ -55,6 +57,6 @@ data/
   schema.sql          # mart 库建表 DDL
   generate_dataset.py # 数据集生成 + 建库 + 导入（Faker，固定种子可复现）
   rag_corpus/         # RAG 语料：6 表文档 + 11 条口径 + 11 条金标 QA
-backend/ frontend/ eval/   # W4 起逐步启用
+backend/ frontend/ eval/   # W4-W7 已全部启用（网关/HITL/消融/自举）
 docs/             # 需求、设计、教学材料、实验记录
 ```

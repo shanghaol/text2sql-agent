@@ -632,3 +632,11 @@ gmv | paid_orders
 ### 工程决策（终稿）
 - rerank 线上不启用（维持 W6 决策，双轮负结果 + 机制排除后更无争议）
 - quota.py / rerank_scope 代码保留（默认关），作为"验证过的修复尝试"存档——负结果叙事的代码证据
+
+---
+
+# W8 收官记录 ｜ 2026-11-03
+
+- 线上 smoke 测试账号清理：21 账号 → 1（保留真实用户 yhnt），history/api_key/feedback 按依赖顺序删除并复核
+- 生产部署 W7 产物（jar/dist/agent 源码），冒烟通过：GMV 数字正确、日志 grep sk- = 0
+- docs/简历终稿.md + docs/模拟面试拷打.md 交付（模拟面试五幕结构，全部数字可溯源 experiment-log）
