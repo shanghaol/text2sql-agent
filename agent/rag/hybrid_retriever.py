@@ -222,14 +222,15 @@ class HybridRetriever:
             # 基线锚），仅 schema 片内部按 rerank 分优化排序。纯生成侧对照行。
             schema_chunks = [c for c in chunks if c.doc_type == "schema"]
             other_chunks = [c for c in chunks if c.doc_type != "schema"]
+            # rerank 返回 [(schema_chunks 下标, score)]——映射回 chunk id
             ranked = reranker.rerank(query, [c.text for c in schema_chunks], top_n=len(schema_chunks))
-            rerank_by_id = {chunks[r["index"]].id: r["score"] for r in ranked}
             rerank_schema = sorted(
-                (replace(c, rrf_score=float(rerank_by_id[c.id])) for c in schema_chunks),
+                (replace(schema_chunks[idx], rrf_score=float(score)) for idx, score in ranked),
                 key=lambda c: -c.rrf_score,
             )
-            others_sorted = sorted(other_chunks, key=lambda c: -c.rrf_score)
-            chunks = [*rerank_schema, *others_sorted]
+            # 非 schema 片保持 RRF 原序（rrf_score 未动），排在重排后的 schema 之后；
+            # 输出截 top_n——与全量重排同款的"重排分全局降序"形态
+            chunks = [*rerank_schema, *other_chunks]
             return chunks[:top_n]
         if use_rerank:
             pool_texts = [chunk.text for chunk in chunks]
