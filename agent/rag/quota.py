@@ -122,3 +122,50 @@ def apply_coverage_quota(
     # —— 输出（第 4 步）：按 rerank 分全局降序（预留片可能不属于 top_n 分位，
     #     预留段的入选序也不保证全局有序，统一重排恢复"按分注入"的形态）——
     return sorted(selected, key=lambda chunk: (-chunk.rrf_score, pool_index[chunk.id]))[:top_n]
+
+
+def apply_cap_quota(
+    reranked: list[RetrievedChunk],
+    rrf_order: list[str],
+    top_n: int,
+    caps: dict[str, int] | None = None,
+) -> list[RetrievedChunk]:
+    """cap_only 选片（W7 离线标定的胜者变体）：按 rerank 全序遍历，类型配额封顶。
+
+    与 apply_coverage_quota 的区别：无覆盖集保底（不做预留段），只对类型设上限——
+    schema 过量时被 cap 挤出，非 schema（glossary/qa_pair）获得实际配额。
+    语义来源：W6 负结果归因实验——判别"schema 挤出 glossary"与"示例稀释"两通道
+    谁是 SQL 伤害主因（experiment-log W7 预注册；离线扫描 86.8%，J1+J2 双过）。
+
+    参数：
+        reranked: 池内全部片的 rerank 全序，rerank 分写在 rrf_score 字段位置
+                  （与 apply_coverage_quota 同约定：本函数以 (-rerank 分, 池内 index)
+                  再排一次，不依赖调用方是否已决胜）；
+        rrf_order: 池内片的 RRF 全序（提供池内 index 决胜键）；
+        top_n: 最终注入条数（遍历在此处停止——被封顶类型跳过不占槽）；
+        caps: 类型 → 上限。默认 {"schema": 6, "glossary": 2, "qa_pair": 2}
+              （离线标定的 V4 精确语义：单题 schema 期望 ≤5、glossary/qa 期望各 ≤1，
+              cap 6/2/2 不误伤合法需求；运行时必须与离线扫描逐位一致——
+              2026-11-03 一致性核对曾因"非 schema 不封顶"漂移被抓，教训在案）。
+
+    返回：≤top_n 片，按 rerank 分全局降序（同分按池内 index 升序）。
+    确定性：只依赖 rerank 全序 + 池内 index，无随机、无分数阈值。
+    """
+    if top_n <= 0 or not reranked:
+        return []
+    caps = caps or {"schema": 6, "glossary": 2, "qa_pair": 2}
+    pool_index = {doc_id: i for i, doc_id in enumerate(rrf_order)}
+    ordered = sorted(reranked, key=lambda chunk: (-chunk.rrf_score, pool_index[chunk.id]))
+
+    selected: list[RetrievedChunk] = []
+    counts: dict[str, int] = {}
+    for chunk in ordered:
+        if len(selected) >= top_n:
+            break
+        cap = caps.get(chunk.doc_type)
+        used = counts.get(chunk.doc_type, 0)
+        if cap is not None and used >= cap:
+            continue
+        selected.append(chunk)
+        counts[chunk.doc_type] = used + 1
+    return selected

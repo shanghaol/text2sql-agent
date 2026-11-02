@@ -601,3 +601,7 @@ gmv | paid_orders
 ## 3. 语料冻结
 - 冻结锚点：git 9f06963 时期语料 = 28 片（schema 6 / glossary 11 / qa 11），与 W6 全矩阵逐片一致
 - 冻结窗口内禁止：absorb_feedback --apply、qa_pairs.md 变更、Chroma 重建
+
+## 附注（T3 开跑前的一致性核对，2026-11-03）
+
+设计红线"标定规则 != 线上规则漂移检查"首次执行即抓到漂移：T1 的运行时 caps={"schema": 6} 少了离线 V4 的 glossary/qa_pair cap 2——非 schema 不封顶时第 7/8 槽被 qa 片抢占，glossary 没救回（83.3% vs 预测 91.7%）。已对齐为 caps={"schema": 6, "glossary": 2, "qa_pair": 2}，运行时复测与离线预测逐项一致（glossary 91.7% / qa片 1.98 精确一致）。教训：**离线标定的选片函数与运行时实现必须是同一份代码**——本例因 sweep 脚本与 quota.py 是两份实现而漂移，已通过一致性核对闭环；未来应让 sweep 直接 import 运行时函数。

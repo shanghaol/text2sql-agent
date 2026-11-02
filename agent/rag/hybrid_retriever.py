@@ -34,7 +34,7 @@ import jieba
 from rank_bm25 import BM25Okapi
 
 from agent.rag.jieba_dict import setup_jieba
-from agent.rag.quota import apply_coverage_quota, coverage_types
+from agent.rag.quota import apply_cap_quota, apply_coverage_quota, coverage_types
 
 if TYPE_CHECKING:  # 仅为类型标注，不引入运行时依赖
     from agent.rag.rerank import Reranker
@@ -119,6 +119,7 @@ class HybridRetriever:
         reranker: "Reranker | None" = None,
         rerank_pool: int = 0,
         quota: bool = False,
+        quota_mode: str = "coverage",
     ) -> list[RetrievedChunk]:
         """混合检索一个查询。
 
@@ -133,7 +134,7 @@ class HybridRetriever:
           （设计 §4.2：池必须大于注入数，pool=top_n 时重排只能换序救不回排位低的片）。
           rerank 失败**不降级**（fail-closed，设计 §4.1）：异常向上抛，由评测
           runner 题级 try/except 落 error 记录——静默回退原序会让消融变量失控。
-        - quota（W7 设计 §1.3，需 rerank 钩子在场）：doc_type 覆盖配额——
+        - quota（W7 设计 §1.3/§1.2，需 rerank 钩子在场）：doc_type 配额——
           **重排允许改变顺序、不允许降低类型覆盖**的最小干预语义。覆盖集锚
           RRF top-8（基线无 rerank 时会注入的类型，不新增基线没有的注入策略），
           预留段为每个覆盖类型强制保底池内 rerank 分最高的 1 片（可救回被重排
@@ -148,8 +149,10 @@ class HybridRetriever:
         if quota and (reranker is None or rerank_pool <= 0):
             raise ValueError(
                 "quota=True 需要 rerank 钩子在场（reranker 且 rerank_pool>0）："
-                "配额是对重排结果的类型覆盖修正，无重排可调说明参数配错（W7 设计 §1.5）"
+                "配额是对重排结果的类型修正，无重排可调说明参数配错（W7 设计 §1.5）"
             )
+        if quota and quota_mode not in ("coverage", "cap"):
+            raise ValueError(f"quota_mode 非法：{quota_mode!r}（可选 coverage | cap）")
 
         wanted = set(doc_types) if doc_types is not None else None
 
@@ -220,11 +223,22 @@ class HybridRetriever:
                     raise ValueError(f"reranker 返回的 index 越界（{index}，候选池 {len(chunks)} 片）")
                 reranked.append(replace(chunks[index], rrf_score=float(score)))
             if quota:
-                # 覆盖集锚 RRF top-8（fused 即池的 RRF 全序，前 top_n = 基线行为锚）；
-                # apply_coverage_quota 输出仍按 rerank 分全局降序（设计 §1.3 第 4 步）
-                metas_by_id = {doc_id: self.metas[id_to_index[doc_id]] for doc_id, _ in fused}
-                coverage = coverage_types([doc_id for doc_id, _ in fused[:top_n]], metas_by_id)
-                chunks = apply_coverage_quota(reranked, [doc_id for doc_id, _ in fused], coverage, top_n)
+                if quota_mode == "cap":
+                    # cap_only（离线标定胜者）：schema 封顶，非 schema 不设限——
+                    # 判别"schema 挤出"与"示例稀释"两通道谁是 W6 负结果主因。
+                    # 遍历停在 top_n：被封顶的类型片跳过不占槽，非 schema 片
+                    # 因此得以进入注入（这正是配额的修复机制）。
+                    chunks = apply_cap_quota(reranked, [doc_id for doc_id, _ in fused], top_n=top_n)
+                else:
+                    # 覆盖保底（W7 设计 §1.3 原主案，离线预演 J1 不过保留作对照实现）：
+                    # 预留段保证覆盖类型各 1 片必在注入内。
+                    coverage = coverage_types(
+                        [doc_id for doc_id, _ in fused[:top_n]],
+                        {doc_id: self.metas[id_to_index[doc_id]] for doc_id, _ in fused},
+                    )
+                    chunks = apply_coverage_quota(
+                        reranked, [doc_id for doc_id, _ in fused], coverage, top_n=top_n
+                    )
             else:
                 chunks = reranked[:top_n]
         return chunks

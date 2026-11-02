@@ -1,0 +1,15 @@
+event: meta
+data: {"threadKey": "u15:b2c3d4e5-0001-4000-8000-000000000002", "model": "deepseek-flash"}
+
+event: tool
+data: {"name": "execute_readonly_sql"}
+
+event: tool
+data: {"name": "execute_readonly_sql", "sql": "SELECT\n  (SELECT ROUND(SUM(amount), 2) FROM payments\n    WHERE paid_at >= DATE_SUB('2026-09-30', INTERVAL 29 DAY)\n      AND paid_at < DATE_ADD('2026-09-30', INTERVAL 1 DAY)) AS pay_amount_30d,\n  (SELECT COUNT(*) FROM payments\n    WHERE paid_at >= DATE_SUB('2026-09-30', INTERVAL 29 DAY)\n      AND paid_at < DATE_ADD('2026-09-30', INTERVAL 1 DAY)) AS pay_cnt_30d,\n  (SELECT ROUND(SUM(amount), 2) FROM refunds\n    WHERE refunded_at >= DATE_SUB('2026-09-30', INTERVAL 29 DAY)\n      AND refunded_at < DATE_ADD('2026-09-30', INTERVAL 1 DAY)) AS refund_amount_30d,\n  (SELECT COUNT(*) FROM refunds\n    WHERE refunded_at >= DATE_SUB('2026-09-30', INTERVAL 29 DAY)\n      AND refunded_at < DATE_ADD('2026-09-30', INTERVAL 1 DAY)) AS refund_cnt_30d,\n  (SELECT ROUND(SUM(order_amount), 2) FROM orders\n    WHERE created_at >= DATE_SUB('2026-09-30', INTERVAL 29 DAY)\n      AND created_at < DATE_ADD('2026-09-30', INTERVAL 1 DAY)) AS order_amount_30d"}
+
+event: pending_approval
+data: {"approvalId": "593d9b9efd2f410ca85fac640725c02b", "sql": "SELECT\n  (SELECT ROUND(SUM(amount), 2) FROM payments\n    WHERE paid_at >= DATE_SUB('2026-09-30', INTERVAL 29 DAY)\n      AND paid_at < DATE_ADD('2026-09-30', INTERVAL 1 DAY)) AS pay_amount_30d,\n  (SELECT COUNT(*) FROM payments\n    WHERE paid_at >= DATE_SUB('2026-09-30', INTERVAL 29 DAY)\n      AND paid_at < DATE_ADD('2026-09-30', INTERVAL 1 DAY)) AS pay_cnt_30d,\n  (SELECT ROUND(SUM(amount), 2) FROM refunds\n    WHERE refunded_at >= DATE_SUB('2026-09-30', INTERVAL 29 DAY)\n      AND refunded_at < DATE_ADD('2026-09-30', INTERVAL 1 DAY)) AS refund_amount_30d,\n  (SELECT COUNT(*) FROM refunds\n    WHERE refunded_at >= DATE_SUB('2026-09-30', INTERVAL 29 DAY)\n      AND refunded_at < DATE_ADD('2026-09-30', INTERVAL 1 DAY)) AS refund_cnt_30d,\n  (SELECT ROUND(SUM(order_amount), 2) FROM orders\n    WHERE created_at >= DATE_SUB('2026-09-30', INTERVAL 29 DAY)\n      AND created_at < DATE_ADD('2026-09-30', INTERVAL 1 DAY)) AS order_amount_30d", "actionCount": 1, "latencyMs": 2676, "tokens": {"input": 4135, "output": 564}}
+
+event: pending_saved
+data: {"historyId":7}
+
