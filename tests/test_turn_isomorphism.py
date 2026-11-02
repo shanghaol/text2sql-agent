@@ -91,6 +91,7 @@ class FakeRetriever:
         rerank_pool: int = 0,
         quota: bool = False,
         quota_mode: str = "coverage",
+        rerank_scope: str = "all",
     ):
         self.calls.append((query, top_n))
         self.kwargs_calls.append(
@@ -105,6 +106,7 @@ class FakeRetriever:
                 "rerank_pool": rerank_pool,
                 "quota": quota,
                 "quota_mode": quota_mode,
+                "rerank_scope": rerank_scope,
             }
         )
         return list(self._chunks)
@@ -321,6 +323,7 @@ def test_retrieval_opts_passthrough_full_kwargs(monkeypatch, gate_env):
         reranker=reranker,
         quota=True,
         quota_mode="cap",
+        rerank_scope="all",
     )
     turn_mod.prepare_turn("问题", "t-ablation", retrieval_opts=opts)
 

@@ -40,7 +40,8 @@ class RetrievalOptions:
     rerank_pool: int = 0  # >0 且 reranker 存在才开重排钩子（F 行 pool=16）
     reranker: object | None = None  # SiliconFlowReranker 实例；None=不重排
     quota: bool = False
-    quota_mode: str = "cap"  # W7：doc_type 覆盖配额（FQ 行 --rerank --quota）；需重排钩子在场
+    quota_mode: str = "cap"
+    rerank_scope: str = "all"  # C 行实验（W7 预注册分支）  # W7：doc_type 覆盖配额（FQ 行 --rerank --quota）；需重排钩子在场
 
 
 @dataclass
@@ -107,6 +108,7 @@ def prepare_turn(
             rerank_pool=retrieval_opts.rerank_pool,
             quota=retrieval_opts.quota,
             quota_mode=retrieval_opts.quota_mode,
+            rerank_scope=retrieval_opts.rerank_scope,
         )
     agent = build_agent(build_system_prompt(format_context_block(chunks)), api_key=api_key, hitl=hitl)
     return PreparedTurn(agent, {"configurable": {"thread_id": thread_key}}, chunks, retrieval_query)
