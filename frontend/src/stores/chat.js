@@ -1,11 +1,16 @@
 /**
  * 对话 store：消息数组、流状态、threadId。
  * applyChatEvent 是纯 reducer（可单测）：SSE 事件 → 助手消息状态。
- * 工具事件规则（与 agent/server.py 事件契约对齐）：
- * - 起始 tool 事件 {"name"}：同名只保留一条"正在查询…"指示行（去重，后端同轮本就只发一次）
- * - 完成 tool 事件 {"name","sql"}：更新同名指示行为可折叠"已执行 SQL"（默认收起）
+ * 工具事件规则（与 agent/server.py 事件契约对齐——后端按工具调用槽（index）各发一条，
+ * 多 action 轮同名工具各有起始/完成事件，W7 设计 §3.1）：
+ * - 起始 tool 事件 {"name"}：存在同名"正在查询…"指示行时去重；全部已完成（或无同名行）
+ *   则追加新行——绝不把已完成行复活回"正在查询"态
+ * - 完成 tool 事件 {"name","sql"}：落在最后一个同名未完成行上（→ 可折叠"已执行 SQL"，
+ *   默认收起）；无未完成行则追加新行——已完成行不覆写（多 action 轮每条 SQL 一条指示行，
+ *   与真实执行序列对齐）
  * HITL 事件（W5 §3.7）：
- * - pending_approval {approvalId, sql}：登记 msg.pending（审批卡渲染），streaming 保持 true
+ * - pending_approval {approvalId, sql, actionCount}：登记 msg.pending（审批卡渲染），
+ *   streaming 保持 true；actionCount>1 时审批卡显示"批 1 拒余"降级文案（W7 §3.1）
  * - pending_saved {historyId}：把 historyId 绑进 pending（批准/拒绝时随请求带回原地 UPDATE）
  */
 import { defineStore } from 'pinia'
@@ -31,7 +36,7 @@ export function newAssistantMsg() {
     historyId: null, // saved 事件注入；有值才显示点赞/点踩
     feedbackExpired: false, // 60s 窗口内未收到 saved
     feedback: null, // 1 赞 / 0 踩 / null 未评
-    pending: null, // W5 HITL：{approvalId, sql, historyId, expired, busy, resolved}
+    pending: null, // W5 HITL：{approvalId, sql, actionCount, historyId, expired, busy, resolved}
   }
 }
 
@@ -51,13 +56,15 @@ export function applyChatEvent(prev, ev) {
       break
     case 'tool': {
       if (d.sql) {
-        // 完成事件：更新最后一个同名指示行为"已执行 SQL"
-        const target = [...m.tools].reverse().find((t) => t.name === d.name)
+        // 完成事件：找最后一个同名且未完成（sql 为空）的指示行落 SQL（"正在查询"→"已完成"）。
+        // 已完成行不覆写（W7 §3.1：多 action 轮完成事件逐条到达）→ 无未完成行时追加新行
+        const target = [...m.tools].reverse().find((t) => t.name === d.name && t.sql == null)
         if (target) target.sql = d.sql
         else m.tools.push({ name: d.name, sql: d.sql })
       } else {
-        // 起始事件：同名去重，保持一条"正在查询…"指示行
-        if (!m.tools.some((t) => t.name === d.name)) {
+        // 起始事件：仅与同名"正在查询"行去重；全部已完成（或无同名行）→ 追加新行
+        // （链式审批轮模型重新发起 SQL：新起一行，不复活已完成行）
+        if (!m.tools.some((t) => t.name === d.name && t.sql == null)) {
           m.tools.push({ name: d.name, sql: null })
         }
       }
@@ -68,6 +75,7 @@ export function applyChatEvent(prev, ev) {
       m.pending = {
         approvalId: d.approvalId ?? '',
         sql: d.sql ?? '',
+        actionCount: d.actionCount ?? 1, // W7 §3.1：多 action 轮 >1，审批卡据此显示降级文案
         historyId: null, // pending_saved 到达后绑定
         expired: false, // 409/410 或恢复流出错后置灰
         busy: false, // 审批请求进行中（按钮 loading + 防双击）

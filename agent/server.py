@@ -25,7 +25,7 @@ Starlette 在线程池中迭代；不引入 async LangChain 栈，避免 to_thre
 不做 CORS：前端只调 Java（同源），Python 无浏览器直连方（§3.2）。
 
 W5 HITL 事件契约增量（§3.4，向后兼容）：
-- /agent/chat 流停在 interrupt 时发 `pending_approval {approvalId, sql, latencyMs, tokens}` 后
+- /agent/chat 流停在 interrupt 时发 `pending_approval {approvalId, sql, actionCount, latencyMs, tokens}` 后
   结束（无 done）；Java 落 status=4 并注入 `pending_saved {historyId}`（Java→FE）；
 - POST /agent/chat/approval：审批恢复流（meta/delta/tool/done 同款映射；saved 仍由 Java 注入）；
 - 流前错误码增量：pending_approval_exists(409) / approval_not_found(409) /
@@ -81,11 +81,13 @@ _LLM_ERROR_MESSAGES = {
     "llm_upstream_error": "模型服务暂时不可用，请重试",
 }
 
-# HITL 审批错误的可读文案（W5 §3.4 事件契约表；Java/前端按 code 再映射一份同语义文案）
+# HITL 审批错误的可读文案（W5 §3.4 事件契约表；Java/前端按 code 再映射一份同语义文案）。
+# pending_approval_exists 指路两条出口（W7 §3.4 核对项）：处理审批卡；刷新后卡片已丢
+# （审批态在进程内存）→ 等惰性过期后重提，历史页可查全文。
 _APPROVAL_ERROR_MESSAGES = {
     "approval_not_found": "审批不存在或已被处理（可能服务已重启），请重新提问",
     "approval_expired": "审批已超过 5 分钟未处理，请重新提问",
-    "pending_approval_exists": "当前会话已有等待确认的 SQL，请先处理审批卡片",
+    "pending_approval_exists": "当前会话有等待确认的 SQL，请先处理审批卡片；若刷新后卡片已丢失，请等审批过期（约 5 分钟）后重新提问，历史页可查看完整问答",
 }
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -101,7 +103,11 @@ def internal_token_ok(provided: str | None) -> bool:
     （开发机不经 Java 直连 uvicorn 调试的口子）；非空时恒等比较防时序侧信道。"""
     if not INTERNAL_TOKEN:
         return True
-    return bool(provided) and secrets.compare_digest(provided, INTERNAL_TOKEN)
+    # bytes 比较（W7 §3.4，W5 审查 P3）：str 版 compare_digest 遇非 ASCII 抛 TypeError →
+    # 本应 401/403 的坏头变 500；bytes 版对任意内容恒可比较，时序侧信道防护语义不变。
+    return bool(provided) and secrets.compare_digest(
+        provided.encode("utf-8"), INTERNAL_TOKEN.encode("utf-8")
+    )
 
 
 def validate_chat_request(question: str, thread_id: str) -> str | None:
@@ -146,15 +152,18 @@ def sse_frame(event: str, data: dict) -> str:
 class StreamEventMapper:
     """流式 chunk → SSE 事件的纯映射（§3.2 事件契约）。
 
-    与 main.py 的去重打印逻辑逐行同构：chunk.content → delta；
-    tool_call_chunks 非空且工具名变化 → tool（同一轮里同名工具只发一次）。
+    chunk.content → delta；tool_call_chunks 非空 → 每个工具调用槽（index）起始各发
+    一次 tool 事件，多 action 轮同名工具各发一条（W7 §3.3 纠偏：并非"同名工具只发
+    一次"——前端按槽位逐条适配，chat.js 起始事件的同名合并仅用于"正在查询"指示行，
+    完成事件逐条落行）。main.py 的同名去重打印是 CLI 活代码（agent/main.py
+    last_tool_name，其"同名去重"记录层瑕疵 W2 已定调："CLI 看趋势，inspect_chain
+    看真相"），与本映射器无关。
     另外累加 chunk.usage_metadata——实测（2026-10-11，langchain-deepseek 1.1.1）
     每条 AIMessage 的收尾 chunk 携带一份 usage_metadata，累加即"每次 LLM 请求
     计一次"，与 W3 sum_usage 的计费口径一致。
     """
 
     def __init__(self) -> None:
-        self._last_tool_name = ""  # 记录上一条已发事件的工具名，同一轮里去重防刷屏
         self._pending_tools: dict[int, dict] = {}  # 工具调用分片累积：index → {name, args}
         self.last_generated_sql = None  # 本轮最后一次 execute_readonly_sql 的完整 SQL（done 事件携带）
         self.usage_input = 0
@@ -189,7 +198,6 @@ class StreamEventMapper:
                     self._pending_tools[idx] = slot
                 if name and slot["name"] == "":
                     slot["name"] = name
-                    self._last_tool_name = name
                     events.append(("tool", {"name": name}))
                 slot["args"] += tc.get("args") or ""
         # 3) token 用量（每条 AIMessage 收尾 chunk 携带一次）——同时是工具调用参数拼装完成的信号
@@ -274,11 +282,11 @@ def _chat_event_stream(pt, question: str, started_at: float, key_fingerprint: st
         interrupt = _extract_interrupt_payload(pt.agent, pt.config)
         if interrupt is not None:
             actions = interrupt.get("action_requests") or []
-            # TODO(W5 §8-⑰ 收尾): 同轮多条 SQL 时 middleware 一次收集全部 tool_call
-            # （action_requests 多条）。当前前端只展示/确认第一条；resume 由
-            # approval.decisions_for 做安全兜底（approve=批 1 条 + 拒其余未过目的，
+            # 同轮多条 SQL 时 middleware 一次收集全部 tool_call（action_requests 多条）。
+            # 事件只带第一条 SQL；actionCount 让前端把"批 1 拒余"兜底对用户透明化
+            # （W7 §3.1 降级文案决策——逐条审批 UI 记 backlog，W6 设计 §6 T4-① 规格）。
+            # resume 由 approval.decisions_for 做安全兜底（approve=批 1 条 + 拒其余未过目的，
             # reject=整批拒）——被拒的 SQL 若仍需要，模型会重新发起 → 链式新审批卡。
-            # 待办：pending_approval 事件带全部 SQL、前端逐条批准/拒绝。
             first = actions[0] if actions else {}
             first_args = first.get("args") or {}
             sql = first_args.get("sql") if isinstance(first_args, dict) else None
@@ -305,6 +313,9 @@ def _chat_event_stream(pt, question: str, started_at: float, key_fingerprint: st
                 {
                     "approvalId": approval_id,
                     "sql": sql_text,
+                    # W7 §3.1：本轮 interrupt 的 action_requests 条数（多 action 轮 >1，
+                    # 前端审批卡据此显示降级文案）；Java 原样透传（§8-6 核实）
+                    "actionCount": len(actions),
                     # latencyMs/tokens 为 additive 字段（契约主字段是 approvalId/sql）：
                     # Java 落 status=4 行时带上停车前已消耗的部分，approve 的 UPDATE
                     # 两段累加后 total 才完整（§3.4 status=4 行含 token/latency）
@@ -398,6 +409,7 @@ def _approval_event_stream(
                 {
                     "approvalId": approval_id,
                     "sql": sql_text,
+                    "actionCount": len(actions),  # W7 §3.1：链式轮同样可能多 action
                     "latencyMs": int((time.perf_counter() - started_at) * 1000),
                     "tokens": {"input": mapper.usage_input, "output": mapper.usage_output},
                 },

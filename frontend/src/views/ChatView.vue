@@ -39,7 +39,7 @@ async function send() {
   if (!question || chat.streaming) return
   if (hasPending.value) {
     // 后端本也会 409 pending_approval_exists——本地先拦，交互更顺（§3.10）
-    ElMessage.warning('当前会话有等待确认的 SQL，请先处理审批卡片')
+    ElMessage.warning('当前会话有等待确认的 SQL，请先处理审批卡片；若刷新后卡片已丢失，请等审批过期（约 5 分钟）后重新提问')
     return
   }
   if (!auth.hasKey) {

@@ -28,7 +28,7 @@ export const ERROR_MESSAGES = {
   // HITL 审批（W5 §3.4，与 Java ErrorCode/Python server 同码同语义）
   approval_not_found: '审批不存在或已被处理（可能服务已重启），请重新提问',
   approval_expired: '审批已超过 5 分钟未处理，请重新提问',
-  pending_approval_exists: '当前会话有等待确认的 SQL，请先处理审批卡片',
+  pending_approval_exists: '当前会话有等待确认的 SQL，请先处理审批卡片；若刷新后卡片已丢失，请等审批过期（约 5 分钟）后重新提问，历史页可查看完整问答',
   approval_bad_decision: '审批操作不合法',
   // 兜底
   bad_request: '请求参数不合法',

@@ -35,7 +35,7 @@ public enum ErrorCode {
     // ---- HITL 审批（W5 §3.4/§3.6；Python 侧同码语义见 server.py _APPROVAL_ERROR_MESSAGES）----
     APPROVAL_NOT_FOUND("approval_not_found", 409, "审批不存在或已被处理（可能服务已重启），请重新提问"),
     APPROVAL_EXPIRED("approval_expired", 410, "审批已超过 5 分钟未处理，请重新提问"),
-    PENDING_APPROVAL_EXISTS("pending_approval_exists", 409, "当前会话有等待确认的 SQL，请先处理审批卡片"),
+    PENDING_APPROVAL_EXISTS("pending_approval_exists", 409, "当前会话有等待确认的 SQL，请先处理审批卡片；若刷新后卡片已丢失，请等审批过期（约 5 分钟）后重新提问，历史页可查看完整问答"),
     APPROVAL_BAD_DECISION("approval_bad_decision", 422, "审批决定不合法（仅支持 approve / reject）");
 
     /** 对外（HTTP 响应体 / 跨服务）的业务错误码，与设计 §3.3 汇总表一致。 */

@@ -108,7 +108,8 @@ def test_mapper_text_chunks_become_delta_events():
 
 
 def test_mapper_tool_name_deduped_like_main_py():
-    """同一轮里同名工具只发一次；换工具再发——与 main.py 去重打印逻辑同构。"""
+    """同一调用槽（index）起始只发一次 tool 事件，槽内换名先结算再开新槽；
+    不同槽的同名工具各发一条（W7 §3.3 docstring 纠偏后的口径）。"""
     mapper = server.StreamEventMapper()
     events = (
         mapper.feed(_tool_chunk("list_tables"))
@@ -196,6 +197,18 @@ def test_internal_token_enforced_when_configured(monkeypatch):
     assert server.internal_token_ok("wrong") is False
     assert server.internal_token_ok(None) is False
     assert server.internal_token_ok("") is False
+
+
+def test_internal_token_non_ascii_header_false_not_typeerror(monkeypatch):
+    """非 ASCII 头 → False 而非 TypeError（W7 §3.4，W5 审查 P3：str 版 compare_digest
+    遇非 ASCII 抛 TypeError → 本应 401/403 的坏头变 500；bytes 版对任意内容恒可比较，
+    时序侧信道防护语义不变）。§8-10 四态：等值 / 不等值 / 非 ASCII / 空头。"""
+    monkeypatch.setattr(server, "INTERNAL_TOKEN", "devtoken")
+    assert server.internal_token_ok("令牌token") is False  # 非 ASCII 不等值：False 而非异常
+    monkeypatch.setattr(server, "INTERNAL_TOKEN", "开发内部令牌")
+    assert server.internal_token_ok("开发内部令牌") is True  # 双方非 ASCII 且等值 → True
+    assert server.internal_token_ok("开发内部令牌X") is False
+    assert server.internal_token_ok(None) is False
 
 
 def test_validate_chat_request_accepts_normal_question():

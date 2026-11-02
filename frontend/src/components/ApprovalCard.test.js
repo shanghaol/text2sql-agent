@@ -73,4 +73,16 @@ describe('ApprovalCard 渲染分支（W5 §3.7）', () => {
     const w = mountCard(pending({ sql: '' }))
     expect(w.find('.sql').text()).toContain('（后端未提供 SQL）')
   })
+
+  it('多 action 降级文案（W7 §3.1）：actionCount>1 显示"共 N 条 SQL：批准第 1 条、拒绝其余"；缺省/1 不显示', () => {
+    const multi = mountCard(pending({ actionCount: 3 }))
+    const note = multi.find('.multi-note')
+    expect(note.exists()).toBe(true)
+    expect(note.text()).toContain('本轮共 3 条 SQL')
+    expect(note.text()).toContain('批准第 1 条、拒绝其余')
+    expect(note.text()).toContain('助手会重新发起并再次请求审批')
+
+    expect(mountCard(pending({ actionCount: 1 })).find('.multi-note').exists()).toBe(false)
+    expect(mountCard(pending({})).find('.multi-note').exists()).toBe(false) // 旧事件无该字段
+  })
 })

@@ -639,6 +639,37 @@ class ChatProxyServiceTest {
         assertThat(gate.inFlight()).isEqualTo(0);
     }
 
+    @Test
+    @DisplayName("W7 §3.2：openApproval threadId 交叉校验——错 threadId 409；大小写不同放行（§8-9）")
+    void openApprovalThreadIdCrossCheck() {
+        QueryHistory original = pendingRow(77L); // 落库 threadId = TEST_THREAD_ID（小写十六进制）
+        doReturn(original).when(historyMapper).selectById(77L);
+
+        // 同用户把 A 会话的审批请求配上 B 会话的 threadId → 409 approval_not_found
+        // （与"行不在待审批态"同码，不泄露该行是否存在于其他会话）
+        assertThatThrownBy(() -> service.openApproval(42L,
+                new ApprovalRequest(UUID.randomUUID().toString(), "approval-1", "approve", 77L)))
+                .isInstanceOf(BizException.class)
+                .satisfies(e -> {
+                    BizException biz = (BizException) e;
+                    assertThat(biz.code()).isEqualTo("approval_not_found");
+                    assertThat(biz.httpStatus()).isEqualTo(409);
+                });
+        assertThat(gate.inFlight()).isEqualTo(0);
+
+        // 大小写边界（§8-9）：大写 UUID threadId + 小写落库值 → 忽略大小写放行
+        upstreamApprovalStream(String.join("\n",
+                "event: done",
+                "data: {\"tokens\":{\"input\":1,\"output\":1},\"latencyMs\":5}",
+                "").getBytes(StandardCharsets.UTF_8));
+        ChatSession session = service.openApproval(42L,
+                new ApprovalRequest(TEST_THREAD_ID.toUpperCase(), "approval-1", "approve", 77L));
+        assertThat(session).isNotNull();
+        assertThat(session.pendingHistory()).isSameAs(original); // 原行随 session 带到落库段
+        session.close(); // 只验前置链放行，不跑流（并发闸归还）
+        assertThat(gate.inFlight()).isEqualTo(0);
+    }
+
     // ------------------------------------------------------------------ 测试用 SseSink
 
     /** 内存捕获 sink。 */

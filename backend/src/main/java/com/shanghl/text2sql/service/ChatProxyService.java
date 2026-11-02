@@ -171,7 +171,8 @@ public class ChatProxyService {
     /**
      * W5 §3.4/§3.6：审批恢复请求的前置链——限流/并发闸/原行校验/读 key 解密/连上游。
      * 与 open() 的差异：转发目标 /agent/chat/approval、恒带 X-User-HITL: 1（resume 轮必开）、
-     * 额外做审批原行的归属（越权红线 §1.7）与状态（幂等）校验，行随 ChatSession 带到落库段。
+     * 额外做审批原行的归属（越权红线 §1.7）、状态（幂等）与 threadId 一致性（W7 §3.2）
+     * 校验，行随 ChatSession 带到落库段。
      */
     public ChatSession openApproval(long userId, ApprovalRequest req) {
         validateThreadId(req.threadId());
@@ -186,13 +187,21 @@ public class ChatProxyService {
         }
         HttpResponse<InputStream> upstream = null;
         try {
-            // ② 审批原行：归属 + 状态校验（W5 §3.6 streamAndPersistForApproval 的 UPDATE 目标）
+            // ② 审批原行：归属 + 状态 + threadId 交叉校验（W5 §3.6 streamAndPersistForApproval 的 UPDATE 目标）
             QueryHistory original = historyMapper.selectById(req.historyId());
             if (original == null || original.getUserId() == null || original.getUserId() != userId) {
                 throw new BizException(ErrorCode.HISTORY_NOT_FOUND); // 非本人行一律 404，不泄露存在性
             }
             if (original.getStatus() == null || original.getStatus() != QueryHistory.STATUS_PENDING) {
                 throw new BizException(ErrorCode.APPROVAL_NOT_FOUND); // 幂等：该行已不在待审批态
+            }
+            // W7 §3.2：threadId 交叉校验——同用户把 A 会话的审批请求配上 B 会话的 threadId
+            // 一并拒绝（resume 会打到 B 会话的 LangGraph 线程，破坏会话一致性）。忽略大小写
+            // 比较（UUID 十六进制大小写无语义差异，两侧都已过 validateThreadId 的 UUID 解析，
+            // §8-9）；错误码复用 APPROVAL_NOT_FOUND 409——与"行不在待审批态"同码，
+            // 不泄露该行是否存在于其他会话（越权面一致性）。
+            if (!req.threadId().equalsIgnoreCase(original.getThreadId())) {
+                throw new BizException(ErrorCode.APPROVAL_NOT_FOUND);
             }
             // ③ 读 key 行 + 解密（与 open() 同款，微秒级、不缓存明文）
             ApiKey row = apiKeyMapper.selectOne(

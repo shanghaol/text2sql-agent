@@ -4,7 +4,10 @@
  * - msg.pending 存在且未 resolved 时由 MessageBubble 条件渲染；
  * - pending_saved 注入 historyId 前按钮禁用（批准请求需要它做原地 UPDATE）；
  * - expired（409/410/恢复流出错）→ 置灰态，提示重新提问；
- * - busy（审批请求进行中）→ 按钮 loading + 双击防护。
+ * - busy（审批请求进行中）→ 按钮 loading + 双击防护；
+ * - actionCount>1（多 action 轮，W7 设计 §3.1 降级文案）：卡片只展示/确认第 1 条 SQL，
+ *   其余按"批 1 拒余"兜底（approval.decisions_for），文案把该行为对用户透明化——
+ *   被拒 SQL 如仍需要，模型重新发起 → 链式新审批卡（逐条审批 UI 记 backlog）。
  */
 defineProps({
   pending: { type: Object, required: true },
@@ -20,6 +23,9 @@ defineEmits(['approve', 'reject'])
       <span v-if="pending.expired" class="badge expired">已过期</span>
       <span v-else-if="pending.resolved" class="badge">已处理</span>
       <span v-else class="badge waiting">等待您确认</span>
+    </div>
+    <div v-if="pending.actionCount > 1" class="multi-note">
+      本轮共 {{ pending.actionCount }} 条 SQL：批准第 1 条、拒绝其余；被拒的 SQL 如仍需要，助手会重新发起并再次请求审批
     </div>
     <pre class="sql">{{ pending.sql || '-- （后端未提供 SQL）' }}</pre>
     <div v-if="!pending.expired" class="ops">
@@ -74,6 +80,12 @@ defineEmits(['approve', 'reject'])
 }
 .badge.expired {
   color: var(--el-text-color-placeholder);
+}
+.multi-note {
+  margin-bottom: 8px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--el-color-warning-dark-2);
 }
 .sql {
   margin: 0 0 8px;

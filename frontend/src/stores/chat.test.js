@@ -31,17 +31,42 @@ describe('applyChatEvent：SSE 事件 → 消息状态（§3.2 契约）', () =>
     })
   })
 
-  it('多轮工具 + 多种工具：各自成行、完成事件对号入座', () => {
+  it('多轮工具 + 多种工具：各自成行、完成事件对号入座（W7 §3.1：已完成行不覆写）', () => {
     let m = newAssistantMsg()
     m = applyChatEvent(m, ev('tool', { name: 'search_query_history' }))
     m = applyChatEvent(m, ev('tool', { name: 'search_query_history' })) // 无 sql 的重复起始：去重为一条
     m = applyChatEvent(m, ev('tool', { name: 'execute_readonly_sql' }))
     m = applyChatEvent(m, ev('tool', { name: 'execute_readonly_sql', sql: 'SELECT 1' }))
-    m = applyChatEvent(m, ev('tool', { name: 'execute_readonly_sql', sql: 'SELECT 2 LIMIT 20' })) // 第二次执行 → 更新到最后一条同名
+    m = applyChatEvent(m, ev('tool', { name: 'execute_readonly_sql', sql: 'SELECT 2 LIMIT 20' })) // 已完成行不覆写 → 追加新行
     expect(m.tools).toEqual([
       { name: 'search_query_history', sql: null },
+      { name: 'execute_readonly_sql', sql: 'SELECT 1' },
       { name: 'execute_readonly_sql', sql: 'SELECT 2 LIMIT 20' },
     ])
+  })
+
+  it('多 action 双完成事件：逐条落行，每条 SQL 一条指示行（W7 §3.1）', () => {
+    // 后端按工具调用槽（index）各发一条完成事件（多 action 轮实测序列：起始 → 完成 → 完成）
+    let m = newAssistantMsg()
+    m = applyChatEvent(m, ev('tool', { name: 'execute_readonly_sql' })) // 起始：一条"正在查询"行
+    m = applyChatEvent(m, ev('tool', { name: 'execute_readonly_sql', sql: "SELECT SUM(amount) FROM payments WHERE paid_at >= '2026-09-01'" }))
+    m = applyChatEvent(m, ev('tool', { name: 'execute_readonly_sql', sql: 'SELECT reason, SUM(amount) FROM refunds GROUP BY reason' }))
+    expect(m.tools).toHaveLength(2)
+    expect(m.tools[0]).toEqual({ name: 'execute_readonly_sql', sql: "SELECT SUM(amount) FROM payments WHERE paid_at >= '2026-09-01'" })
+    expect(m.tools[1]).toEqual({ name: 'execute_readonly_sql', sql: 'SELECT reason, SUM(amount) FROM refunds GROUP BY reason' })
+  })
+
+  it('先完成后起始：已完成行不复活，新起始追加新"正在查询"行（链式审批轮）', () => {
+    let m = newAssistantMsg()
+    m = applyChatEvent(m, ev('tool', { name: 'execute_readonly_sql' }))
+    m = applyChatEvent(m, ev('tool', { name: 'execute_readonly_sql', sql: 'SELECT 1' }))
+    m = applyChatEvent(m, ev('tool', { name: 'execute_readonly_sql' })) // 同名新起始
+    expect(m.tools).toEqual([
+      { name: 'execute_readonly_sql', sql: 'SELECT 1' }, // 已完成行原样保留
+      { name: 'execute_readonly_sql', sql: null }, // 新"正在查询"行
+    ])
+    m = applyChatEvent(m, ev('tool', { name: 'execute_readonly_sql', sql: 'SELECT 2' }))
+    expect(m.tools[1].sql).toBe('SELECT 2') // 新完成事件落到新行
   })
 
   it('done：收尾并记录 tokens/latency/generatedSql', () => {
@@ -102,15 +127,16 @@ describe('applyChatEvent：SSE 事件 → 消息状态（§3.2 契约）', () =>
 
 // W5 HITL（§3.7）：pending_approval / pending_saved 的登记与卡片生命周期
 describe('applyChatEvent：HITL 审批事件（W5 §3.7）', () => {
-  it('pending_approval：登记 msg.pending，streaming 保持 true（UI 显示"等待确认"）', () => {
+  it('pending_approval：登记 msg.pending，streaming 保持 true；actionCount 透传（>1 显示降级文案，W7 §3.1）', () => {
     let m = newAssistantMsg()
     m = applyChatEvent(m, ev('tool', { name: 'execute_readonly_sql' }))
     m = applyChatEvent(m, ev('delta', { text: '让我查一下' }))
-    m = applyChatEvent(m, ev('pending_approval', { approvalId: 'a-1', sql: 'SELECT SUM(amount) FROM payments' }))
+    m = applyChatEvent(m, ev('pending_approval', { approvalId: 'a-1', sql: 'SELECT SUM(amount) FROM payments', actionCount: 3 }))
     expect(m.streaming).toBe(true) // 卡片渲染期间气泡仍处"进行中"
     expect(m.pending).toEqual({
       approvalId: 'a-1',
       sql: 'SELECT SUM(amount) FROM payments',
+      actionCount: 3,
       historyId: null,
       expired: false,
       busy: false,
