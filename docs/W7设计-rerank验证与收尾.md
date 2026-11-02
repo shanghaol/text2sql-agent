@@ -1,6 +1,6 @@
 # W7 设计——rerank 负结果修复验证与 W5 遗留收尾
 
-> **草稿 · 待用户确认**（2026-11-03，设计子 Agent 拟定；§9 开放问题逐条给推荐项，用户拍板后转"已确认 · 可编码"）
+> **已确认 · 可编码**（2026-11-03 主 Agent 按推荐项代拍板 §9 五项：E+FQ 组合行不跑 / C 行按预注册分支机械触发 / rerank 判据全过仍不上线上 / absorb_feedback 只读观察一次 / 预注册被修正显式进简历与面试——用户可否决任一项，返工成本低）。设计子 Agent 拟定于 2026-11-03。
 > 上游依据：《W6设计-评测扩展与消融.md》（F 行协议、语料冻结纪律、rerank 实现与"线上暂不启用"决策）、《W6讲解-评测扩展与消融.md》（发现 3 的机制假说与"W7：按 doc_type 配额保留"的修法预告、W6 审查 P1"E 行 +4.6pp 未超运行方差"的措辞纪律）、《W5设计-安全加固与自举.md》（HITL 状态机、decisions_for 安全不变量）、W5 审查遗留（0caf490 审查通过无 P0/P1，P2/P3 见 §3，本文档逐条对照现行代码核实）
 > 现状代码基线：`agent/rag/hybrid_retriever.py`（search 已参数化 enable_bm25/enable_dense/reranker/rerank_pool，W6-T2）、`agent/rag/rerank.py`（SiliconFlowReranker，fail-closed，W4 审查通过）、`agent/core/turn.py`（RetrievalOptions 收口，prepare_turn 三方共用）、`eval/run_eval.py`（--rerank 等消融 CLI 齐全，detail config 记录实际参数）、`eval/judge.py` v2.1（W3 审查 P2-1 排序键数值化已修，rejudge 零翻转——**确认无需再动**）、`agent/core/approval.py`（decisions_for"批 1 拒余"）、测试账本 pytest 423 / vitest 42 / mvn 47
 > 生产现状：https://sql.shanghl.club 原生共存部署（deploy/deploy.sh rsync 三件套）；rerank 线上未启用（服务器 .env 无 SILICONFLOW_API_KEY，W6 §4.4 决策——**W7 维持，本里程碑无线上检索行为变更**）
