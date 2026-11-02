@@ -174,6 +174,7 @@ def _build_retrieval_opts(args: argparse.Namespace) -> RetrievalOptions | None:
         rerank_pool=rerank_pool,
         reranker=reranker,
         quota=args.quota,
+        quota_mode=args.quota_mode,
     )
 
 
@@ -194,6 +195,7 @@ def effective_retrieval_config(args: argparse.Namespace) -> dict:
         "rerank_pool": RERANK_POOL if rerank_enabled else 0,
         "rerank_model": RERANK_MODEL if rerank_enabled else None,
         "quota": bool(getattr(args, "quota", False)),
+        "quota_mode": getattr(args, "quota_mode", "coverage"),
     }
 
 
@@ -209,7 +211,7 @@ def _describe_retrieval(retrieval_cfg: dict) -> str:
     if retrieval_cfg["rerank"]:
         bits.append(f"rerank={retrieval_cfg['rerank_model']}（pool={retrieval_cfg['rerank_pool']}）")
     if retrieval_cfg["quota"]:
-        bits.append("quota=开（doc_type 覆盖保底，W7 §1.3）")
+        bits.append(f"quota=开（mode={args.quota_mode}，W7 离线标定）")
     return "，".join(bits)
 
 
@@ -1038,6 +1040,8 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--no-dense", dest="no_dense", action="store_true", help="关向量路=纯 BM25 检索（消融 C 行：语义改写鲁棒性的损失）")
     parser.add_argument("--no-fewshot", dest="no_fewshot", action="store_true", help="过滤 qa_pair 片（doc_types=schema+glossary，消融 G 行：去 few-shot 自举）")
     parser.add_argument("--rerank", action="store_true", help=f"启用 rerank（SiliconFlow {RERANK_MODEL}，候选池 {RERANK_POOL}=2×top_n 起点，消融 F 行；需 .env 配 SILICONFLOW_API_KEY，仅评测侧）")
+    parser.add_argument("--quota-mode", choices=["coverage", "cap"], default="cap",
+                        help="配额选片模式（W7 离线标定：cap 为胜者，预注册主实验行；coverage 为原主案对照实现）")
     parser.add_argument("--quota", action="store_true", help="启用 doc_type 覆盖配额（W7 设计 §1.3，FQ 行：--rerank --quota）——重排允许改变顺序、不允许降低类型覆盖（相对 RRF top-8 基线锚）；需与 --rerank 同用")
     args = parser.parse_args()
     # W7 §1.5 启动期互斥校验：few-shot（qa_pair 片）被 --no-fewshot 过滤后，
