@@ -218,19 +218,23 @@ class HybridRetriever:
         # quota=True（W7 设计 §1.3）：对整池取 rerank 全序（预留段要能救回被重排
         # 挤出 top_n 的片，这正是配额的修复对象），再交覆盖配额选片。
         if use_rerank and rerank_scope == "schema_only":
-            # C 行实验（W7 预注册）：只重排 schema 片——注入选集不变（成员=RRF top-8
-            # 基线锚），仅 schema 片内部按 rerank 分优化排序。纯生成侧对照行。
-            schema_chunks = [c for c in chunks if c.doc_type == "schema"]
-            other_chunks = [c for c in chunks if c.doc_type != "schema"]
-            # rerank 返回 [(schema_chunks 下标, score)]——映射回 chunk id
-            ranked = reranker.rerank(query, [c.text for c in schema_chunks], top_n=len(schema_chunks))
-            rerank_schema = sorted(
-                (replace(schema_chunks[idx], rrf_score=float(score)) for idx, score in ranked),
-                key=lambda c: -c.rrf_score,
-            )
-            # 非 schema 片保持 RRF 原序（rrf_score 未动），排在重排后的 schema 之后；
-            # 输出截 top_n——与全量重排同款的"重排分全局降序"形态
-            chunks = [*rerank_schema, *other_chunks]
+            # C 行实验（W7 预注册）：注入选集 = RRF top-8（成员与基线完全一致），
+            # 仅其中的 schema 片按 rerank 分内部重排，非 schema 片保持 RRF 相对
+            # 顺序——构成不变的纯顺序对照行（设计 §1.2-C：选集不变的生成侧探针）。
+            baseline_top = chunks[:top_n]
+            schema_subset = [c for c in baseline_top if c.doc_type == "schema"]
+            non_schema = [c for c in baseline_top if c.doc_type != "schema"]
+            if len(schema_subset) >= 2:
+                ranked = reranker.rerank(
+                    query, [c.text for c in schema_subset], top_n=len(schema_subset)
+                )
+                schema_sorted = sorted(
+                    (replace(schema_subset[idx], rrf_score=float(score)) for idx, score in ranked),
+                    key=lambda c: -c.rrf_score,
+                )
+            else:
+                schema_sorted = schema_subset  # 0/1 片无"内部排序"可言，直通
+            chunks = [*schema_sorted, *non_schema]
             return chunks[:top_n]
         if use_rerank:
             pool_texts = [chunk.text for chunk in chunks]
