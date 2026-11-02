@@ -1,0 +1,8352 @@
+{
+ "EV-001": {
+  "question": "2026 年 3 月 1 日至 3 月 15 日（含）每天的订单量是多少？",
+  "rrf_order": [
+   {
+    "id": "qa_pair:qa_001",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03278688524590164
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03225806451612903
+   },
+   {
+    "id": "qa_pair:qa_007",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.031746031746031744
+   },
+   {
+    "id": "glossary:gmv",
+    "doc_type": "glossary",
+    "rrf_score": 0.03128054740957967
+   },
+   {
+    "id": "glossary:avg_order_value",
+    "doc_type": "glossary",
+    "rrf_score": 0.030798389007344232
+   },
+   {
+    "id": "qa_pair:qa_003",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03055037313432836
+   },
+   {
+    "id": "qa_pair:qa_009",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.030536130536130537
+   },
+   {
+    "id": "schema:order_items",
+    "doc_type": "schema",
+    "rrf_score": 0.029910714285714284
+   },
+   {
+    "id": "schema:orders",
+    "doc_type": "schema",
+    "rrf_score": 0.029906956136464335
+   },
+   {
+    "id": "qa_pair:qa_010",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.029273504273504274
+   },
+   {
+    "id": "glossary:new_customers",
+    "doc_type": "glossary",
+    "rrf_score": 0.028985507246376812
+   },
+   {
+    "id": "qa_pair:qa_011",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.028790389395194696
+   },
+   {
+    "id": "schema:products",
+    "doc_type": "schema",
+    "rrf_score": 0.028371628371628373
+   },
+   {
+    "id": "glossary:items_per_order",
+    "doc_type": "glossary",
+    "rrf_score": 0.028370221327967807
+   },
+   {
+    "id": "glossary:sell_through",
+    "doc_type": "glossary",
+    "rrf_score": 0.028083267871170464
+   },
+   {
+    "id": "glossary:arpu",
+    "doc_type": "glossary",
+    "rrf_score": 0.02803921568627451
+   }
+  ],
+  "rerank_order": [
+   {
+    "id": "schema:orders",
+    "doc_type": "schema",
+    "score": 0.9688039422035217
+   },
+   {
+    "id": "qa_pair:qa_001",
+    "doc_type": "qa_pair",
+    "score": 0.9288536310195923
+   },
+   {
+    "id": "qa_pair:qa_007",
+    "doc_type": "qa_pair",
+    "score": 0.45758163928985596
+   },
+   {
+    "id": "schema:products",
+    "doc_type": "schema",
+    "score": 0.42515477538108826
+   },
+   {
+    "id": "schema:order_items",
+    "doc_type": "schema",
+    "score": 0.4206540882587433
+   },
+   {
+    "id": "qa_pair:qa_009",
+    "doc_type": "qa_pair",
+    "score": 0.1322902888059616
+   },
+   {
+    "id": "glossary:gmv",
+    "doc_type": "glossary",
+    "score": 0.12713125348091125
+   },
+   {
+    "id": "glossary:new_customers",
+    "doc_type": "glossary",
+    "score": 0.08050686866044998
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "score": 0.07631568610668182
+   },
+   {
+    "id": "glossary:arpu",
+    "doc_type": "glossary",
+    "score": 0.06062561273574829
+   },
+   {
+    "id": "qa_pair:qa_003",
+    "doc_type": "qa_pair",
+    "score": 0.059146106243133545
+   },
+   {
+    "id": "qa_pair:qa_011",
+    "doc_type": "qa_pair",
+    "score": 0.03518135845661163
+   },
+   {
+    "id": "glossary:sell_through",
+    "doc_type": "glossary",
+    "score": 0.034300051629543304
+   },
+   {
+    "id": "glossary:avg_order_value",
+    "doc_type": "glossary",
+    "score": 0.028318503871560097
+   },
+   {
+    "id": "glossary:items_per_order",
+    "doc_type": "glossary",
+    "score": 0.018894266337156296
+   },
+   {
+    "id": "qa_pair:qa_010",
+    "doc_type": "qa_pair",
+    "score": 0.0038682883605360985
+   }
+  ]
+ },
+ "EV-002": {
+  "question": "销售额最高的前 5 个城市是哪些？",
+  "rrf_order": [
+   {
+    "id": "qa_pair:qa_002",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03278688524590164
+   },
+   {
+    "id": "glossary:net_sales",
+    "doc_type": "glossary",
+    "rrf_score": 0.03252247488101534
+   },
+   {
+    "id": "schema:users",
+    "doc_type": "schema",
+    "rrf_score": 0.032018442622950824
+   },
+   {
+    "id": "qa_pair:qa_010",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03200204813108039
+   },
+   {
+    "id": "qa_pair:qa_009",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.031024531024531024
+   },
+   {
+    "id": "schema:products",
+    "doc_type": "schema",
+    "rrf_score": 0.03057889822595705
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03055037313432836
+   },
+   {
+    "id": "schema:order_items",
+    "doc_type": "schema",
+    "rrf_score": 0.0304147465437788
+   },
+   {
+    "id": "glossary:sell_through",
+    "doc_type": "glossary",
+    "rrf_score": 0.030309988518943745
+   },
+   {
+    "id": "qa_pair:qa_001",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.02946912242686891
+   },
+   {
+    "id": "glossary:avg_order_value",
+    "doc_type": "glossary",
+    "rrf_score": 0.029206349206349208
+   },
+   {
+    "id": "glossary:repurchase_rate",
+    "doc_type": "glossary",
+    "rrf_score": 0.02904040404040404
+   },
+   {
+    "id": "glossary:arpu",
+    "doc_type": "glossary",
+    "rrf_score": 0.0288981288981289
+   },
+   {
+    "id": "qa_pair:qa_005",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.02877846790890269
+   },
+   {
+    "id": "glossary:new_customers",
+    "doc_type": "glossary",
+    "rrf_score": 0.02819138376017471
+   },
+   {
+    "id": "schema:orders",
+    "doc_type": "schema",
+    "rrf_score": 0.028125
+   }
+  ],
+  "rerank_order": [
+   {
+    "id": "qa_pair:qa_002",
+    "doc_type": "qa_pair",
+    "score": 0.9191464781761169
+   },
+   {
+    "id": "schema:users",
+    "doc_type": "schema",
+    "score": 0.24762669205665588
+   },
+   {
+    "id": "schema:order_items",
+    "doc_type": "schema",
+    "score": 0.04554511234164238
+   },
+   {
+    "id": "schema:orders",
+    "doc_type": "schema",
+    "score": 0.04079898074269295
+   },
+   {
+    "id": "schema:products",
+    "doc_type": "schema",
+    "score": 0.03599217161536217
+   },
+   {
+    "id": "glossary:new_customers",
+    "doc_type": "glossary",
+    "score": 0.0006290027522481978
+   },
+   {
+    "id": "glossary:sell_through",
+    "doc_type": "glossary",
+    "score": 0.0004029371193610132
+   },
+   {
+    "id": "qa_pair:qa_001",
+    "doc_type": "qa_pair",
+    "score": 0.00037925023934803903
+   },
+   {
+    "id": "qa_pair:qa_009",
+    "doc_type": "qa_pair",
+    "score": 0.00035002807271666825
+   },
+   {
+    "id": "glossary:arpu",
+    "doc_type": "glossary",
+    "score": 0.00024908522027544677
+   },
+   {
+    "id": "glossary:net_sales",
+    "doc_type": "glossary",
+    "score": 0.00023385247914120555
+   },
+   {
+    "id": "qa_pair:qa_010",
+    "doc_type": "qa_pair",
+    "score": 0.00021536831627599895
+   },
+   {
+    "id": "qa_pair:qa_005",
+    "doc_type": "qa_pair",
+    "score": 0.00012542359763756394
+   },
+   {
+    "id": "glossary:repurchase_rate",
+    "doc_type": "glossary",
+    "score": 0.00011607895430643111
+   },
+   {
+    "id": "glossary:avg_order_value",
+    "doc_type": "glossary",
+    "score": 7.526686385972425e-05
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "score": 5.455659265862778e-05
+   }
+  ]
+ },
+ "EV-003": {
+  "question": "上个月的 GMV 是多少？",
+  "rrf_order": [
+   {
+    "id": "qa_pair:qa_003",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03278688524590164
+   },
+   {
+    "id": "qa_pair:qa_001",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03200204813108039
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03200204813108039
+   },
+   {
+    "id": "glossary:arpu",
+    "doc_type": "glossary",
+    "rrf_score": 0.03125
+   },
+   {
+    "id": "qa_pair:qa_007",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.031009615384615385
+   },
+   {
+    "id": "glossary:gmv",
+    "doc_type": "glossary",
+    "rrf_score": 0.030834914611005692
+   },
+   {
+    "id": "qa_pair:qa_009",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.030303030303030304
+   },
+   {
+    "id": "glossary:avg_order_value",
+    "doc_type": "glossary",
+    "rrf_score": 0.029957522915269395
+   },
+   {
+    "id": "qa_pair:qa_004",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.029877369007803793
+   },
+   {
+    "id": "glossary:repurchase_rate",
+    "doc_type": "glossary",
+    "rrf_score": 0.029437229437229435
+   },
+   {
+    "id": "schema:products",
+    "doc_type": "schema",
+    "rrf_score": 0.029083245521601686
+   },
+   {
+    "id": "glossary:yoy_mom",
+    "doc_type": "glossary",
+    "rrf_score": 0.02900988017658188
+   },
+   {
+    "id": "schema:users",
+    "doc_type": "schema",
+    "rrf_score": 0.028484848484848488
+   },
+   {
+    "id": "qa_pair:qa_011",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.028438886647841874
+   },
+   {
+    "id": "glossary:new_customers",
+    "doc_type": "glossary",
+    "rrf_score": 0.028381642512077296
+   },
+   {
+    "id": "glossary:sell_through",
+    "doc_type": "glossary",
+    "rrf_score": 0.028083267871170464
+   }
+  ],
+  "rerank_order": [
+   {
+    "id": "qa_pair:qa_003",
+    "doc_type": "qa_pair",
+    "score": 0.9886457920074463
+   },
+   {
+    "id": "glossary:gmv",
+    "doc_type": "glossary",
+    "score": 0.25103121995925903
+   },
+   {
+    "id": "glossary:avg_order_value",
+    "doc_type": "glossary",
+    "score": 0.20912377536296844
+   },
+   {
+    "id": "glossary:arpu",
+    "doc_type": "glossary",
+    "score": 0.14270365238189697
+   },
+   {
+    "id": "schema:users",
+    "doc_type": "schema",
+    "score": 0.006912801414728165
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "score": 0.005850071553140879
+   },
+   {
+    "id": "schema:products",
+    "doc_type": "schema",
+    "score": 0.005394072737544775
+   },
+   {
+    "id": "glossary:yoy_mom",
+    "doc_type": "glossary",
+    "score": 0.0047259642742574215
+   },
+   {
+    "id": "glossary:sell_through",
+    "doc_type": "glossary",
+    "score": 0.0024109832011163235
+   },
+   {
+    "id": "qa_pair:qa_009",
+    "doc_type": "qa_pair",
+    "score": 0.0023048664443194866
+   },
+   {
+    "id": "qa_pair:qa_004",
+    "doc_type": "qa_pair",
+    "score": 0.001425333903171122
+   },
+   {
+    "id": "qa_pair:qa_001",
+    "doc_type": "qa_pair",
+    "score": 0.0014050003373995423
+   },
+   {
+    "id": "glossary:new_customers",
+    "doc_type": "glossary",
+    "score": 0.0011548608308658004
+   },
+   {
+    "id": "glossary:repurchase_rate",
+    "doc_type": "glossary",
+    "score": 0.0010276702232658863
+   },
+   {
+    "id": "qa_pair:qa_007",
+    "doc_type": "qa_pair",
+    "score": 0.0008182606543414295
+   },
+   {
+    "id": "qa_pair:qa_011",
+    "doc_type": "qa_pair",
+    "score": 0.00029114625067450106
+   }
+  ]
+ },
+ "EV-004": {
+  "question": "9 月的退款率是多少（金额口径）？",
+  "rrf_order": [
+   {
+    "id": "qa_pair:qa_004",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03278688524590164
+   },
+   {
+    "id": "glossary:refund_rate",
+    "doc_type": "glossary",
+    "rrf_score": 0.03252247488101534
+   },
+   {
+    "id": "schema:refunds",
+    "doc_type": "schema",
+    "rrf_score": 0.03177805800756621
+   },
+   {
+    "id": "glossary:net_sales",
+    "doc_type": "glossary",
+    "rrf_score": 0.03149801587301587
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.030621785881252923
+   },
+   {
+    "id": "qa_pair:qa_010",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03057889822595705
+   },
+   {
+    "id": "qa_pair:qa_003",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.030303030303030304
+   },
+   {
+    "id": "qa_pair:qa_009",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.029850746268656716
+   },
+   {
+    "id": "qa_pair:qa_007",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.029273504273504274
+   },
+   {
+    "id": "qa_pair:qa_001",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.029206349206349208
+   },
+   {
+    "id": "schema:payments",
+    "doc_type": "schema",
+    "rrf_score": 0.029116045245077504
+   },
+   {
+    "id": "glossary:repurchase_rate",
+    "doc_type": "glossary",
+    "rrf_score": 0.028991596638655463
+   },
+   {
+    "id": "schema:order_items",
+    "doc_type": "schema",
+    "rrf_score": 0.028782894736842105
+   },
+   {
+    "id": "glossary:gmv",
+    "doc_type": "glossary",
+    "rrf_score": 0.028665028665028666
+   },
+   {
+    "id": "qa_pair:qa_002",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.02844551282051282
+   },
+   {
+    "id": "glossary:pay_conversion",
+    "doc_type": "glossary",
+    "rrf_score": 0.028370221327967807
+   }
+  ],
+  "rerank_order": [
+   {
+    "id": "qa_pair:qa_004",
+    "doc_type": "qa_pair",
+    "score": 0.9973412156105042
+   },
+   {
+    "id": "schema:refunds",
+    "doc_type": "schema",
+    "score": 0.909791111946106
+   },
+   {
+    "id": "glossary:refund_rate",
+    "doc_type": "glossary",
+    "score": 0.40277916193008423
+   },
+   {
+    "id": "schema:payments",
+    "doc_type": "schema",
+    "score": 0.3302341103553772
+   },
+   {
+    "id": "glossary:net_sales",
+    "doc_type": "glossary",
+    "score": 0.08701544255018234
+   },
+   {
+    "id": "qa_pair:qa_003",
+    "doc_type": "qa_pair",
+    "score": 0.07698021829128265
+   },
+   {
+    "id": "schema:order_items",
+    "doc_type": "schema",
+    "score": 0.05178568884730339
+   },
+   {
+    "id": "glossary:gmv",
+    "doc_type": "glossary",
+    "score": 0.04522625729441643
+   },
+   {
+    "id": "qa_pair:qa_009",
+    "doc_type": "qa_pair",
+    "score": 0.02922268956899643
+   },
+   {
+    "id": "qa_pair:qa_010",
+    "doc_type": "qa_pair",
+    "score": 0.010425602085888386
+   },
+   {
+    "id": "glossary:repurchase_rate",
+    "doc_type": "glossary",
+    "score": 0.009171758778393269
+   },
+   {
+    "id": "glossary:pay_conversion",
+    "doc_type": "glossary",
+    "score": 0.008371874690055847
+   },
+   {
+    "id": "qa_pair:qa_002",
+    "doc_type": "qa_pair",
+    "score": 0.006487221457064152
+   },
+   {
+    "id": "qa_pair:qa_007",
+    "doc_type": "qa_pair",
+    "score": 0.0036624432541429996
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "score": 0.001353991450741887
+   },
+   {
+    "id": "qa_pair:qa_001",
+    "doc_type": "qa_pair",
+    "score": 0.00035376776941120625
+   }
+  ]
+ },
+ "EV-005": {
+  "question": "买过数码类目商品的女性用户有多少？",
+  "rrf_order": [
+   {
+    "id": "qa_pair:qa_005",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03278688524590164
+   },
+   {
+    "id": "schema:products",
+    "doc_type": "schema",
+    "rrf_score": 0.03252247488101534
+   },
+   {
+    "id": "qa_pair:qa_009",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03149801587301587
+   },
+   {
+    "id": "glossary:repurchase_rate",
+    "doc_type": "glossary",
+    "rrf_score": 0.03125763125763126
+   },
+   {
+    "id": "schema:users",
+    "doc_type": "schema",
+    "rrf_score": 0.03125763125763126
+   },
+   {
+    "id": "glossary:arpu",
+    "doc_type": "glossary",
+    "rrf_score": 0.031054405392392875
+   },
+   {
+    "id": "glossary:sell_through",
+    "doc_type": "glossary",
+    "rrf_score": 0.030679156908665108
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03007688828584351
+   },
+   {
+    "id": "qa_pair:qa_002",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.029877369007803793
+   },
+   {
+    "id": "qa_pair:qa_001",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.029513888888888888
+   },
+   {
+    "id": "schema:order_items",
+    "doc_type": "schema",
+    "rrf_score": 0.02946236559139785
+   },
+   {
+    "id": "glossary:new_customers",
+    "doc_type": "glossary",
+    "rrf_score": 0.029030910609857977
+   },
+   {
+    "id": "qa_pair:qa_006",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.028949545078577336
+   },
+   {
+    "id": "qa_pair:qa_003",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.028850145288501453
+   },
+   {
+    "id": "glossary:items_per_order",
+    "doc_type": "glossary",
+    "rrf_score": 0.028790389395194696
+   },
+   {
+    "id": "glossary:avg_order_value",
+    "doc_type": "glossary",
+    "rrf_score": 0.028665028665028666
+   }
+  ],
+  "rerank_order": [
+   {
+    "id": "qa_pair:qa_005",
+    "doc_type": "qa_pair",
+    "score": 0.983116626739502
+   },
+   {
+    "id": "schema:products",
+    "doc_type": "schema",
+    "score": 0.07126323133707047
+   },
+   {
+    "id": "schema:users",
+    "doc_type": "schema",
+    "score": 0.02992638200521469
+   },
+   {
+    "id": "schema:order_items",
+    "doc_type": "schema",
+    "score": 0.009128224104642868
+   },
+   {
+    "id": "glossary:arpu",
+    "doc_type": "glossary",
+    "score": 0.00208396022208035
+   },
+   {
+    "id": "glossary:repurchase_rate",
+    "doc_type": "glossary",
+    "score": 0.001863508252426982
+   },
+   {
+    "id": "glossary:new_customers",
+    "doc_type": "glossary",
+    "score": 0.0009011624497361481
+   },
+   {
+    "id": "qa_pair:qa_009",
+    "doc_type": "qa_pair",
+    "score": 0.0004742960154544562
+   },
+   {
+    "id": "glossary:sell_through",
+    "doc_type": "glossary",
+    "score": 0.00046902408939786255
+   },
+   {
+    "id": "qa_pair:qa_001",
+    "doc_type": "qa_pair",
+    "score": 0.0003244742110837251
+   },
+   {
+    "id": "glossary:avg_order_value",
+    "doc_type": "glossary",
+    "score": 0.0003087472287006676
+   },
+   {
+    "id": "qa_pair:qa_006",
+    "doc_type": "qa_pair",
+    "score": 0.0002863149857148528
+   },
+   {
+    "id": "glossary:items_per_order",
+    "doc_type": "glossary",
+    "score": 0.0002659225428942591
+   },
+   {
+    "id": "qa_pair:qa_002",
+    "doc_type": "qa_pair",
+    "score": 0.00024873684742487967
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "score": 0.00022430320677813143
+   },
+   {
+    "id": "qa_pair:qa_003",
+    "doc_type": "qa_pair",
+    "score": 5.273946590023115e-05
+   }
+  ]
+ },
+ "EV-006": {
+  "question": "注册后从未成功支付的用户有多少？",
+  "rrf_order": [
+   {
+    "id": "qa_pair:qa_006",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03278688524590164
+   },
+   {
+    "id": "qa_pair:qa_003",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03125763125763126
+   },
+   {
+    "id": "schema:payments",
+    "doc_type": "schema",
+    "rrf_score": 0.03125763125763126
+   },
+   {
+    "id": "glossary:gmv",
+    "doc_type": "glossary",
+    "rrf_score": 0.031054405392392875
+   },
+   {
+    "id": "glossary:arpu",
+    "doc_type": "glossary",
+    "rrf_score": 0.030834914611005692
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.030776515151515152
+   },
+   {
+    "id": "qa_pair:qa_002",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03055037313432836
+   },
+   {
+    "id": "glossary:avg_order_value",
+    "doc_type": "glossary",
+    "rrf_score": 0.030303030303030304
+   },
+   {
+    "id": "qa_pair:qa_011",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.030158730158730156
+   },
+   {
+    "id": "schema:users",
+    "doc_type": "schema",
+    "rrf_score": 0.03009207275993712
+   },
+   {
+    "id": "schema:orders",
+    "doc_type": "schema",
+    "rrf_score": 0.02946236559139785
+   },
+   {
+    "id": "schema:refunds",
+    "doc_type": "schema",
+    "rrf_score": 0.029236022193768675
+   },
+   {
+    "id": "glossary:new_customers",
+    "doc_type": "glossary",
+    "rrf_score": 0.02921395544346364
+   },
+   {
+    "id": "qa_pair:qa_004",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.028985507246376812
+   },
+   {
+    "id": "glossary:refund_rate",
+    "doc_type": "glossary",
+    "rrf_score": 0.028782894736842105
+   },
+   {
+    "id": "glossary:net_sales",
+    "doc_type": "glossary",
+    "rrf_score": 0.028531243721117136
+   }
+  ],
+  "rerank_order": [
+   {
+    "id": "qa_pair:qa_006",
+    "doc_type": "qa_pair",
+    "score": 0.9507471919059753
+   },
+   {
+    "id": "schema:orders",
+    "doc_type": "schema",
+    "score": 0.10945644229650497
+   },
+   {
+    "id": "schema:users",
+    "doc_type": "schema",
+    "score": 0.05095287784934044
+   },
+   {
+    "id": "schema:payments",
+    "doc_type": "schema",
+    "score": 0.030007096007466316
+   },
+   {
+    "id": "glossary:arpu",
+    "doc_type": "glossary",
+    "score": 0.014686697162687778
+   },
+   {
+    "id": "glossary:avg_order_value",
+    "doc_type": "glossary",
+    "score": 0.012446511536836624
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "score": 0.011597095057368279
+   },
+   {
+    "id": "glossary:new_customers",
+    "doc_type": "glossary",
+    "score": 0.007839931175112724
+   },
+   {
+    "id": "qa_pair:qa_002",
+    "doc_type": "qa_pair",
+    "score": 0.007744322996586561
+   },
+   {
+    "id": "schema:refunds",
+    "doc_type": "schema",
+    "score": 0.00743582658469677
+   },
+   {
+    "id": "glossary:gmv",
+    "doc_type": "glossary",
+    "score": 0.0017906312132254243
+   },
+   {
+    "id": "glossary:refund_rate",
+    "doc_type": "glossary",
+    "score": 0.0015999843599274755
+   },
+   {
+    "id": "qa_pair:qa_003",
+    "doc_type": "qa_pair",
+    "score": 0.001547976746223867
+   },
+   {
+    "id": "qa_pair:qa_011",
+    "doc_type": "qa_pair",
+    "score": 0.0013788549695163965
+   },
+   {
+    "id": "qa_pair:qa_004",
+    "doc_type": "qa_pair",
+    "score": 0.0003110336547251791
+   },
+   {
+    "id": "glossary:net_sales",
+    "doc_type": "glossary",
+    "score": 0.00020264912745915353
+   }
+  ]
+ },
+ "EV-007": {
+  "question": "近 7 天每天的支付金额是多少？",
+  "rrf_order": [
+   {
+    "id": "qa_pair:qa_007",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03278688524590164
+   },
+   {
+    "id": "qa_pair:qa_001",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03200204813108039
+   },
+   {
+    "id": "glossary:avg_order_value",
+    "doc_type": "glossary",
+    "rrf_score": 0.0315136476426799
+   },
+   {
+    "id": "qa_pair:qa_003",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.031054405392392875
+   },
+   {
+    "id": "glossary:gmv",
+    "doc_type": "glossary",
+    "rrf_score": 0.031009615384615385
+   },
+   {
+    "id": "schema:payments",
+    "doc_type": "schema",
+    "rrf_score": 0.030776515151515152
+   },
+   {
+    "id": "qa_pair:qa_004",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03057889822595705
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03055037313432836
+   },
+   {
+    "id": "glossary:refund_rate",
+    "doc_type": "glossary",
+    "rrf_score": 0.029910714285714284
+   },
+   {
+    "id": "glossary:net_sales",
+    "doc_type": "glossary",
+    "rrf_score": 0.02976190476190476
+   },
+   {
+    "id": "schema:refunds",
+    "doc_type": "schema",
+    "rrf_score": 0.029551337359792925
+   },
+   {
+    "id": "glossary:pay_conversion",
+    "doc_type": "glossary",
+    "rrf_score": 0.029236022193768675
+   },
+   {
+    "id": "qa_pair:qa_011",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.02919863597612958
+   },
+   {
+    "id": "qa_pair:qa_002",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.029083245521601686
+   },
+   {
+    "id": "qa_pair:qa_010",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.028484848484848488
+   },
+   {
+    "id": "glossary:arpu",
+    "doc_type": "glossary",
+    "rrf_score": 0.02821939586645469
+   }
+  ],
+  "rerank_order": [
+   {
+    "id": "qa_pair:qa_007",
+    "doc_type": "qa_pair",
+    "score": 0.9673868417739868
+   },
+   {
+    "id": "schema:payments",
+    "doc_type": "schema",
+    "score": 0.12984977662563324
+   },
+   {
+    "id": "schema:refunds",
+    "doc_type": "schema",
+    "score": 0.03394923731684685
+   },
+   {
+    "id": "qa_pair:qa_001",
+    "doc_type": "qa_pair",
+    "score": 0.012895513325929642
+   },
+   {
+    "id": "glossary:avg_order_value",
+    "doc_type": "glossary",
+    "score": 0.010273599997162819
+   },
+   {
+    "id": "glossary:gmv",
+    "doc_type": "glossary",
+    "score": 0.006098588462918997
+   },
+   {
+    "id": "glossary:arpu",
+    "doc_type": "glossary",
+    "score": 0.006056068930774927
+   },
+   {
+    "id": "glossary:refund_rate",
+    "doc_type": "glossary",
+    "score": 0.00294234836474061
+   },
+   {
+    "id": "qa_pair:qa_002",
+    "doc_type": "qa_pair",
+    "score": 0.0024950585793703794
+   },
+   {
+    "id": "qa_pair:qa_011",
+    "doc_type": "qa_pair",
+    "score": 0.002337632467970252
+   },
+   {
+    "id": "glossary:net_sales",
+    "doc_type": "glossary",
+    "score": 0.002073667710646987
+   },
+   {
+    "id": "glossary:pay_conversion",
+    "doc_type": "glossary",
+    "score": 0.0016045996453613043
+   },
+   {
+    "id": "qa_pair:qa_003",
+    "doc_type": "qa_pair",
+    "score": 0.0012754823546856642
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "score": 0.0009224183158949018
+   },
+   {
+    "id": "qa_pair:qa_004",
+    "doc_type": "qa_pair",
+    "score": 0.0006488062208518386
+   },
+   {
+    "id": "qa_pair:qa_010",
+    "doc_type": "qa_pair",
+    "score": 0.0005509796901606023
+   }
+  ]
+ },
+ "EV-008": {
+  "question": "2026 年 6 月的客单价是多少？",
+  "rrf_order": [
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03278688524590164
+   },
+   {
+    "id": "qa_pair:qa_001",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03200204813108039
+   },
+   {
+    "id": "glossary:gmv",
+    "doc_type": "glossary",
+    "rrf_score": 0.031544957774465976
+   },
+   {
+    "id": "qa_pair:qa_009",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.0315136476426799
+   },
+   {
+    "id": "glossary:avg_order_value",
+    "doc_type": "glossary",
+    "rrf_score": 0.03149801587301587
+   },
+   {
+    "id": "schema:order_items",
+    "doc_type": "schema",
+    "rrf_score": 0.03055037313432836
+   },
+   {
+    "id": "qa_pair:qa_003",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.030536130536130537
+   },
+   {
+    "id": "qa_pair:qa_007",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.030330882352941176
+   },
+   {
+    "id": "schema:products",
+    "doc_type": "schema",
+    "rrf_score": 0.029877369007803793
+   },
+   {
+    "id": "glossary:arpu",
+    "doc_type": "glossary",
+    "rrf_score": 0.029709507042253523
+   },
+   {
+    "id": "qa_pair:qa_004",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.029206349206349208
+   },
+   {
+    "id": "glossary:yoy_mom",
+    "doc_type": "glossary",
+    "rrf_score": 0.029116045245077504
+   },
+   {
+    "id": "schema:payments",
+    "doc_type": "schema",
+    "rrf_score": 0.029051670471052088
+   },
+   {
+    "id": "glossary:items_per_order",
+    "doc_type": "glossary",
+    "rrf_score": 0.0288981288981289
+   },
+   {
+    "id": "qa_pair:qa_011",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.028814262023217248
+   },
+   {
+    "id": "glossary:new_customers",
+    "doc_type": "glossary",
+    "rrf_score": 0.02857142857142857
+   }
+  ],
+  "rerank_order": [
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "score": 0.9338846802711487
+   },
+   {
+    "id": "schema:payments",
+    "doc_type": "schema",
+    "score": 0.5938867926597595
+   },
+   {
+    "id": "qa_pair:qa_009",
+    "doc_type": "qa_pair",
+    "score": 0.39769867062568665
+   },
+   {
+    "id": "schema:products",
+    "doc_type": "schema",
+    "score": 0.1672479808330536
+   },
+   {
+    "id": "schema:order_items",
+    "doc_type": "schema",
+    "score": 0.049689166247844696
+   },
+   {
+    "id": "glossary:avg_order_value",
+    "doc_type": "glossary",
+    "score": 0.03211585059762001
+   },
+   {
+    "id": "qa_pair:qa_003",
+    "doc_type": "qa_pair",
+    "score": 0.03211555629968643
+   },
+   {
+    "id": "qa_pair:qa_001",
+    "doc_type": "qa_pair",
+    "score": 0.029850617051124573
+   },
+   {
+    "id": "glossary:arpu",
+    "doc_type": "glossary",
+    "score": 0.026448454707860947
+   },
+   {
+    "id": "glossary:new_customers",
+    "doc_type": "glossary",
+    "score": 0.01885944791138172
+   },
+   {
+    "id": "glossary:items_per_order",
+    "doc_type": "glossary",
+    "score": 0.01716224104166031
+   },
+   {
+    "id": "qa_pair:qa_007",
+    "doc_type": "qa_pair",
+    "score": 0.015596909448504448
+   },
+   {
+    "id": "glossary:gmv",
+    "doc_type": "glossary",
+    "score": 0.007054119370877743
+   },
+   {
+    "id": "qa_pair:qa_004",
+    "doc_type": "qa_pair",
+    "score": 0.003090692451223731
+   },
+   {
+    "id": "glossary:yoy_mom",
+    "doc_type": "glossary",
+    "score": 0.002174208639189601
+   },
+   {
+    "id": "qa_pair:qa_011",
+    "doc_type": "qa_pair",
+    "score": 0.0005706789088435471
+   }
+  ]
+ },
+ "EV-009": {
+  "question": "2026 年上半年的复购率是多少？",
+  "rrf_order": [
+   {
+    "id": "qa_pair:qa_009",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03278688524590164
+   },
+   {
+    "id": "glossary:repurchase_rate",
+    "doc_type": "glossary",
+    "rrf_score": 0.03225806451612903
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03200204813108039
+   },
+   {
+    "id": "qa_pair:qa_001",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03149801587301587
+   },
+   {
+    "id": "glossary:gmv",
+    "doc_type": "glossary",
+    "rrf_score": 0.031099324975891997
+   },
+   {
+    "id": "qa_pair:qa_003",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.031009615384615385
+   },
+   {
+    "id": "qa_pair:qa_004",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.030303030303030304
+   },
+   {
+    "id": "glossary:net_sales",
+    "doc_type": "glossary",
+    "rrf_score": 0.029957522915269395
+   },
+   {
+    "id": "glossary:sell_through",
+    "doc_type": "glossary",
+    "rrf_score": 0.029850746268656716
+   },
+   {
+    "id": "schema:products",
+    "doc_type": "schema",
+    "rrf_score": 0.029571646010002173
+   },
+   {
+    "id": "glossary:arpu",
+    "doc_type": "glossary",
+    "rrf_score": 0.029437229437229435
+   },
+   {
+    "id": "glossary:items_per_order",
+    "doc_type": "glossary",
+    "rrf_score": 0.02919863597612958
+   },
+   {
+    "id": "schema:users",
+    "doc_type": "schema",
+    "rrf_score": 0.0288981288981289
+   },
+   {
+    "id": "glossary:avg_order_value",
+    "doc_type": "glossary",
+    "rrf_score": 0.028782894736842105
+   },
+   {
+    "id": "glossary:refund_rate",
+    "doc_type": "glossary",
+    "rrf_score": 0.028371628371628373
+   },
+   {
+    "id": "glossary:yoy_mom",
+    "doc_type": "glossary",
+    "rrf_score": 0.02797339593114241
+   }
+  ],
+  "rerank_order": [
+   {
+    "id": "qa_pair:qa_009",
+    "doc_type": "qa_pair",
+    "score": 0.9894579648971558
+   },
+   {
+    "id": "qa_pair:qa_004",
+    "doc_type": "qa_pair",
+    "score": 0.17234988510608673
+   },
+   {
+    "id": "schema:products",
+    "doc_type": "schema",
+    "score": 0.10710202902555466
+   },
+   {
+    "id": "schema:users",
+    "doc_type": "schema",
+    "score": 0.07839943468570709
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "score": 0.06234043836593628
+   },
+   {
+    "id": "glossary:repurchase_rate",
+    "doc_type": "glossary",
+    "score": 0.0372934490442276
+   },
+   {
+    "id": "qa_pair:qa_003",
+    "doc_type": "qa_pair",
+    "score": 0.009284121915698051
+   },
+   {
+    "id": "qa_pair:qa_001",
+    "doc_type": "qa_pair",
+    "score": 0.005016573704779148
+   },
+   {
+    "id": "glossary:sell_through",
+    "doc_type": "glossary",
+    "score": 0.0042708758264780045
+   },
+   {
+    "id": "glossary:gmv",
+    "doc_type": "glossary",
+    "score": 0.003857491770759225
+   },
+   {
+    "id": "glossary:yoy_mom",
+    "doc_type": "glossary",
+    "score": 0.0027825837023556232
+   },
+   {
+    "id": "glossary:refund_rate",
+    "doc_type": "glossary",
+    "score": 0.002408069558441639
+   },
+   {
+    "id": "glossary:items_per_order",
+    "doc_type": "glossary",
+    "score": 0.0019306925823912024
+   },
+   {
+    "id": "glossary:arpu",
+    "doc_type": "glossary",
+    "score": 0.0014562371652573347
+   },
+   {
+    "id": "glossary:net_sales",
+    "doc_type": "glossary",
+    "score": 0.0010324291652068496
+   },
+   {
+    "id": "glossary:avg_order_value",
+    "doc_type": "glossary",
+    "score": 0.0006733945338055491
+   }
+  ]
+ },
+ "EV-010": {
+  "question": "退款金额最高的 3 笔订单是哪些？",
+  "rrf_order": [
+   {
+    "id": "qa_pair:qa_010",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03278688524590164
+   },
+   {
+    "id": "qa_pair:qa_004",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03225806451612903
+   },
+   {
+    "id": "glossary:net_sales",
+    "doc_type": "glossary",
+    "rrf_score": 0.03177805800756621
+   },
+   {
+    "id": "glossary:refund_rate",
+    "doc_type": "glossary",
+    "rrf_score": 0.031754032258064516
+   },
+   {
+    "id": "schema:refunds",
+    "doc_type": "schema",
+    "rrf_score": 0.03125763125763126
+   },
+   {
+    "id": "qa_pair:qa_002",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.031024531024531024
+   },
+   {
+    "id": "schema:order_items",
+    "doc_type": "schema",
+    "rrf_score": 0.0304147465437788
+   },
+   {
+    "id": "schema:orders",
+    "doc_type": "schema",
+    "rrf_score": 0.03036576949620428
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.030330882352941176
+   },
+   {
+    "id": "glossary:avg_order_value",
+    "doc_type": "glossary",
+    "rrf_score": 0.029957522915269395
+   },
+   {
+    "id": "qa_pair:qa_011",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.029850746268656716
+   },
+   {
+    "id": "qa_pair:qa_001",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.029273504273504274
+   },
+   {
+    "id": "glossary:gmv",
+    "doc_type": "glossary",
+    "rrf_score": 0.029138513513513514
+   },
+   {
+    "id": "schema:payments",
+    "doc_type": "schema",
+    "rrf_score": 0.028850145288501453
+   },
+   {
+    "id": "schema:products",
+    "doc_type": "schema",
+    "rrf_score": 0.02844551282051282
+   },
+   {
+    "id": "glossary:repurchase_rate",
+    "doc_type": "glossary",
+    "rrf_score": 0.027692895339954164
+   }
+  ],
+  "rerank_order": [
+   {
+    "id": "qa_pair:qa_010",
+    "doc_type": "qa_pair",
+    "score": 0.935806930065155
+   },
+   {
+    "id": "schema:orders",
+    "doc_type": "schema",
+    "score": 0.45505490899086
+   },
+   {
+    "id": "schema:refunds",
+    "doc_type": "schema",
+    "score": 0.42406103014945984
+   },
+   {
+    "id": "schema:payments",
+    "doc_type": "schema",
+    "score": 0.19256097078323364
+   },
+   {
+    "id": "schema:order_items",
+    "doc_type": "schema",
+    "score": 0.05751457065343857
+   },
+   {
+    "id": "schema:products",
+    "doc_type": "schema",
+    "score": 0.04789644107222557
+   },
+   {
+    "id": "glossary:refund_rate",
+    "doc_type": "glossary",
+    "score": 0.01926564797759056
+   },
+   {
+    "id": "qa_pair:qa_004",
+    "doc_type": "qa_pair",
+    "score": 0.018834063783288002
+   },
+   {
+    "id": "glossary:net_sales",
+    "doc_type": "glossary",
+    "score": 0.011940191499888897
+   },
+   {
+    "id": "glossary:gmv",
+    "doc_type": "glossary",
+    "score": 0.007523743901401758
+   },
+   {
+    "id": "qa_pair:qa_002",
+    "doc_type": "qa_pair",
+    "score": 0.005743184592574835
+   },
+   {
+    "id": "glossary:avg_order_value",
+    "doc_type": "glossary",
+    "score": 0.003107696305960417
+   },
+   {
+    "id": "glossary:repurchase_rate",
+    "doc_type": "glossary",
+    "score": 0.0018713136669248343
+   },
+   {
+    "id": "qa_pair:qa_001",
+    "doc_type": "qa_pair",
+    "score": 0.001251635723747313
+   },
+   {
+    "id": "qa_pair:qa_011",
+    "doc_type": "qa_pair",
+    "score": 0.0011704040225595236
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "score": 0.0007073385640978813
+   }
+  ]
+ },
+ "EV-011": {
+  "question": "各支付方式的订单占比是多少？",
+  "rrf_order": [
+   {
+    "id": "qa_pair:qa_011",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03278688524590164
+   },
+   {
+    "id": "glossary:avg_order_value",
+    "doc_type": "glossary",
+    "rrf_score": 0.03200204813108039
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.031746031746031744
+   },
+   {
+    "id": "schema:payments",
+    "doc_type": "schema",
+    "rrf_score": 0.031544957774465976
+   },
+   {
+    "id": "glossary:gmv",
+    "doc_type": "glossary",
+    "rrf_score": 0.031009615384615385
+   },
+   {
+    "id": "schema:order_items",
+    "doc_type": "schema",
+    "rrf_score": 0.03036576949620428
+   },
+   {
+    "id": "qa_pair:qa_003",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.030330882352941176
+   },
+   {
+    "id": "glossary:pay_conversion",
+    "doc_type": "glossary",
+    "rrf_score": 0.030117753623188408
+   },
+   {
+    "id": "qa_pair:qa_010",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03007688828584351
+   },
+   {
+    "id": "glossary:refund_rate",
+    "doc_type": "glossary",
+    "rrf_score": 0.029437229437229435
+   },
+   {
+    "id": "schema:orders",
+    "doc_type": "schema",
+    "rrf_score": 0.029273504273504274
+   },
+   {
+    "id": "schema:refunds",
+    "doc_type": "schema",
+    "rrf_score": 0.02878726010616578
+   },
+   {
+    "id": "qa_pair:qa_001",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.02871794871794872
+   },
+   {
+    "id": "qa_pair:qa_004",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.028629032258064516
+   },
+   {
+    "id": "glossary:arpu",
+    "doc_type": "glossary",
+    "rrf_score": 0.028370221327967807
+   },
+   {
+    "id": "qa_pair:qa_002",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.02821939586645469
+   }
+  ],
+  "rerank_order": [
+   {
+    "id": "qa_pair:qa_011",
+    "doc_type": "qa_pair",
+    "score": 0.991042971611023
+   },
+   {
+    "id": "schema:payments",
+    "doc_type": "schema",
+    "score": 0.940798819065094
+   },
+   {
+    "id": "schema:orders",
+    "doc_type": "schema",
+    "score": 0.2092829942703247
+   },
+   {
+    "id": "schema:refunds",
+    "doc_type": "schema",
+    "score": 0.0229059848934412
+   },
+   {
+    "id": "schema:order_items",
+    "doc_type": "schema",
+    "score": 0.021253330633044243
+   },
+   {
+    "id": "qa_pair:qa_004",
+    "doc_type": "qa_pair",
+    "score": 0.014358865097165108
+   },
+   {
+    "id": "glossary:pay_conversion",
+    "doc_type": "glossary",
+    "score": 0.009970641694962978
+   },
+   {
+    "id": "glossary:avg_order_value",
+    "doc_type": "glossary",
+    "score": 0.007353191263973713
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "score": 0.006149366032332182
+   },
+   {
+    "id": "glossary:arpu",
+    "doc_type": "glossary",
+    "score": 0.004226712044328451
+   },
+   {
+    "id": "glossary:gmv",
+    "doc_type": "glossary",
+    "score": 0.00372460950165987
+   },
+   {
+    "id": "qa_pair:qa_002",
+    "doc_type": "qa_pair",
+    "score": 0.002625879133120179
+   },
+   {
+    "id": "glossary:refund_rate",
+    "doc_type": "glossary",
+    "score": 0.0019851517863571644
+   },
+   {
+    "id": "qa_pair:qa_003",
+    "doc_type": "qa_pair",
+    "score": 0.0018983869813382626
+   },
+   {
+    "id": "qa_pair:qa_001",
+    "doc_type": "qa_pair",
+    "score": 0.0012550677638500929
+   },
+   {
+    "id": "qa_pair:qa_010",
+    "doc_type": "qa_pair",
+    "score": 0.0009780462132766843
+   }
+  ]
+ },
+ "EV-012": {
+  "question": "2025 年上半年注册的用户有多少？",
+  "rrf_order": [
+   {
+    "id": "qa_pair:qa_009",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03252247488101534
+   },
+   {
+    "id": "schema:users",
+    "doc_type": "schema",
+    "rrf_score": 0.03252247488101534
+   },
+   {
+    "id": "qa_pair:qa_006",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.032018442622950824
+   },
+   {
+    "id": "glossary:arpu",
+    "doc_type": "glossary",
+    "rrf_score": 0.0315136476426799
+   },
+   {
+    "id": "glossary:new_customers",
+    "doc_type": "glossary",
+    "rrf_score": 0.03131881575727918
+   },
+   {
+    "id": "qa_pair:qa_001",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03125763125763126
+   },
+   {
+    "id": "schema:orders",
+    "doc_type": "schema",
+    "rrf_score": 0.03021353930031804
+   },
+   {
+    "id": "qa_pair:qa_003",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03007688828584351
+   },
+   {
+    "id": "qa_pair:qa_002",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.029910714285714284
+   },
+   {
+    "id": "glossary:repurchase_rate",
+    "doc_type": "glossary",
+    "rrf_score": 0.029877369007803793
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.029857397504456328
+   },
+   {
+    "id": "qa_pair:qa_005",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.029571646010002173
+   },
+   {
+    "id": "schema:products",
+    "doc_type": "schema",
+    "rrf_score": 0.029513888888888888
+   },
+   {
+    "id": "schema:payments",
+    "doc_type": "schema",
+    "rrf_score": 0.028693528693528692
+   },
+   {
+    "id": "glossary:gmv",
+    "doc_type": "glossary",
+    "rrf_score": 0.028083267871170464
+   },
+   {
+    "id": "schema:refunds",
+    "doc_type": "schema",
+    "rrf_score": 0.02804284323271665
+   }
+  ],
+  "rerank_order": [
+   {
+    "id": "schema:users",
+    "doc_type": "schema",
+    "score": 0.7718860507011414
+   },
+   {
+    "id": "schema:orders",
+    "doc_type": "schema",
+    "score": 0.30299830436706543
+   },
+   {
+    "id": "glossary:new_customers",
+    "doc_type": "glossary",
+    "score": 0.19238068163394928
+   },
+   {
+    "id": "schema:payments",
+    "doc_type": "schema",
+    "score": 0.05222554877400398
+   },
+   {
+    "id": "qa_pair:qa_009",
+    "doc_type": "qa_pair",
+    "score": 0.04018028825521469
+   },
+   {
+    "id": "schema:products",
+    "doc_type": "schema",
+    "score": 0.03581902012228966
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "score": 0.023380350321531296
+   },
+   {
+    "id": "glossary:arpu",
+    "doc_type": "glossary",
+    "score": 0.019368989393115044
+   },
+   {
+    "id": "schema:refunds",
+    "doc_type": "schema",
+    "score": 0.01827606000006199
+   },
+   {
+    "id": "qa_pair:qa_002",
+    "doc_type": "qa_pair",
+    "score": 0.003982014488428831
+   },
+   {
+    "id": "qa_pair:qa_001",
+    "doc_type": "qa_pair",
+    "score": 0.0016500642523169518
+   },
+   {
+    "id": "glossary:repurchase_rate",
+    "doc_type": "glossary",
+    "score": 0.0014860308729112148
+   },
+   {
+    "id": "qa_pair:qa_006",
+    "doc_type": "qa_pair",
+    "score": 0.0010345564223825932
+   },
+   {
+    "id": "qa_pair:qa_005",
+    "doc_type": "qa_pair",
+    "score": 0.0009307558066211641
+   },
+   {
+    "id": "glossary:gmv",
+    "doc_type": "glossary",
+    "score": 0.00027281863731332123
+   },
+   {
+    "id": "qa_pair:qa_003",
+    "doc_type": "qa_pair",
+    "score": 0.00017890031449496746
+   }
+  ]
+ },
+ "EV-013": {
+  "question": "图书类目下原价最高的 3 个商品是哪些？",
+  "rrf_order": [
+   {
+    "id": "schema:products",
+    "doc_type": "schema",
+    "rrf_score": 0.03278688524590164
+   },
+   {
+    "id": "qa_pair:qa_010",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03252247488101534
+   },
+   {
+    "id": "qa_pair:qa_002",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03200204813108039
+   },
+   {
+    "id": "schema:order_items",
+    "doc_type": "schema",
+    "rrf_score": 0.0315136476426799
+   },
+   {
+    "id": "qa_pair:qa_005",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03149801587301587
+   },
+   {
+    "id": "qa_pair:qa_001",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.030536130536130537
+   },
+   {
+    "id": "glossary:sell_through",
+    "doc_type": "glossary",
+    "rrf_score": 0.03028233151183971
+   },
+   {
+    "id": "glossary:avg_order_value",
+    "doc_type": "glossary",
+    "rrf_score": 0.03021353930031804
+   },
+   {
+    "id": "schema:users",
+    "doc_type": "schema",
+    "rrf_score": 0.030158730158730156
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.030117753623188408
+   },
+   {
+    "id": "glossary:items_per_order",
+    "doc_type": "glossary",
+    "rrf_score": 0.029631255487269532
+   },
+   {
+    "id": "glossary:repurchase_rate",
+    "doc_type": "glossary",
+    "rrf_score": 0.029631255487269532
+   },
+   {
+    "id": "schema:orders",
+    "doc_type": "schema",
+    "rrf_score": 0.028958333333333336
+   },
+   {
+    "id": "glossary:arpu",
+    "doc_type": "glossary",
+    "rrf_score": 0.028665028665028666
+   },
+   {
+    "id": "qa_pair:qa_009",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.02862400327131466
+   },
+   {
+    "id": "glossary:net_sales",
+    "doc_type": "glossary",
+    "rrf_score": 0.028373015873015873
+   }
+  ],
+  "rerank_order": [
+   {
+    "id": "schema:products",
+    "doc_type": "schema",
+    "score": 0.6239719390869141
+   },
+   {
+    "id": "schema:order_items",
+    "doc_type": "schema",
+    "score": 0.03247249498963356
+   },
+   {
+    "id": "schema:users",
+    "doc_type": "schema",
+    "score": 0.013415827415883541
+   },
+   {
+    "id": "schema:orders",
+    "doc_type": "schema",
+    "score": 0.009465327486395836
+   },
+   {
+    "id": "qa_pair:qa_010",
+    "doc_type": "qa_pair",
+    "score": 0.001449807663448155
+   },
+   {
+    "id": "qa_pair:qa_002",
+    "doc_type": "qa_pair",
+    "score": 0.0011759917251765728
+   },
+   {
+    "id": "glossary:sell_through",
+    "doc_type": "glossary",
+    "score": 0.0010241493582725525
+   },
+   {
+    "id": "qa_pair:qa_005",
+    "doc_type": "qa_pair",
+    "score": 0.0007868396351113915
+   },
+   {
+    "id": "glossary:items_per_order",
+    "doc_type": "glossary",
+    "score": 0.000466678524389863
+   },
+   {
+    "id": "qa_pair:qa_009",
+    "doc_type": "qa_pair",
+    "score": 0.0003268571163062006
+   },
+   {
+    "id": "glossary:arpu",
+    "doc_type": "glossary",
+    "score": 0.0003260867961216718
+   },
+   {
+    "id": "qa_pair:qa_001",
+    "doc_type": "qa_pair",
+    "score": 0.0002861951943486929
+   },
+   {
+    "id": "glossary:avg_order_value",
+    "doc_type": "glossary",
+    "score": 0.00027406166191212833
+   },
+   {
+    "id": "glossary:repurchase_rate",
+    "doc_type": "glossary",
+    "score": 0.0002386525011388585
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "score": 0.00023485753627028316
+   },
+   {
+    "id": "glossary:net_sales",
+    "doc_type": "glossary",
+    "score": 0.00012949034862685949
+   }
+  ]
+ },
+ "EV-014": {
+  "question": "2026 年 5 月各状态的订单分别有多少笔？",
+  "rrf_order": [
+   {
+    "id": "qa_pair:qa_001",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.032266458495966696
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.031754032258064516
+   },
+   {
+    "id": "glossary:gmv",
+    "doc_type": "glossary",
+    "rrf_score": 0.03128054740957967
+   },
+   {
+    "id": "qa_pair:qa_010",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.031009615384615385
+   },
+   {
+    "id": "qa_pair:qa_009",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.030309988518943745
+   },
+   {
+    "id": "qa_pair:qa_003",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.030158730158730156
+   },
+   {
+    "id": "qa_pair:qa_011",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03007688828584351
+   },
+   {
+    "id": "schema:order_items",
+    "doc_type": "schema",
+    "rrf_score": 0.029877369007803793
+   },
+   {
+    "id": "schema:orders",
+    "doc_type": "schema",
+    "rrf_score": 0.029709507042253523
+   },
+   {
+    "id": "schema:payments",
+    "doc_type": "schema",
+    "rrf_score": 0.02964254577157803
+   },
+   {
+    "id": "glossary:avg_order_value",
+    "doc_type": "glossary",
+    "rrf_score": 0.029631255487269532
+   },
+   {
+    "id": "schema:products",
+    "doc_type": "schema",
+    "rrf_score": 0.029437229437229435
+   },
+   {
+    "id": "qa_pair:qa_004",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.02938045560996381
+   },
+   {
+    "id": "schema:refunds",
+    "doc_type": "schema",
+    "rrf_score": 0.028693528693528692
+   },
+   {
+    "id": "qa_pair:qa_002",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.028381642512077296
+   },
+   {
+    "id": "glossary:yoy_mom",
+    "doc_type": "glossary",
+    "rrf_score": 0.028373015873015873
+   }
+  ],
+  "rerank_order": [
+   {
+    "id": "schema:orders",
+    "doc_type": "schema",
+    "score": 0.7929739356040955
+   },
+   {
+    "id": "schema:payments",
+    "doc_type": "schema",
+    "score": 0.6272544860839844
+   },
+   {
+    "id": "schema:refunds",
+    "doc_type": "schema",
+    "score": 0.3827015459537506
+   },
+   {
+    "id": "schema:products",
+    "doc_type": "schema",
+    "score": 0.07656686007976532
+   },
+   {
+    "id": "qa_pair:qa_001",
+    "doc_type": "qa_pair",
+    "score": 0.06811655312776566
+   },
+   {
+    "id": "schema:order_items",
+    "doc_type": "schema",
+    "score": 0.062262486666440964
+   },
+   {
+    "id": "glossary:gmv",
+    "doc_type": "glossary",
+    "score": 0.04495008662343025
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "score": 0.0384441502392292
+   },
+   {
+    "id": "qa_pair:qa_002",
+    "doc_type": "qa_pair",
+    "score": 0.03605275601148605
+   },
+   {
+    "id": "qa_pair:qa_009",
+    "doc_type": "qa_pair",
+    "score": 0.02810024470090866
+   },
+   {
+    "id": "qa_pair:qa_003",
+    "doc_type": "qa_pair",
+    "score": 0.01763499341905117
+   },
+   {
+    "id": "qa_pair:qa_004",
+    "doc_type": "qa_pair",
+    "score": 0.010139203630387783
+   },
+   {
+    "id": "qa_pair:qa_011",
+    "doc_type": "qa_pair",
+    "score": 0.008648501709103584
+   },
+   {
+    "id": "glossary:avg_order_value",
+    "doc_type": "glossary",
+    "score": 0.006009172648191452
+   },
+   {
+    "id": "qa_pair:qa_010",
+    "doc_type": "qa_pair",
+    "score": 0.0032063641119748354
+   },
+   {
+    "id": "glossary:yoy_mom",
+    "doc_type": "glossary",
+    "score": 0.0022144492249935865
+   }
+  ]
+ },
+ "EV-015": {
+  "question": "2026 年 8 月金额最高的 5 笔订单的订单号和金额是多少？",
+  "rrf_order": [
+   {
+    "id": "qa_pair:qa_010",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03252247488101534
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03177805800756621
+   },
+   {
+    "id": "qa_pair:qa_002",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.031754032258064516
+   },
+   {
+    "id": "qa_pair:qa_001",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03149801587301587
+   },
+   {
+    "id": "qa_pair:qa_004",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03057889822595705
+   },
+   {
+    "id": "glossary:gmv",
+    "doc_type": "glossary",
+    "rrf_score": 0.03047794966520434
+   },
+   {
+    "id": "qa_pair:qa_009",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.030303030303030304
+   },
+   {
+    "id": "schema:orders",
+    "doc_type": "schema",
+    "rrf_score": 0.03028233151183971
+   },
+   {
+    "id": "glossary:avg_order_value",
+    "doc_type": "glossary",
+    "rrf_score": 0.030117753623188408
+   },
+   {
+    "id": "qa_pair:qa_003",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.030090497737556562
+   },
+   {
+    "id": "qa_pair:qa_011",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.029418126757516764
+   },
+   {
+    "id": "glossary:refund_rate",
+    "doc_type": "glossary",
+    "rrf_score": 0.029386529386529386
+   },
+   {
+    "id": "qa_pair:qa_007",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.029211087420042643
+   },
+   {
+    "id": "schema:refunds",
+    "doc_type": "schema",
+    "rrf_score": 0.028958333333333336
+   },
+   {
+    "id": "schema:order_items",
+    "doc_type": "schema",
+    "rrf_score": 0.028850145288501453
+   },
+   {
+    "id": "schema:payments",
+    "doc_type": "schema",
+    "rrf_score": 0.02854251012145749
+   }
+  ],
+  "rerank_order": [
+   {
+    "id": "schema:orders",
+    "doc_type": "schema",
+    "score": 0.7410883903503418
+   },
+   {
+    "id": "schema:payments",
+    "doc_type": "schema",
+    "score": 0.7047829627990723
+   },
+   {
+    "id": "qa_pair:qa_002",
+    "doc_type": "qa_pair",
+    "score": 0.33879029750823975
+   },
+   {
+    "id": "schema:refunds",
+    "doc_type": "schema",
+    "score": 0.1798221319913864
+   },
+   {
+    "id": "schema:order_items",
+    "doc_type": "schema",
+    "score": 0.1573939472436905
+   },
+   {
+    "id": "qa_pair:qa_009",
+    "doc_type": "qa_pair",
+    "score": 0.13041304051876068
+   },
+   {
+    "id": "glossary:gmv",
+    "doc_type": "glossary",
+    "score": 0.07816161215305328
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "score": 0.076619952917099
+   },
+   {
+    "id": "qa_pair:qa_003",
+    "doc_type": "qa_pair",
+    "score": 0.07380525767803192
+   },
+   {
+    "id": "qa_pair:qa_010",
+    "doc_type": "qa_pair",
+    "score": 0.03086795099079609
+   },
+   {
+    "id": "qa_pair:qa_007",
+    "doc_type": "qa_pair",
+    "score": 0.0304912980645895
+   },
+   {
+    "id": "qa_pair:qa_001",
+    "doc_type": "qa_pair",
+    "score": 0.022650418803095818
+   },
+   {
+    "id": "qa_pair:qa_004",
+    "doc_type": "qa_pair",
+    "score": 0.012563091702759266
+   },
+   {
+    "id": "glossary:avg_order_value",
+    "doc_type": "glossary",
+    "score": 0.011042439378798008
+   },
+   {
+    "id": "qa_pair:qa_011",
+    "doc_type": "qa_pair",
+    "score": 0.006243622861802578
+   },
+   {
+    "id": "glossary:refund_rate",
+    "doc_type": "glossary",
+    "score": 0.003520899685099721
+   }
+  ]
+ },
+ "EV-016": {
+  "question": "2026 年 1 月各城市的支付金额是多少？",
+  "rrf_order": [
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03252247488101534
+   },
+   {
+    "id": "qa_pair:qa_002",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.032018442622950824
+   },
+   {
+    "id": "glossary:gmv",
+    "doc_type": "glossary",
+    "rrf_score": 0.03177805800756621
+   },
+   {
+    "id": "qa_pair:qa_001",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.031024531024531024
+   },
+   {
+    "id": "qa_pair:qa_007",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.031024531024531024
+   },
+   {
+    "id": "qa_pair:qa_003",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.030834914611005692
+   },
+   {
+    "id": "schema:payments",
+    "doc_type": "schema",
+    "rrf_score": 0.030158730158730156
+   },
+   {
+    "id": "qa_pair:qa_011",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.030117753623188408
+   },
+   {
+    "id": "qa_pair:qa_004",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.030090497737556562
+   },
+   {
+    "id": "glossary:avg_order_value",
+    "doc_type": "glossary",
+    "rrf_score": 0.029957522915269395
+   },
+   {
+    "id": "qa_pair:qa_009",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.029850746268656716
+   },
+   {
+    "id": "glossary:yoy_mom",
+    "doc_type": "glossary",
+    "rrf_score": 0.029116045245077504
+   },
+   {
+    "id": "glossary:net_sales",
+    "doc_type": "glossary",
+    "rrf_score": 0.029083245521601686
+   },
+   {
+    "id": "glossary:refund_rate",
+    "doc_type": "glossary",
+    "rrf_score": 0.028958333333333336
+   },
+   {
+    "id": "schema:refunds",
+    "doc_type": "schema",
+    "rrf_score": 0.028949545078577336
+   },
+   {
+    "id": "glossary:pay_conversion",
+    "doc_type": "glossary",
+    "rrf_score": 0.028665028665028666
+   }
+  ],
+  "rerank_order": [
+   {
+    "id": "schema:payments",
+    "doc_type": "schema",
+    "score": 0.5381647944450378
+   },
+   {
+    "id": "qa_pair:qa_002",
+    "doc_type": "qa_pair",
+    "score": 0.18228934705257416
+   },
+   {
+    "id": "schema:refunds",
+    "doc_type": "schema",
+    "score": 0.12322087585926056
+   },
+   {
+    "id": "qa_pair:qa_007",
+    "doc_type": "qa_pair",
+    "score": 0.06394502520561218
+   },
+   {
+    "id": "glossary:gmv",
+    "doc_type": "glossary",
+    "score": 0.05093371868133545
+   },
+   {
+    "id": "qa_pair:qa_003",
+    "doc_type": "qa_pair",
+    "score": 0.0350140780210495
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "score": 0.030891168862581253
+   },
+   {
+    "id": "qa_pair:qa_001",
+    "doc_type": "qa_pair",
+    "score": 0.013861157931387424
+   },
+   {
+    "id": "qa_pair:qa_004",
+    "doc_type": "qa_pair",
+    "score": 0.009642235934734344
+   },
+   {
+    "id": "qa_pair:qa_009",
+    "doc_type": "qa_pair",
+    "score": 0.0052260421216487885
+   },
+   {
+    "id": "glossary:avg_order_value",
+    "doc_type": "glossary",
+    "score": 0.005028764251619577
+   },
+   {
+    "id": "glossary:yoy_mom",
+    "doc_type": "glossary",
+    "score": 0.002154180547222495
+   },
+   {
+    "id": "glossary:net_sales",
+    "doc_type": "glossary",
+    "score": 0.0015413491055369377
+   },
+   {
+    "id": "glossary:refund_rate",
+    "doc_type": "glossary",
+    "score": 0.0015390942571684718
+   },
+   {
+    "id": "qa_pair:qa_011",
+    "doc_type": "qa_pair",
+    "score": 0.0010848840465769172
+   },
+   {
+    "id": "glossary:pay_conversion",
+    "doc_type": "glossary",
+    "score": 0.0010022770147770643
+   }
+  ]
+ },
+ "EV-017": {
+  "question": "武汉的用户都买过哪些类目？",
+  "rrf_order": [
+   {
+    "id": "qa_pair:qa_005",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03278688524590164
+   },
+   {
+    "id": "schema:users",
+    "doc_type": "schema",
+    "rrf_score": 0.03200204813108039
+   },
+   {
+    "id": "qa_pair:qa_002",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.031754032258064516
+   },
+   {
+    "id": "schema:products",
+    "doc_type": "schema",
+    "rrf_score": 0.03149801587301587
+   },
+   {
+    "id": "glossary:repurchase_rate",
+    "doc_type": "glossary",
+    "rrf_score": 0.03128054740957967
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.030834914611005692
+   },
+   {
+    "id": "qa_pair:qa_010",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.030798389007344232
+   },
+   {
+    "id": "qa_pair:qa_009",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.030536130536130537
+   },
+   {
+    "id": "schema:order_items",
+    "doc_type": "schema",
+    "rrf_score": 0.03047794966520434
+   },
+   {
+    "id": "schema:orders",
+    "doc_type": "schema",
+    "rrf_score": 0.030117753623188408
+   },
+   {
+    "id": "glossary:arpu",
+    "doc_type": "glossary",
+    "rrf_score": 0.029906956136464335
+   },
+   {
+    "id": "qa_pair:qa_006",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.02967032967032967
+   },
+   {
+    "id": "glossary:new_customers",
+    "doc_type": "glossary",
+    "rrf_score": 0.029030910609857977
+   },
+   {
+    "id": "qa_pair:qa_001",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.028814262023217248
+   },
+   {
+    "id": "glossary:avg_order_value",
+    "doc_type": "glossary",
+    "rrf_score": 0.028205128205128206
+   },
+   {
+    "id": "glossary:sell_through",
+    "doc_type": "glossary",
+    "rrf_score": 0.02813852813852814
+   }
+  ],
+  "rerank_order": [
+   {
+    "id": "qa_pair:qa_005",
+    "doc_type": "qa_pair",
+    "score": 0.01270363386720419
+   },
+   {
+    "id": "schema:users",
+    "doc_type": "schema",
+    "score": 0.010457316413521767
+   },
+   {
+    "id": "schema:order_items",
+    "doc_type": "schema",
+    "score": 0.009717113338410854
+   },
+   {
+    "id": "schema:products",
+    "doc_type": "schema",
+    "score": 0.0075164977461099625
+   },
+   {
+    "id": "schema:orders",
+    "doc_type": "schema",
+    "score": 0.0048998198471963406
+   },
+   {
+    "id": "qa_pair:qa_002",
+    "doc_type": "qa_pair",
+    "score": 0.000539689208380878
+   },
+   {
+    "id": "glossary:repurchase_rate",
+    "doc_type": "glossary",
+    "score": 0.00031687464797869325
+   },
+   {
+    "id": "glossary:new_customers",
+    "doc_type": "glossary",
+    "score": 0.0002432358596706763
+   },
+   {
+    "id": "qa_pair:qa_009",
+    "doc_type": "qa_pair",
+    "score": 0.0001882881624624133
+   },
+   {
+    "id": "glossary:arpu",
+    "doc_type": "glossary",
+    "score": 8.422944665653631e-05
+   },
+   {
+    "id": "glossary:sell_through",
+    "doc_type": "glossary",
+    "score": 6.862033478682861e-05
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "score": 6.769500760128722e-05
+   },
+   {
+    "id": "glossary:avg_order_value",
+    "doc_type": "glossary",
+    "score": 4.854545113630593e-05
+   },
+   {
+    "id": "qa_pair:qa_001",
+    "doc_type": "qa_pair",
+    "score": 3.863014717353508e-05
+   },
+   {
+    "id": "qa_pair:qa_006",
+    "doc_type": "qa_pair",
+    "score": 3.6728921259054914e-05
+   },
+   {
+    "id": "qa_pair:qa_010",
+    "doc_type": "qa_pair",
+    "score": 2.621690509840846e-05
+   }
+  ]
+ },
+ "EV-018": {
+  "question": "用银联支付过的用户分布在哪些城市（各城市多少人）？",
+  "rrf_order": [
+   {
+    "id": "qa_pair:qa_002",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03278688524590164
+   },
+   {
+    "id": "schema:users",
+    "doc_type": "schema",
+    "rrf_score": 0.032018442622950824
+   },
+   {
+    "id": "glossary:arpu",
+    "doc_type": "glossary",
+    "rrf_score": 0.03200204813108039
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.031754032258064516
+   },
+   {
+    "id": "schema:payments",
+    "doc_type": "schema",
+    "rrf_score": 0.03128054740957967
+   },
+   {
+    "id": "qa_pair:qa_011",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03125763125763126
+   },
+   {
+    "id": "qa_pair:qa_005",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.029857397504456328
+   },
+   {
+    "id": "qa_pair:qa_006",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.029850746268656716
+   },
+   {
+    "id": "glossary:avg_order_value",
+    "doc_type": "glossary",
+    "rrf_score": 0.029709507042253523
+   },
+   {
+    "id": "glossary:pay_conversion",
+    "doc_type": "glossary",
+    "rrf_score": 0.02964426877470356
+   },
+   {
+    "id": "qa_pair:qa_010",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.02928692699490662
+   },
+   {
+    "id": "glossary:net_sales",
+    "doc_type": "glossary",
+    "rrf_score": 0.02886002886002886
+   },
+   {
+    "id": "qa_pair:qa_003",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.02877846790890269
+   },
+   {
+    "id": "schema:orders",
+    "doc_type": "schema",
+    "rrf_score": 0.028531243721117136
+   },
+   {
+    "id": "qa_pair:qa_007",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.028404512489927477
+   },
+   {
+    "id": "qa_pair:qa_009",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.02817460317460317
+   }
+  ],
+  "rerank_order": [
+   {
+    "id": "schema:users",
+    "doc_type": "schema",
+    "score": 0.4926441013813019
+   },
+   {
+    "id": "schema:payments",
+    "doc_type": "schema",
+    "score": 0.1330612450838089
+   },
+   {
+    "id": "schema:orders",
+    "doc_type": "schema",
+    "score": 0.018904859200119972
+   },
+   {
+    "id": "qa_pair:qa_002",
+    "doc_type": "qa_pair",
+    "score": 0.005916880443692207
+   },
+   {
+    "id": "glossary:arpu",
+    "doc_type": "glossary",
+    "score": 0.0018932194216176867
+   },
+   {
+    "id": "glossary:avg_order_value",
+    "doc_type": "glossary",
+    "score": 0.0007901426870375872
+   },
+   {
+    "id": "qa_pair:qa_006",
+    "doc_type": "qa_pair",
+    "score": 0.0005963308503851295
+   },
+   {
+    "id": "qa_pair:qa_011",
+    "doc_type": "qa_pair",
+    "score": 0.00047909485874697566
+   },
+   {
+    "id": "qa_pair:qa_005",
+    "doc_type": "qa_pair",
+    "score": 0.0003703509282786399
+   },
+   {
+    "id": "glossary:pay_conversion",
+    "doc_type": "glossary",
+    "score": 0.000345967011526227
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "score": 0.000337994220899418
+   },
+   {
+    "id": "qa_pair:qa_007",
+    "doc_type": "qa_pair",
+    "score": 0.00026121223345398903
+   },
+   {
+    "id": "qa_pair:qa_009",
+    "doc_type": "qa_pair",
+    "score": 0.0002212777326349169
+   },
+   {
+    "id": "qa_pair:qa_003",
+    "doc_type": "qa_pair",
+    "score": 7.74255022406578e-05
+   },
+   {
+    "id": "glossary:net_sales",
+    "doc_type": "glossary",
+    "score": 5.4185766202863306e-05
+   },
+   {
+    "id": "qa_pair:qa_010",
+    "doc_type": "qa_pair",
+    "score": 4.1425526433158666e-05
+   }
+  ]
+ },
+ "EV-019": {
+  "question": "退款总额最高的 5 个用户是谁（用户 ID、姓名、退款总额）？",
+  "rrf_order": [
+   {
+    "id": "glossary:net_sales",
+    "doc_type": "glossary",
+    "rrf_score": 0.032266458495966696
+   },
+   {
+    "id": "qa_pair:qa_010",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.032266458495966696
+   },
+   {
+    "id": "qa_pair:qa_004",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03225806451612903
+   },
+   {
+    "id": "qa_pair:qa_002",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.031544957774465976
+   },
+   {
+    "id": "glossary:refund_rate",
+    "doc_type": "glossary",
+    "rrf_score": 0.03125763125763126
+   },
+   {
+    "id": "glossary:arpu",
+    "doc_type": "glossary",
+    "rrf_score": 0.031054405392392875
+   },
+   {
+    "id": "schema:refunds",
+    "doc_type": "schema",
+    "rrf_score": 0.030776515151515152
+   },
+   {
+    "id": "schema:users",
+    "doc_type": "schema",
+    "rrf_score": 0.030679156908665108
+   },
+   {
+    "id": "schema:orders",
+    "doc_type": "schema",
+    "rrf_score": 0.029386529386529386
+   },
+   {
+    "id": "qa_pair:qa_006",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.02919863597612958
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.02919863597612958
+   },
+   {
+    "id": "qa_pair:qa_009",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.028850145288501453
+   },
+   {
+    "id": "qa_pair:qa_005",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.028814262023217248
+   },
+   {
+    "id": "glossary:avg_order_value",
+    "doc_type": "glossary",
+    "rrf_score": 0.02854251012145749
+   },
+   {
+    "id": "qa_pair:qa_011",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.028371628371628373
+   },
+   {
+    "id": "glossary:new_customers",
+    "doc_type": "glossary",
+    "rrf_score": 0.028283227848101264
+   }
+  ],
+  "rerank_order": [
+   {
+    "id": "schema:orders",
+    "doc_type": "schema",
+    "score": 0.30391213297843933
+   },
+   {
+    "id": "qa_pair:qa_010",
+    "doc_type": "qa_pair",
+    "score": 0.18661774694919586
+   },
+   {
+    "id": "schema:refunds",
+    "doc_type": "schema",
+    "score": 0.15833906829357147
+   },
+   {
+    "id": "schema:users",
+    "doc_type": "schema",
+    "score": 0.06641307473182678
+   },
+   {
+    "id": "qa_pair:qa_002",
+    "doc_type": "qa_pair",
+    "score": 0.015808960422873497
+   },
+   {
+    "id": "glossary:refund_rate",
+    "doc_type": "glossary",
+    "score": 0.01108071580529213
+   },
+   {
+    "id": "glossary:arpu",
+    "doc_type": "glossary",
+    "score": 0.00932416319847107
+   },
+   {
+    "id": "qa_pair:qa_004",
+    "doc_type": "qa_pair",
+    "score": 0.006744637619704008
+   },
+   {
+    "id": "glossary:net_sales",
+    "doc_type": "glossary",
+    "score": 0.0060324901714921
+   },
+   {
+    "id": "qa_pair:qa_009",
+    "doc_type": "qa_pair",
+    "score": 0.004509642720222473
+   },
+   {
+    "id": "qa_pair:qa_006",
+    "doc_type": "qa_pair",
+    "score": 0.0028579183854162693
+   },
+   {
+    "id": "glossary:new_customers",
+    "doc_type": "glossary",
+    "score": 0.0023907197173684835
+   },
+   {
+    "id": "glossary:avg_order_value",
+    "doc_type": "glossary",
+    "score": 0.001594287808984518
+   },
+   {
+    "id": "qa_pair:qa_005",
+    "doc_type": "qa_pair",
+    "score": 0.0014319521142169833
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "score": 0.0014071548357605934
+   },
+   {
+    "id": "qa_pair:qa_011",
+    "doc_type": "qa_pair",
+    "score": 0.0005913419299758971
+   }
+  ]
+ },
+ "EV-020": {
+  "question": "2026 年 4 月美妆类目的销售额是多少？",
+  "rrf_order": [
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03252247488101534
+   },
+   {
+    "id": "schema:products",
+    "doc_type": "schema",
+    "rrf_score": 0.03252247488101534
+   },
+   {
+    "id": "qa_pair:qa_002",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.031746031746031744
+   },
+   {
+    "id": "glossary:gmv",
+    "doc_type": "glossary",
+    "rrf_score": 0.03131881575727918
+   },
+   {
+    "id": "qa_pair:qa_001",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.030776515151515152
+   },
+   {
+    "id": "qa_pair:qa_003",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.030776515151515152
+   },
+   {
+    "id": "qa_pair:qa_009",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03076923076923077
+   },
+   {
+    "id": "glossary:net_sales",
+    "doc_type": "glossary",
+    "rrf_score": 0.03057889822595705
+   },
+   {
+    "id": "qa_pair:qa_004",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03009207275993712
+   },
+   {
+    "id": "glossary:arpu",
+    "doc_type": "glossary",
+    "rrf_score": 0.029513888888888888
+   },
+   {
+    "id": "glossary:yoy_mom",
+    "doc_type": "glossary",
+    "rrf_score": 0.02946236559139785
+   },
+   {
+    "id": "qa_pair:qa_007",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.02900988017658188
+   },
+   {
+    "id": "qa_pair:qa_005",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.028985507246376812
+   },
+   {
+    "id": "glossary:avg_order_value",
+    "doc_type": "glossary",
+    "rrf_score": 0.028665028665028666
+   },
+   {
+    "id": "glossary:sell_through",
+    "doc_type": "glossary",
+    "rrf_score": 0.02857142857142857
+   },
+   {
+    "id": "schema:order_items",
+    "doc_type": "schema",
+    "rrf_score": 0.028371628371628373
+   }
+  ],
+  "rerank_order": [
+   {
+    "id": "schema:products",
+    "doc_type": "schema",
+    "score": 0.43597590923309326
+   },
+   {
+    "id": "schema:order_items",
+    "doc_type": "schema",
+    "score": 0.06312457472085953
+   },
+   {
+    "id": "qa_pair:qa_001",
+    "doc_type": "qa_pair",
+    "score": 0.020908962935209274
+   },
+   {
+    "id": "glossary:gmv",
+    "doc_type": "glossary",
+    "score": 0.007345812860876322
+   },
+   {
+    "id": "glossary:sell_through",
+    "doc_type": "glossary",
+    "score": 0.005793455522507429
+   },
+   {
+    "id": "qa_pair:qa_002",
+    "doc_type": "qa_pair",
+    "score": 0.005245881155133247
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "score": 0.0030427114106714725
+   },
+   {
+    "id": "glossary:arpu",
+    "doc_type": "glossary",
+    "score": 0.0025637566577643156
+   },
+   {
+    "id": "qa_pair:qa_009",
+    "doc_type": "qa_pair",
+    "score": 0.0024147273506969213
+   },
+   {
+    "id": "qa_pair:qa_003",
+    "doc_type": "qa_pair",
+    "score": 0.0022215978242456913
+   },
+   {
+    "id": "glossary:yoy_mom",
+    "doc_type": "glossary",
+    "score": 0.002100038807839155
+   },
+   {
+    "id": "qa_pair:qa_005",
+    "doc_type": "qa_pair",
+    "score": 0.0015594327123835683
+   },
+   {
+    "id": "qa_pair:qa_007",
+    "doc_type": "qa_pair",
+    "score": 0.0012334325583651662
+   },
+   {
+    "id": "glossary:net_sales",
+    "doc_type": "glossary",
+    "score": 0.0010282163275405765
+   },
+   {
+    "id": "glossary:avg_order_value",
+    "doc_type": "glossary",
+    "score": 0.0007908801781013608
+   },
+   {
+    "id": "qa_pair:qa_004",
+    "doc_type": "qa_pair",
+    "score": 0.00048017321387305856
+   }
+  ]
+ },
+ "EV-021": {
+  "question": "各退款原因的数量与占比是多少？",
+  "rrf_order": [
+   {
+    "id": "qa_pair:qa_004",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03252247488101534
+   },
+   {
+    "id": "glossary:net_sales",
+    "doc_type": "glossary",
+    "rrf_score": 0.03225806451612903
+   },
+   {
+    "id": "qa_pair:qa_011",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03177805800756621
+   },
+   {
+    "id": "glossary:refund_rate",
+    "doc_type": "glossary",
+    "rrf_score": 0.031746031746031744
+   },
+   {
+    "id": "schema:refunds",
+    "doc_type": "schema",
+    "rrf_score": 0.031544957774465976
+   },
+   {
+    "id": "qa_pair:qa_010",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03149801587301587
+   },
+   {
+    "id": "glossary:repurchase_rate",
+    "doc_type": "glossary",
+    "rrf_score": 0.03055037313432836
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.030330882352941176
+   },
+   {
+    "id": "glossary:avg_order_value",
+    "doc_type": "glossary",
+    "rrf_score": 0.029437229437229435
+   },
+   {
+    "id": "glossary:new_customers",
+    "doc_type": "glossary",
+    "rrf_score": 0.02921395544346364
+   },
+   {
+    "id": "glossary:gmv",
+    "doc_type": "glossary",
+    "rrf_score": 0.02919863597612958
+   },
+   {
+    "id": "glossary:yoy_mom",
+    "doc_type": "glossary",
+    "rrf_score": 0.02871794871794872
+   },
+   {
+    "id": "qa_pair:qa_003",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.02862400327131466
+   },
+   {
+    "id": "qa_pair:qa_009",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.028594771241830064
+   },
+   {
+    "id": "glossary:pay_conversion",
+    "doc_type": "glossary",
+    "rrf_score": 0.028169014084507043
+   },
+   {
+    "id": "glossary:arpu",
+    "doc_type": "glossary",
+    "rrf_score": 0.028083267871170464
+   }
+  ],
+  "rerank_order": [
+   {
+    "id": "schema:refunds",
+    "doc_type": "schema",
+    "score": 0.9211264252662659
+   },
+   {
+    "id": "qa_pair:qa_004",
+    "doc_type": "qa_pair",
+    "score": 0.16892434656620026
+   },
+   {
+    "id": "qa_pair:qa_011",
+    "doc_type": "qa_pair",
+    "score": 0.044491883367300034
+   },
+   {
+    "id": "qa_pair:qa_010",
+    "doc_type": "qa_pair",
+    "score": 0.02500160038471222
+   },
+   {
+    "id": "glossary:refund_rate",
+    "doc_type": "glossary",
+    "score": 0.015038708224892616
+   },
+   {
+    "id": "glossary:net_sales",
+    "doc_type": "glossary",
+    "score": 0.007097131107002497
+   },
+   {
+    "id": "glossary:yoy_mom",
+    "doc_type": "glossary",
+    "score": 0.005073906853795052
+   },
+   {
+    "id": "glossary:new_customers",
+    "doc_type": "glossary",
+    "score": 0.0037840697914361954
+   },
+   {
+    "id": "glossary:gmv",
+    "doc_type": "glossary",
+    "score": 0.0026032074820250273
+   },
+   {
+    "id": "qa_pair:qa_009",
+    "doc_type": "qa_pair",
+    "score": 0.0024262999650090933
+   },
+   {
+    "id": "glossary:pay_conversion",
+    "doc_type": "glossary",
+    "score": 0.002402115846052766
+   },
+   {
+    "id": "glossary:avg_order_value",
+    "doc_type": "glossary",
+    "score": 0.0009042903548106551
+   },
+   {
+    "id": "glossary:repurchase_rate",
+    "doc_type": "glossary",
+    "score": 0.0007747569470666349
+   },
+   {
+    "id": "qa_pair:qa_003",
+    "doc_type": "qa_pair",
+    "score": 0.000494817562866956
+   },
+   {
+    "id": "glossary:arpu",
+    "doc_type": "glossary",
+    "score": 0.00036293486482463777
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "score": 0.0003068378136958927
+   }
+  ]
+ },
+ "EV-022": {
+  "question": "2026 年二季度每月的订单量与已完成订单量分别是多少？",
+  "rrf_order": [
+   {
+    "id": "qa_pair:qa_001",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03278688524590164
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03225806451612903
+   },
+   {
+    "id": "schema:order_items",
+    "doc_type": "schema",
+    "rrf_score": 0.03125763125763126
+   },
+   {
+    "id": "glossary:gmv",
+    "doc_type": "glossary",
+    "rrf_score": 0.031099324975891997
+   },
+   {
+    "id": "qa_pair:qa_009",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.031009615384615385
+   },
+   {
+    "id": "schema:orders",
+    "doc_type": "schema",
+    "rrf_score": 0.030886196246139225
+   },
+   {
+    "id": "qa_pair:qa_011",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.030798389007344232
+   },
+   {
+    "id": "qa_pair:qa_003",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.030776515151515152
+   },
+   {
+    "id": "glossary:avg_order_value",
+    "doc_type": "glossary",
+    "rrf_score": 0.03055037313432836
+   },
+   {
+    "id": "qa_pair:qa_010",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.02904040404040404
+   },
+   {
+    "id": "glossary:items_per_order",
+    "doc_type": "glossary",
+    "rrf_score": 0.028991596638655463
+   },
+   {
+    "id": "glossary:arpu",
+    "doc_type": "glossary",
+    "rrf_score": 0.028850145288501453
+   },
+   {
+    "id": "glossary:refund_rate",
+    "doc_type": "glossary",
+    "rrf_score": 0.02878726010616578
+   },
+   {
+    "id": "glossary:repurchase_rate",
+    "doc_type": "glossary",
+    "rrf_score": 0.028577260665441927
+   },
+   {
+    "id": "glossary:sell_through",
+    "doc_type": "glossary",
+    "rrf_score": 0.02854251012145749
+   },
+   {
+    "id": "qa_pair:qa_004",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.028373015873015873
+   }
+  ],
+  "rerank_order": [
+   {
+    "id": "schema:orders",
+    "doc_type": "schema",
+    "score": 0.9008052349090576
+   },
+   {
+    "id": "glossary:gmv",
+    "doc_type": "glossary",
+    "score": 0.14965905249118805
+   },
+   {
+    "id": "schema:order_items",
+    "doc_type": "schema",
+    "score": 0.13902214169502258
+   },
+   {
+    "id": "qa_pair:qa_003",
+    "doc_type": "qa_pair",
+    "score": 0.13275732100009918
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "score": 0.12763246893882751
+   },
+   {
+    "id": "qa_pair:qa_001",
+    "doc_type": "qa_pair",
+    "score": 0.09170264005661011
+   },
+   {
+    "id": "glossary:arpu",
+    "doc_type": "glossary",
+    "score": 0.03244996815919876
+   },
+   {
+    "id": "qa_pair:qa_009",
+    "doc_type": "qa_pair",
+    "score": 0.031076759099960327
+   },
+   {
+    "id": "glossary:avg_order_value",
+    "doc_type": "glossary",
+    "score": 0.02155650407075882
+   },
+   {
+    "id": "qa_pair:qa_004",
+    "doc_type": "qa_pair",
+    "score": 0.019476544111967087
+   },
+   {
+    "id": "glossary:repurchase_rate",
+    "doc_type": "glossary",
+    "score": 0.011828554794192314
+   },
+   {
+    "id": "glossary:items_per_order",
+    "doc_type": "glossary",
+    "score": 0.010802172124385834
+   },
+   {
+    "id": "glossary:sell_through",
+    "doc_type": "glossary",
+    "score": 0.010772481560707092
+   },
+   {
+    "id": "glossary:refund_rate",
+    "doc_type": "glossary",
+    "score": 0.007693185470998287
+   },
+   {
+    "id": "qa_pair:qa_011",
+    "doc_type": "qa_pair",
+    "score": 0.007313234265893698
+   },
+   {
+    "id": "qa_pair:qa_010",
+    "doc_type": "qa_pair",
+    "score": 0.0014684554189443588
+   }
+  ]
+ },
+ "EV-023": {
+  "question": "全部用户中有过下单行为的用户占多少百分比？",
+  "rrf_order": [
+   {
+    "id": "glossary:repurchase_rate",
+    "doc_type": "glossary",
+    "rrf_score": 0.032266458495966696
+   },
+   {
+    "id": "glossary:new_customers",
+    "doc_type": "glossary",
+    "rrf_score": 0.032018442622950824
+   },
+   {
+    "id": "glossary:arpu",
+    "doc_type": "glossary",
+    "rrf_score": 0.03200204813108039
+   },
+   {
+    "id": "qa_pair:qa_005",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.031754032258064516
+   },
+   {
+    "id": "schema:users",
+    "doc_type": "schema",
+    "rrf_score": 0.031544957774465976
+   },
+   {
+    "id": "qa_pair:qa_011",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.0315136476426799
+   },
+   {
+    "id": "qa_pair:qa_009",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03131881575727918
+   },
+   {
+    "id": "schema:orders",
+    "doc_type": "schema",
+    "rrf_score": 0.030621785881252923
+   },
+   {
+    "id": "glossary:avg_order_value",
+    "doc_type": "glossary",
+    "rrf_score": 0.029437229437229435
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.028991596638655463
+   },
+   {
+    "id": "schema:order_items",
+    "doc_type": "schema",
+    "rrf_score": 0.0288981288981289
+   },
+   {
+    "id": "glossary:pay_conversion",
+    "doc_type": "glossary",
+    "rrf_score": 0.02854251012145749
+   },
+   {
+    "id": "qa_pair:qa_006",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.028484848484848488
+   },
+   {
+    "id": "qa_pair:qa_001",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.028404512489927477
+   },
+   {
+    "id": "glossary:sell_through",
+    "doc_type": "glossary",
+    "rrf_score": 0.028283227848101264
+   },
+   {
+    "id": "glossary:items_per_order",
+    "doc_type": "glossary",
+    "rrf_score": 0.028169014084507043
+   }
+  ],
+  "rerank_order": [
+   {
+    "id": "schema:users",
+    "doc_type": "schema",
+    "score": 0.5428143739700317
+   },
+   {
+    "id": "schema:orders",
+    "doc_type": "schema",
+    "score": 0.4382094144821167
+   },
+   {
+    "id": "qa_pair:qa_009",
+    "doc_type": "qa_pair",
+    "score": 0.2099057137966156
+   },
+   {
+    "id": "glossary:arpu",
+    "doc_type": "glossary",
+    "score": 0.18556617200374603
+   },
+   {
+    "id": "glossary:new_customers",
+    "doc_type": "glossary",
+    "score": 0.16552087664604187
+   },
+   {
+    "id": "glossary:repurchase_rate",
+    "doc_type": "glossary",
+    "score": 0.07730897516012192
+   },
+   {
+    "id": "schema:order_items",
+    "doc_type": "schema",
+    "score": 0.02561786025762558
+   },
+   {
+    "id": "qa_pair:qa_011",
+    "doc_type": "qa_pair",
+    "score": 0.02246525138616562
+   },
+   {
+    "id": "qa_pair:qa_005",
+    "doc_type": "qa_pair",
+    "score": 0.005134608130902052
+   },
+   {
+    "id": "qa_pair:qa_006",
+    "doc_type": "qa_pair",
+    "score": 0.004201068542897701
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "score": 0.0036974907852709293
+   },
+   {
+    "id": "glossary:avg_order_value",
+    "doc_type": "glossary",
+    "score": 0.003516067983582616
+   },
+   {
+    "id": "glossary:sell_through",
+    "doc_type": "glossary",
+    "score": 0.0024761022068560123
+   },
+   {
+    "id": "glossary:items_per_order",
+    "doc_type": "glossary",
+    "score": 0.001960074994713068
+   },
+   {
+    "id": "glossary:pay_conversion",
+    "doc_type": "glossary",
+    "score": 0.0013914435403421521
+   },
+   {
+    "id": "qa_pair:qa_001",
+    "doc_type": "qa_pair",
+    "score": 0.0009205560781992972
+   }
+  ]
+ },
+ "EV-024": {
+  "question": "各城市下过单的用户平均下单多少次？",
+  "rrf_order": [
+   {
+    "id": "glossary:repurchase_rate",
+    "doc_type": "glossary",
+    "rrf_score": 0.03278688524590164
+   },
+   {
+    "id": "qa_pair:qa_009",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03252247488101534
+   },
+   {
+    "id": "glossary:new_customers",
+    "doc_type": "glossary",
+    "rrf_score": 0.03200204813108039
+   },
+   {
+    "id": "schema:users",
+    "doc_type": "schema",
+    "rrf_score": 0.03177805800756621
+   },
+   {
+    "id": "glossary:arpu",
+    "doc_type": "glossary",
+    "rrf_score": 0.03149801587301587
+   },
+   {
+    "id": "qa_pair:qa_002",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.030621785881252923
+   },
+   {
+    "id": "qa_pair:qa_001",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03055037313432836
+   },
+   {
+    "id": "qa_pair:qa_005",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.030090497737556562
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.029857397504456328
+   },
+   {
+    "id": "schema:orders",
+    "doc_type": "schema",
+    "rrf_score": 0.029827662395050816
+   },
+   {
+    "id": "qa_pair:qa_011",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.02976190476190476
+   },
+   {
+    "id": "glossary:items_per_order",
+    "doc_type": "glossary",
+    "rrf_score": 0.029709507042253523
+   },
+   {
+    "id": "glossary:avg_order_value",
+    "doc_type": "glossary",
+    "rrf_score": 0.02967032967032967
+   },
+   {
+    "id": "schema:order_items",
+    "doc_type": "schema",
+    "rrf_score": 0.029386529386529386
+   },
+   {
+    "id": "qa_pair:qa_003",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.028083267871170464
+   },
+   {
+    "id": "glossary:sell_through",
+    "doc_type": "glossary",
+    "rrf_score": 0.027972027972027972
+   }
+  ],
+  "rerank_order": [
+   {
+    "id": "schema:users",
+    "doc_type": "schema",
+    "score": 0.6106203198432922
+   },
+   {
+    "id": "glossary:repurchase_rate",
+    "doc_type": "glossary",
+    "score": 0.06430519372224808
+   },
+   {
+    "id": "schema:orders",
+    "doc_type": "schema",
+    "score": 0.05255012959241867
+   },
+   {
+    "id": "qa_pair:qa_009",
+    "doc_type": "qa_pair",
+    "score": 0.03814275935292244
+   },
+   {
+    "id": "glossary:arpu",
+    "doc_type": "glossary",
+    "score": 0.03131274878978729
+   },
+   {
+    "id": "glossary:new_customers",
+    "doc_type": "glossary",
+    "score": 0.016116252169013023
+   },
+   {
+    "id": "schema:order_items",
+    "doc_type": "schema",
+    "score": 0.01601787656545639
+   },
+   {
+    "id": "qa_pair:qa_002",
+    "doc_type": "qa_pair",
+    "score": 0.0063779051415622234
+   },
+   {
+    "id": "glossary:avg_order_value",
+    "doc_type": "glossary",
+    "score": 0.006140504498034716
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "score": 0.002801362657919526
+   },
+   {
+    "id": "glossary:items_per_order",
+    "doc_type": "glossary",
+    "score": 0.0025673904456198215
+   },
+   {
+    "id": "qa_pair:qa_005",
+    "doc_type": "qa_pair",
+    "score": 0.0017554680816829205
+   },
+   {
+    "id": "qa_pair:qa_001",
+    "doc_type": "qa_pair",
+    "score": 0.0012758480152115226
+   },
+   {
+    "id": "glossary:sell_through",
+    "doc_type": "glossary",
+    "score": 0.001268821768462658
+   },
+   {
+    "id": "qa_pair:qa_011",
+    "doc_type": "qa_pair",
+    "score": 0.0010101695079356432
+   },
+   {
+    "id": "qa_pair:qa_003",
+    "doc_type": "qa_pair",
+    "score": 0.00019650935428217053
+   }
+  ]
+ },
+ "EV-025": {
+  "question": "2025 年 11 月的订单量环比 2025 年 10 月增长了百分之多少？",
+  "rrf_order": [
+   {
+    "id": "qa_pair:qa_001",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03278688524590164
+   },
+   {
+    "id": "glossary:yoy_mom",
+    "doc_type": "glossary",
+    "rrf_score": 0.03252247488101534
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03149801587301587
+   },
+   {
+    "id": "qa_pair:qa_009",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03125763125763126
+   },
+   {
+    "id": "glossary:new_customers",
+    "doc_type": "glossary",
+    "rrf_score": 0.030834914611005692
+   },
+   {
+    "id": "qa_pair:qa_003",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.030536130536130537
+   },
+   {
+    "id": "schema:products",
+    "doc_type": "schema",
+    "rrf_score": 0.030309988518943745
+   },
+   {
+    "id": "qa_pair:qa_011",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03007688828584351
+   },
+   {
+    "id": "schema:order_items",
+    "doc_type": "schema",
+    "rrf_score": 0.029910714285714284
+   },
+   {
+    "id": "glossary:gmv",
+    "doc_type": "glossary",
+    "rrf_score": 0.02976190476190476
+   },
+   {
+    "id": "qa_pair:qa_004",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.0293236301369863
+   },
+   {
+    "id": "qa_pair:qa_002",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.02928692699490662
+   },
+   {
+    "id": "schema:orders",
+    "doc_type": "schema",
+    "rrf_score": 0.02921395544346364
+   },
+   {
+    "id": "glossary:repurchase_rate",
+    "doc_type": "glossary",
+    "rrf_score": 0.02900988017658188
+   },
+   {
+    "id": "glossary:sell_through",
+    "doc_type": "glossary",
+    "rrf_score": 0.028612012987012988
+   },
+   {
+    "id": "glossary:items_per_order",
+    "doc_type": "glossary",
+    "rrf_score": 0.028577260665441927
+   }
+  ],
+  "rerank_order": [
+   {
+    "id": "schema:orders",
+    "doc_type": "schema",
+    "score": 0.7889467477798462
+   },
+   {
+    "id": "schema:products",
+    "doc_type": "schema",
+    "score": 0.21785274147987366
+   },
+   {
+    "id": "schema:order_items",
+    "doc_type": "schema",
+    "score": 0.16767928004264832
+   },
+   {
+    "id": "glossary:new_customers",
+    "doc_type": "glossary",
+    "score": 0.10168806463479996
+   },
+   {
+    "id": "qa_pair:qa_002",
+    "doc_type": "qa_pair",
+    "score": 0.029498234391212463
+   },
+   {
+    "id": "glossary:yoy_mom",
+    "doc_type": "glossary",
+    "score": 0.014730253256857395
+   },
+   {
+    "id": "qa_pair:qa_011",
+    "doc_type": "qa_pair",
+    "score": 0.014494367875158787
+   },
+   {
+    "id": "glossary:gmv",
+    "doc_type": "glossary",
+    "score": 0.0074935429729521275
+   },
+   {
+    "id": "glossary:repurchase_rate",
+    "doc_type": "glossary",
+    "score": 0.006035658996552229
+   },
+   {
+    "id": "glossary:items_per_order",
+    "doc_type": "glossary",
+    "score": 0.005883918143808842
+   },
+   {
+    "id": "qa_pair:qa_009",
+    "doc_type": "qa_pair",
+    "score": 0.00429858174175024
+   },
+   {
+    "id": "qa_pair:qa_001",
+    "doc_type": "qa_pair",
+    "score": 0.004217518027871847
+   },
+   {
+    "id": "glossary:sell_through",
+    "doc_type": "glossary",
+    "score": 0.0034681863617151976
+   },
+   {
+    "id": "qa_pair:qa_004",
+    "doc_type": "qa_pair",
+    "score": 0.0018774118507280946
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "score": 0.0013827901566401124
+   },
+   {
+    "id": "qa_pair:qa_003",
+    "doc_type": "qa_pair",
+    "score": 0.001189031288959086
+   }
+  ]
+ },
+ "EV-026": {
+  "question": "2026 年 9 月 24 日至 9 月 30 日（含）每天的退款金额是多少？",
+  "rrf_order": [
+   {
+    "id": "qa_pair:qa_004",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03278688524590164
+   },
+   {
+    "id": "schema:refunds",
+    "doc_type": "schema",
+    "rrf_score": 0.03177805800756621
+   },
+   {
+    "id": "glossary:refund_rate",
+    "doc_type": "glossary",
+    "rrf_score": 0.031754032258064516
+   },
+   {
+    "id": "glossary:net_sales",
+    "doc_type": "glossary",
+    "rrf_score": 0.03149801587301587
+   },
+   {
+    "id": "qa_pair:qa_001",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.031054405392392875
+   },
+   {
+    "id": "qa_pair:qa_007",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.031024531024531024
+   },
+   {
+    "id": "qa_pair:qa_010",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.031024531024531024
+   },
+   {
+    "id": "glossary:gmv",
+    "doc_type": "glossary",
+    "rrf_score": 0.030621785881252923
+   },
+   {
+    "id": "qa_pair:qa_003",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.030090497737556562
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.029910714285714284
+   },
+   {
+    "id": "schema:payments",
+    "doc_type": "schema",
+    "rrf_score": 0.029827662395050816
+   },
+   {
+    "id": "glossary:yoy_mom",
+    "doc_type": "glossary",
+    "rrf_score": 0.029051670471052088
+   },
+   {
+    "id": "schema:orders",
+    "doc_type": "schema",
+    "rrf_score": 0.029030910609857977
+   },
+   {
+    "id": "qa_pair:qa_009",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.02900988017658188
+   },
+   {
+    "id": "glossary:avg_order_value",
+    "doc_type": "glossary",
+    "rrf_score": 0.02871794871794872
+   },
+   {
+    "id": "glossary:repurchase_rate",
+    "doc_type": "glossary",
+    "rrf_score": 0.02797339593114241
+   }
+  ],
+  "rerank_order": [
+   {
+    "id": "schema:refunds",
+    "doc_type": "schema",
+    "score": 0.9748826622962952
+   },
+   {
+    "id": "schema:orders",
+    "doc_type": "schema",
+    "score": 0.9350128173828125
+   },
+   {
+    "id": "schema:payments",
+    "doc_type": "schema",
+    "score": 0.8883295655250549
+   },
+   {
+    "id": "qa_pair:qa_007",
+    "doc_type": "qa_pair",
+    "score": 0.727722704410553
+   },
+   {
+    "id": "qa_pair:qa_004",
+    "doc_type": "qa_pair",
+    "score": 0.7193852663040161
+   },
+   {
+    "id": "glossary:gmv",
+    "doc_type": "glossary",
+    "score": 0.12877628207206726
+   },
+   {
+    "id": "qa_pair:qa_003",
+    "doc_type": "qa_pair",
+    "score": 0.12654070556163788
+   },
+   {
+    "id": "glossary:net_sales",
+    "doc_type": "glossary",
+    "score": 0.06891213357448578
+   },
+   {
+    "id": "glossary:refund_rate",
+    "doc_type": "glossary",
+    "score": 0.06797579675912857
+   },
+   {
+    "id": "qa_pair:qa_001",
+    "doc_type": "qa_pair",
+    "score": 0.038137033581733704
+   },
+   {
+    "id": "qa_pair:qa_010",
+    "doc_type": "qa_pair",
+    "score": 0.03150634840130806
+   },
+   {
+    "id": "qa_pair:qa_009",
+    "doc_type": "qa_pair",
+    "score": 0.024979596957564354
+   },
+   {
+    "id": "glossary:yoy_mom",
+    "doc_type": "glossary",
+    "score": 0.010834206826984882
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "score": 0.006964900530874729
+   },
+   {
+    "id": "glossary:avg_order_value",
+    "doc_type": "glossary",
+    "score": 0.005359682720154524
+   },
+   {
+    "id": "glossary:repurchase_rate",
+    "doc_type": "glossary",
+    "score": 0.0017755309818312526
+   }
+  ]
+ },
+ "EV-027": {
+  "question": "数据期每个月的订单量趋势是怎样的？",
+  "rrf_order": [
+   {
+    "id": "qa_pair:qa_001",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03278688524590164
+   },
+   {
+    "id": "glossary:new_customers",
+    "doc_type": "glossary",
+    "rrf_score": 0.03225806451612903
+   },
+   {
+    "id": "glossary:yoy_mom",
+    "doc_type": "glossary",
+    "rrf_score": 0.031099324975891997
+   },
+   {
+    "id": "glossary:arpu",
+    "doc_type": "glossary",
+    "rrf_score": 0.030798389007344232
+   },
+   {
+    "id": "glossary:avg_order_value",
+    "doc_type": "glossary",
+    "rrf_score": 0.030776515151515152
+   },
+   {
+    "id": "glossary:repurchase_rate",
+    "doc_type": "glossary",
+    "rrf_score": 0.03036576949620428
+   },
+   {
+    "id": "qa_pair:qa_011",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.030309988518943745
+   },
+   {
+    "id": "qa_pair:qa_003",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03021353930031804
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.030158730158730156
+   },
+   {
+    "id": "glossary:items_per_order",
+    "doc_type": "glossary",
+    "rrf_score": 0.029709507042253523
+   },
+   {
+    "id": "schema:order_items",
+    "doc_type": "schema",
+    "rrf_score": 0.02964426877470356
+   },
+   {
+    "id": "schema:orders",
+    "doc_type": "schema",
+    "rrf_score": 0.029551337359792925
+   },
+   {
+    "id": "qa_pair:qa_010",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.028484848484848488
+   },
+   {
+    "id": "schema:products",
+    "doc_type": "schema",
+    "rrf_score": 0.02844551282051282
+   },
+   {
+    "id": "qa_pair:qa_005",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.028404512489927477
+   },
+   {
+    "id": "qa_pair:qa_007",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.028283227848101264
+   }
+  ],
+  "rerank_order": [
+   {
+    "id": "schema:orders",
+    "doc_type": "schema",
+    "score": 0.8034345507621765
+   },
+   {
+    "id": "schema:products",
+    "doc_type": "schema",
+    "score": 0.16161908209323883
+   },
+   {
+    "id": "glossary:new_customers",
+    "doc_type": "glossary",
+    "score": 0.02762206830084324
+   },
+   {
+    "id": "schema:order_items",
+    "doc_type": "schema",
+    "score": 0.01852456107735634
+   },
+   {
+    "id": "qa_pair:qa_001",
+    "doc_type": "qa_pair",
+    "score": 0.005204245448112488
+   },
+   {
+    "id": "glossary:arpu",
+    "doc_type": "glossary",
+    "score": 0.005036715418100357
+   },
+   {
+    "id": "glossary:repurchase_rate",
+    "doc_type": "glossary",
+    "score": 0.003420666791498661
+   },
+   {
+    "id": "glossary:avg_order_value",
+    "doc_type": "glossary",
+    "score": 0.0032991906628012657
+   },
+   {
+    "id": "qa_pair:qa_003",
+    "doc_type": "qa_pair",
+    "score": 0.0029134578071534634
+   },
+   {
+    "id": "glossary:yoy_mom",
+    "doc_type": "glossary",
+    "score": 0.0016235590446740389
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "score": 0.0013944918755441904
+   },
+   {
+    "id": "glossary:items_per_order",
+    "doc_type": "glossary",
+    "score": 0.0011483763810247183
+   },
+   {
+    "id": "qa_pair:qa_011",
+    "doc_type": "qa_pair",
+    "score": 0.0010312963277101517
+   },
+   {
+    "id": "qa_pair:qa_007",
+    "doc_type": "qa_pair",
+    "score": 0.0003325443249195814
+   },
+   {
+    "id": "qa_pair:qa_005",
+    "doc_type": "qa_pair",
+    "score": 0.00020240002777427435
+   },
+   {
+    "id": "qa_pair:qa_010",
+    "doc_type": "qa_pair",
+    "score": 0.00017630548973102123
+   }
+  ]
+ },
+ "EV-028": {
+  "question": "截至 2026-09-30 的最近 30 天里（含当天）支付订单有多少笔？",
+  "rrf_order": [
+   {
+    "id": "qa_pair:qa_007",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03278688524590164
+   },
+   {
+    "id": "qa_pair:qa_003",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03200204813108039
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.031009615384615385
+   },
+   {
+    "id": "glossary:gmv",
+    "doc_type": "glossary",
+    "rrf_score": 0.030886196246139225
+   },
+   {
+    "id": "schema:payments",
+    "doc_type": "schema",
+    "rrf_score": 0.030798389007344232
+   },
+   {
+    "id": "qa_pair:qa_001",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.030621785881252923
+   },
+   {
+    "id": "qa_pair:qa_010",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.030536130536130537
+   },
+   {
+    "id": "glossary:avg_order_value",
+    "doc_type": "glossary",
+    "rrf_score": 0.030330882352941176
+   },
+   {
+    "id": "schema:orders",
+    "doc_type": "schema",
+    "rrf_score": 0.030017921146953404
+   },
+   {
+    "id": "qa_pair:qa_004",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.029957522915269395
+   },
+   {
+    "id": "schema:refunds",
+    "doc_type": "schema",
+    "rrf_score": 0.0293236301369863
+   },
+   {
+    "id": "qa_pair:qa_011",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.029236022193768675
+   },
+   {
+    "id": "glossary:pay_conversion",
+    "doc_type": "glossary",
+    "rrf_score": 0.029211087420042643
+   },
+   {
+    "id": "qa_pair:qa_006",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.028782894736842105
+   },
+   {
+    "id": "schema:order_items",
+    "doc_type": "schema",
+    "rrf_score": 0.028665028665028666
+   },
+   {
+    "id": "glossary:refund_rate",
+    "doc_type": "glossary",
+    "rrf_score": 0.028484848484848488
+   }
+  ],
+  "rerank_order": [
+   {
+    "id": "schema:payments",
+    "doc_type": "schema",
+    "score": 0.9404608607292175
+   },
+   {
+    "id": "schema:orders",
+    "doc_type": "schema",
+    "score": 0.9090352058410645
+   },
+   {
+    "id": "schema:refunds",
+    "doc_type": "schema",
+    "score": 0.6278228759765625
+   },
+   {
+    "id": "qa_pair:qa_007",
+    "doc_type": "qa_pair",
+    "score": 0.46826839447021484
+   },
+   {
+    "id": "qa_pair:qa_003",
+    "doc_type": "qa_pair",
+    "score": 0.2585497498512268
+   },
+   {
+    "id": "schema:order_items",
+    "doc_type": "schema",
+    "score": 0.14521098136901855
+   },
+   {
+    "id": "glossary:gmv",
+    "doc_type": "glossary",
+    "score": 0.1444598138332367
+   },
+   {
+    "id": "glossary:avg_order_value",
+    "doc_type": "glossary",
+    "score": 0.08048184961080551
+   },
+   {
+    "id": "qa_pair:qa_001",
+    "doc_type": "qa_pair",
+    "score": 0.05784481018781662
+   },
+   {
+    "id": "qa_pair:qa_004",
+    "doc_type": "qa_pair",
+    "score": 0.05664884299039841
+   },
+   {
+    "id": "qa_pair:qa_011",
+    "doc_type": "qa_pair",
+    "score": 0.04218524321913719
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "score": 0.03060590662062168
+   },
+   {
+    "id": "glossary:pay_conversion",
+    "doc_type": "glossary",
+    "score": 0.024796858429908752
+   },
+   {
+    "id": "glossary:refund_rate",
+    "doc_type": "glossary",
+    "score": 0.009491359815001488
+   },
+   {
+    "id": "qa_pair:qa_010",
+    "doc_type": "qa_pair",
+    "score": 0.0067229862324893475
+   },
+   {
+    "id": "qa_pair:qa_006",
+    "doc_type": "qa_pair",
+    "score": 0.002939027501270175
+   }
+  ]
+ },
+ "EV-029": {
+  "question": "2026 年 9 月的净销售额是多少？",
+  "rrf_order": [
+   {
+    "id": "qa_pair:qa_004",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.032018442622950824
+   },
+   {
+    "id": "glossary:net_sales",
+    "doc_type": "glossary",
+    "rrf_score": 0.03200204813108039
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03200204813108039
+   },
+   {
+    "id": "qa_pair:qa_009",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03177805800756621
+   },
+   {
+    "id": "qa_pair:qa_001",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.0315136476426799
+   },
+   {
+    "id": "glossary:gmv",
+    "doc_type": "glossary",
+    "rrf_score": 0.030886196246139225
+   },
+   {
+    "id": "qa_pair:qa_002",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.030330882352941176
+   },
+   {
+    "id": "qa_pair:qa_003",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.030303030303030304
+   },
+   {
+    "id": "glossary:yoy_mom",
+    "doc_type": "glossary",
+    "rrf_score": 0.030158730158730156
+   },
+   {
+    "id": "schema:products",
+    "doc_type": "schema",
+    "rrf_score": 0.029709507042253523
+   },
+   {
+    "id": "glossary:sell_through",
+    "doc_type": "glossary",
+    "rrf_score": 0.029631255487269532
+   },
+   {
+    "id": "schema:order_items",
+    "doc_type": "schema",
+    "rrf_score": 0.029030910609857977
+   },
+   {
+    "id": "glossary:repurchase_rate",
+    "doc_type": "glossary",
+    "rrf_score": 0.028814262023217248
+   },
+   {
+    "id": "glossary:arpu",
+    "doc_type": "glossary",
+    "rrf_score": 0.028665028665028666
+   },
+   {
+    "id": "qa_pair:qa_007",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.02862400327131466
+   },
+   {
+    "id": "glossary:avg_order_value",
+    "doc_type": "glossary",
+    "rrf_score": 0.02844551282051282
+   }
+  ],
+  "rerank_order": [
+   {
+    "id": "glossary:gmv",
+    "doc_type": "glossary",
+    "score": 0.37450456619262695
+   },
+   {
+    "id": "qa_pair:qa_003",
+    "doc_type": "qa_pair",
+    "score": 0.18879525363445282
+   },
+   {
+    "id": "schema:products",
+    "doc_type": "schema",
+    "score": 0.11427119374275208
+   },
+   {
+    "id": "schema:order_items",
+    "doc_type": "schema",
+    "score": 0.06689587980508804
+   },
+   {
+    "id": "qa_pair:qa_004",
+    "doc_type": "qa_pair",
+    "score": 0.043647658079862595
+   },
+   {
+    "id": "qa_pair:qa_002",
+    "doc_type": "qa_pair",
+    "score": 0.027739958837628365
+   },
+   {
+    "id": "qa_pair:qa_009",
+    "doc_type": "qa_pair",
+    "score": 0.01938958652317524
+   },
+   {
+    "id": "qa_pair:qa_007",
+    "doc_type": "qa_pair",
+    "score": 0.017895156517624855
+   },
+   {
+    "id": "glossary:net_sales",
+    "doc_type": "glossary",
+    "score": 0.010139203630387783
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "score": 0.007650271989405155
+   },
+   {
+    "id": "glossary:yoy_mom",
+    "doc_type": "glossary",
+    "score": 0.0071468413807451725
+   },
+   {
+    "id": "glossary:sell_through",
+    "doc_type": "glossary",
+    "score": 0.00644978042691946
+   },
+   {
+    "id": "qa_pair:qa_001",
+    "doc_type": "qa_pair",
+    "score": 0.005977096501737833
+   },
+   {
+    "id": "glossary:arpu",
+    "doc_type": "glossary",
+    "score": 0.005892839282751083
+   },
+   {
+    "id": "glossary:repurchase_rate",
+    "doc_type": "glossary",
+    "score": 0.0017929442692548037
+   },
+   {
+    "id": "glossary:avg_order_value",
+    "doc_type": "glossary",
+    "score": 0.0017230650410056114
+   }
+  ]
+ },
+ "EV-030": {
+  "question": "2026 年 9 月的退款率是多少（订单口径）？",
+  "rrf_order": [
+   {
+    "id": "qa_pair:qa_004",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03278688524590164
+   },
+   {
+    "id": "glossary:refund_rate",
+    "doc_type": "glossary",
+    "rrf_score": 0.03200204813108039
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.0315136476426799
+   },
+   {
+    "id": "qa_pair:qa_009",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03125
+   },
+   {
+    "id": "schema:refunds",
+    "doc_type": "schema",
+    "rrf_score": 0.031099324975891997
+   },
+   {
+    "id": "qa_pair:qa_001",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.031024531024531024
+   },
+   {
+    "id": "glossary:gmv",
+    "doc_type": "glossary",
+    "rrf_score": 0.030679156908665108
+   },
+   {
+    "id": "glossary:net_sales",
+    "doc_type": "glossary",
+    "rrf_score": 0.03055037313432836
+   },
+   {
+    "id": "qa_pair:qa_010",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.030158730158730156
+   },
+   {
+    "id": "qa_pair:qa_003",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.029877369007803793
+   },
+   {
+    "id": "schema:orders",
+    "doc_type": "schema",
+    "rrf_score": 0.029571646010002173
+   },
+   {
+    "id": "schema:order_items",
+    "doc_type": "schema",
+    "rrf_score": 0.029138513513513514
+   },
+   {
+    "id": "schema:payments",
+    "doc_type": "schema",
+    "rrf_score": 0.028629032258064516
+   },
+   {
+    "id": "qa_pair:qa_011",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.028577260665441927
+   },
+   {
+    "id": "glossary:avg_order_value",
+    "doc_type": "glossary",
+    "rrf_score": 0.02854251012145749
+   },
+   {
+    "id": "glossary:sell_through",
+    "doc_type": "glossary",
+    "rrf_score": 0.028484848484848488
+   }
+  ],
+  "rerank_order": [
+   {
+    "id": "qa_pair:qa_004",
+    "doc_type": "qa_pair",
+    "score": 0.9943165183067322
+   },
+   {
+    "id": "schema:refunds",
+    "doc_type": "schema",
+    "score": 0.9901977777481079
+   },
+   {
+    "id": "schema:orders",
+    "doc_type": "schema",
+    "score": 0.9453767538070679
+   },
+   {
+    "id": "schema:payments",
+    "doc_type": "schema",
+    "score": 0.8999968767166138
+   },
+   {
+    "id": "qa_pair:qa_003",
+    "doc_type": "qa_pair",
+    "score": 0.582309365272522
+   },
+   {
+    "id": "qa_pair:qa_009",
+    "doc_type": "qa_pair",
+    "score": 0.4119883179664612
+   },
+   {
+    "id": "glossary:gmv",
+    "doc_type": "glossary",
+    "score": 0.37468841671943665
+   },
+   {
+    "id": "glossary:refund_rate",
+    "doc_type": "glossary",
+    "score": 0.22624936699867249
+   },
+   {
+    "id": "schema:order_items",
+    "doc_type": "schema",
+    "score": 0.1283138394355774
+   },
+   {
+    "id": "glossary:net_sales",
+    "doc_type": "glossary",
+    "score": 0.03248279169201851
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "score": 0.0194720309227705
+   },
+   {
+    "id": "glossary:sell_through",
+    "doc_type": "glossary",
+    "score": 0.01651390641927719
+   },
+   {
+    "id": "qa_pair:qa_010",
+    "doc_type": "qa_pair",
+    "score": 0.008419360034167767
+   },
+   {
+    "id": "glossary:avg_order_value",
+    "doc_type": "glossary",
+    "score": 0.008142346516251564
+   },
+   {
+    "id": "qa_pair:qa_001",
+    "doc_type": "qa_pair",
+    "score": 0.007216785103082657
+   },
+   {
+    "id": "qa_pair:qa_011",
+    "doc_type": "qa_pair",
+    "score": 0.0068613565526902676
+   }
+  ]
+ },
+ "EV-031": {
+  "question": "各类目下分别有多少个商品？",
+  "rrf_order": [
+   {
+    "id": "qa_pair:qa_005",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03278688524590164
+   },
+   {
+    "id": "schema:products",
+    "doc_type": "schema",
+    "rrf_score": 0.03252247488101534
+   },
+   {
+    "id": "glossary:sell_through",
+    "doc_type": "glossary",
+    "rrf_score": 0.032266458495966696
+   },
+   {
+    "id": "schema:order_items",
+    "doc_type": "schema",
+    "rrf_score": 0.0315136476426799
+   },
+   {
+    "id": "qa_pair:qa_002",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03149801587301587
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.030536130536130537
+   },
+   {
+    "id": "glossary:arpu",
+    "doc_type": "glossary",
+    "rrf_score": 0.03007688828584351
+   },
+   {
+    "id": "glossary:repurchase_rate",
+    "doc_type": "glossary",
+    "rrf_score": 0.029418126757516764
+   },
+   {
+    "id": "glossary:avg_order_value",
+    "doc_type": "glossary",
+    "rrf_score": 0.029273504273504274
+   },
+   {
+    "id": "qa_pair:qa_011",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.029236022193768675
+   },
+   {
+    "id": "schema:users",
+    "doc_type": "schema",
+    "rrf_score": 0.029206349206349208
+   },
+   {
+    "id": "glossary:items_per_order",
+    "doc_type": "glossary",
+    "rrf_score": 0.028991596638655463
+   },
+   {
+    "id": "qa_pair:qa_001",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.028991596638655463
+   },
+   {
+    "id": "schema:orders",
+    "doc_type": "schema",
+    "rrf_score": 0.028665028665028666
+   },
+   {
+    "id": "glossary:gmv",
+    "doc_type": "glossary",
+    "rrf_score": 0.028373015873015873
+   },
+   {
+    "id": "glossary:net_sales",
+    "doc_type": "glossary",
+    "rrf_score": 0.028283227848101264
+   }
+  ],
+  "rerank_order": [
+   {
+    "id": "schema:products",
+    "doc_type": "schema",
+    "score": 0.9243008494377136
+   },
+   {
+    "id": "schema:order_items",
+    "doc_type": "schema",
+    "score": 0.21445460617542267
+   },
+   {
+    "id": "glossary:items_per_order",
+    "doc_type": "glossary",
+    "score": 0.008070949465036392
+   },
+   {
+    "id": "glossary:sell_through",
+    "doc_type": "glossary",
+    "score": 0.008004236035048962
+   },
+   {
+    "id": "schema:users",
+    "doc_type": "schema",
+    "score": 0.007592462934553623
+   },
+   {
+    "id": "schema:orders",
+    "doc_type": "schema",
+    "score": 0.006750565953552723
+   },
+   {
+    "id": "qa_pair:qa_005",
+    "doc_type": "qa_pair",
+    "score": 0.005583672784268856
+   },
+   {
+    "id": "glossary:arpu",
+    "doc_type": "glossary",
+    "score": 0.0019452854758128524
+   },
+   {
+    "id": "glossary:repurchase_rate",
+    "doc_type": "glossary",
+    "score": 0.0017863026587292552
+   },
+   {
+    "id": "qa_pair:qa_001",
+    "doc_type": "qa_pair",
+    "score": 0.0009337197989225388
+   },
+   {
+    "id": "qa_pair:qa_002",
+    "doc_type": "qa_pair",
+    "score": 0.0008892420446500182
+   },
+   {
+    "id": "qa_pair:qa_011",
+    "doc_type": "qa_pair",
+    "score": 0.0007445652154274285
+   },
+   {
+    "id": "glossary:avg_order_value",
+    "doc_type": "glossary",
+    "score": 0.0004265989118721336
+   },
+   {
+    "id": "glossary:net_sales",
+    "doc_type": "glossary",
+    "score": 0.0004188693128526211
+   },
+   {
+    "id": "glossary:gmv",
+    "doc_type": "glossary",
+    "score": 0.0003704763075802475
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "score": 0.0003641870862338692
+   }
+  ]
+ },
+ "EV-032": {
+  "question": "价格高于 500 元的商品占比是多少？",
+  "rrf_order": [
+   {
+    "id": "qa_pair:qa_011",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.032266458495966696
+   },
+   {
+    "id": "schema:products",
+    "doc_type": "schema",
+    "rrf_score": 0.032018442622950824
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.031754032258064516
+   },
+   {
+    "id": "schema:order_items",
+    "doc_type": "schema",
+    "rrf_score": 0.0315136476426799
+   },
+   {
+    "id": "qa_pair:qa_005",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.031024531024531024
+   },
+   {
+    "id": "qa_pair:qa_002",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03047794966520434
+   },
+   {
+    "id": "glossary:avg_order_value",
+    "doc_type": "glossary",
+    "rrf_score": 0.030309988518943745
+   },
+   {
+    "id": "glossary:sell_through",
+    "doc_type": "glossary",
+    "rrf_score": 0.030017921146953404
+   },
+   {
+    "id": "glossary:repurchase_rate",
+    "doc_type": "glossary",
+    "rrf_score": 0.029957522915269395
+   },
+   {
+    "id": "glossary:items_per_order",
+    "doc_type": "glossary",
+    "rrf_score": 0.028991596638655463
+   },
+   {
+    "id": "qa_pair:qa_009",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.028991596638655463
+   },
+   {
+    "id": "glossary:arpu",
+    "doc_type": "glossary",
+    "rrf_score": 0.028985507246376812
+   },
+   {
+    "id": "glossary:new_customers",
+    "doc_type": "glossary",
+    "rrf_score": 0.02889344262295082
+   },
+   {
+    "id": "glossary:yoy_mom",
+    "doc_type": "glossary",
+    "rrf_score": 0.028612012987012988
+   },
+   {
+    "id": "glossary:net_sales",
+    "doc_type": "glossary",
+    "rrf_score": 0.028484848484848488
+   },
+   {
+    "id": "qa_pair:qa_003",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.028438886647841874
+   }
+  ],
+  "rerank_order": [
+   {
+    "id": "schema:products",
+    "doc_type": "schema",
+    "score": 0.035405419766902924
+   },
+   {
+    "id": "schema:order_items",
+    "doc_type": "schema",
+    "score": 0.03490505367517471
+   },
+   {
+    "id": "qa_pair:qa_011",
+    "doc_type": "qa_pair",
+    "score": 0.0033485100138932467
+   },
+   {
+    "id": "glossary:sell_through",
+    "doc_type": "glossary",
+    "score": 0.0025176971685141325
+   },
+   {
+    "id": "glossary:new_customers",
+    "doc_type": "glossary",
+    "score": 0.002190252300351858
+   },
+   {
+    "id": "glossary:items_per_order",
+    "doc_type": "glossary",
+    "score": 0.0015601507620885968
+   },
+   {
+    "id": "glossary:yoy_mom",
+    "doc_type": "glossary",
+    "score": 0.000798948050942272
+   },
+   {
+    "id": "glossary:arpu",
+    "doc_type": "glossary",
+    "score": 0.0007437021704390645
+   },
+   {
+    "id": "qa_pair:qa_002",
+    "doc_type": "qa_pair",
+    "score": 0.0006872571539133787
+   },
+   {
+    "id": "qa_pair:qa_009",
+    "doc_type": "qa_pair",
+    "score": 0.0006282053655013442
+   },
+   {
+    "id": "glossary:repurchase_rate",
+    "doc_type": "glossary",
+    "score": 0.0005099598783999681
+   },
+   {
+    "id": "qa_pair:qa_005",
+    "doc_type": "qa_pair",
+    "score": 0.0004376347060315311
+   },
+   {
+    "id": "glossary:avg_order_value",
+    "doc_type": "glossary",
+    "score": 0.0003977246524300426
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "score": 0.00035172567004337907
+   },
+   {
+    "id": "glossary:net_sales",
+    "doc_type": "glossary",
+    "score": 0.00028731170459650457
+   },
+   {
+    "id": "qa_pair:qa_003",
+    "doc_type": "qa_pair",
+    "score": 0.00017715884314384311
+   }
+  ]
+ },
+ "EV-033": {
+  "question": "退款金额最大的一笔退款发生在哪一天、金额多少？",
+  "rrf_order": [
+   {
+    "id": "qa_pair:qa_004",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03252247488101534
+   },
+   {
+    "id": "qa_pair:qa_010",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03252247488101534
+   },
+   {
+    "id": "schema:refunds",
+    "doc_type": "schema",
+    "rrf_score": 0.032018442622950824
+   },
+   {
+    "id": "glossary:refund_rate",
+    "doc_type": "glossary",
+    "rrf_score": 0.03200204813108039
+   },
+   {
+    "id": "glossary:net_sales",
+    "doc_type": "glossary",
+    "rrf_score": 0.03177805800756621
+   },
+   {
+    "id": "qa_pair:qa_007",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.030536130536130537
+   },
+   {
+    "id": "glossary:gmv",
+    "doc_type": "glossary",
+    "rrf_score": 0.03007688828584351
+   },
+   {
+    "id": "qa_pair:qa_001",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.029910714285714284
+   },
+   {
+    "id": "qa_pair:qa_002",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.029857397504456328
+   },
+   {
+    "id": "qa_pair:qa_011",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.02976190476190476
+   },
+   {
+    "id": "glossary:avg_order_value",
+    "doc_type": "glossary",
+    "rrf_score": 0.02946912242686891
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.029418126757516764
+   },
+   {
+    "id": "schema:payments",
+    "doc_type": "schema",
+    "rrf_score": 0.029386529386529386
+   },
+   {
+    "id": "glossary:pay_conversion",
+    "doc_type": "glossary",
+    "rrf_score": 0.028612012987012988
+   },
+   {
+    "id": "schema:orders",
+    "doc_type": "schema",
+    "rrf_score": 0.028309409888357256
+   },
+   {
+    "id": "qa_pair:qa_003",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.027984344422700584
+   }
+  ],
+  "rerank_order": [
+   {
+    "id": "schema:refunds",
+    "doc_type": "schema",
+    "score": 0.4694409668445587
+   },
+   {
+    "id": "qa_pair:qa_010",
+    "doc_type": "qa_pair",
+    "score": 0.4332720637321472
+   },
+   {
+    "id": "schema:orders",
+    "doc_type": "schema",
+    "score": 0.235142320394516
+   },
+   {
+    "id": "schema:payments",
+    "doc_type": "schema",
+    "score": 0.1147901862859726
+   },
+   {
+    "id": "qa_pair:qa_004",
+    "doc_type": "qa_pair",
+    "score": 0.039318494498729706
+   },
+   {
+    "id": "glossary:refund_rate",
+    "doc_type": "glossary",
+    "score": 0.01819949597120285
+   },
+   {
+    "id": "glossary:net_sales",
+    "doc_type": "glossary",
+    "score": 0.010830804705619812
+   },
+   {
+    "id": "glossary:gmv",
+    "doc_type": "glossary",
+    "score": 0.00540849519893527
+   },
+   {
+    "id": "qa_pair:qa_007",
+    "doc_type": "qa_pair",
+    "score": 0.00527593307197094
+   },
+   {
+    "id": "qa_pair:qa_001",
+    "doc_type": "qa_pair",
+    "score": 0.0021350292954593897
+   },
+   {
+    "id": "qa_pair:qa_002",
+    "doc_type": "qa_pair",
+    "score": 0.001327649923041463
+   },
+   {
+    "id": "qa_pair:qa_003",
+    "doc_type": "qa_pair",
+    "score": 0.001110892160795629
+   },
+   {
+    "id": "glossary:avg_order_value",
+    "doc_type": "glossary",
+    "score": 0.0010265997843816876
+   },
+   {
+    "id": "glossary:pay_conversion",
+    "doc_type": "glossary",
+    "score": 0.0009668993880040944
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "score": 0.0005262209451757371
+   },
+   {
+    "id": "qa_pair:qa_011",
+    "doc_type": "qa_pair",
+    "score": 0.00027171592228114605
+   }
+  ]
+ },
+ "EV-034": {
+  "question": "2026 年一季度各商品类目的销售额与销量件数是多少？",
+  "rrf_order": [
+   {
+    "id": "qa_pair:qa_009",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03278688524590164
+   },
+   {
+    "id": "glossary:sell_through",
+    "doc_type": "glossary",
+    "rrf_score": 0.03177805800756621
+   },
+   {
+    "id": "qa_pair:qa_002",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.031746031746031744
+   },
+   {
+    "id": "schema:products",
+    "doc_type": "schema",
+    "rrf_score": 0.03131881575727918
+   },
+   {
+    "id": "qa_pair:qa_001",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03128054740957967
+   },
+   {
+    "id": "qa_pair:qa_005",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03128054740957967
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.031009615384615385
+   },
+   {
+    "id": "glossary:net_sales",
+    "doc_type": "glossary",
+    "rrf_score": 0.030330882352941176
+   },
+   {
+    "id": "schema:order_items",
+    "doc_type": "schema",
+    "rrf_score": 0.03021353930031804
+   },
+   {
+    "id": "glossary:repurchase_rate",
+    "doc_type": "glossary",
+    "rrf_score": 0.029877369007803793
+   },
+   {
+    "id": "glossary:items_per_order",
+    "doc_type": "glossary",
+    "rrf_score": 0.02976190476190476
+   },
+   {
+    "id": "glossary:gmv",
+    "doc_type": "glossary",
+    "rrf_score": 0.02964254577157803
+   },
+   {
+    "id": "qa_pair:qa_011",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.0293236301369863
+   },
+   {
+    "id": "qa_pair:qa_003",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.029211087420042643
+   },
+   {
+    "id": "schema:orders",
+    "doc_type": "schema",
+    "rrf_score": 0.028693528693528692
+   },
+   {
+    "id": "glossary:arpu",
+    "doc_type": "glossary",
+    "rrf_score": 0.02813852813852814
+   }
+  ],
+  "rerank_order": [
+   {
+    "id": "schema:products",
+    "doc_type": "schema",
+    "score": 0.6547840237617493
+   },
+   {
+    "id": "schema:order_items",
+    "doc_type": "schema",
+    "score": 0.42532700300216675
+   },
+   {
+    "id": "schema:orders",
+    "doc_type": "schema",
+    "score": 0.2165687084197998
+   },
+   {
+    "id": "qa_pair:qa_001",
+    "doc_type": "qa_pair",
+    "score": 0.045299943536520004
+   },
+   {
+    "id": "qa_pair:qa_002",
+    "doc_type": "qa_pair",
+    "score": 0.03452981635928154
+   },
+   {
+    "id": "qa_pair:qa_009",
+    "doc_type": "qa_pair",
+    "score": 0.027948647737503052
+   },
+   {
+    "id": "glossary:sell_through",
+    "doc_type": "glossary",
+    "score": 0.023508233949542046
+   },
+   {
+    "id": "glossary:gmv",
+    "doc_type": "glossary",
+    "score": 0.02242199145257473
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "score": 0.0133891012519598
+   },
+   {
+    "id": "qa_pair:qa_003",
+    "doc_type": "qa_pair",
+    "score": 0.009125215001404285
+   },
+   {
+    "id": "glossary:items_per_order",
+    "doc_type": "glossary",
+    "score": 0.0071524400264024734
+   },
+   {
+    "id": "glossary:arpu",
+    "doc_type": "glossary",
+    "score": 0.005291789770126343
+   },
+   {
+    "id": "qa_pair:qa_005",
+    "doc_type": "qa_pair",
+    "score": 0.003974826540797949
+   },
+   {
+    "id": "glossary:repurchase_rate",
+    "doc_type": "glossary",
+    "score": 0.0034097586758434772
+   },
+   {
+    "id": "glossary:net_sales",
+    "doc_type": "glossary",
+    "score": 0.0033776620402932167
+   },
+   {
+    "id": "qa_pair:qa_011",
+    "doc_type": "qa_pair",
+    "score": 0.0009434996754862368
+   }
+  ]
+ },
+ "EV-035": {
+  "question": "退款金额最高的 3 个类目是哪些？（跨类目订单的退款金额在其涉及的每个类目各计一次）",
+  "rrf_order": [
+   {
+    "id": "qa_pair:qa_010",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03252247488101534
+   },
+   {
+    "id": "glossary:net_sales",
+    "doc_type": "glossary",
+    "rrf_score": 0.032266458495966696
+   },
+   {
+    "id": "glossary:refund_rate",
+    "doc_type": "glossary",
+    "rrf_score": 0.03225806451612903
+   },
+   {
+    "id": "qa_pair:qa_004",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03149801587301587
+   },
+   {
+    "id": "qa_pair:qa_002",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.030776515151515152
+   },
+   {
+    "id": "qa_pair:qa_005",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.030679156908665108
+   },
+   {
+    "id": "schema:refunds",
+    "doc_type": "schema",
+    "rrf_score": 0.030536130536130537
+   },
+   {
+    "id": "glossary:avg_order_value",
+    "doc_type": "glossary",
+    "rrf_score": 0.030117753623188408
+   },
+   {
+    "id": "glossary:repurchase_rate",
+    "doc_type": "glossary",
+    "rrf_score": 0.029631255487269532
+   },
+   {
+    "id": "glossary:gmv",
+    "doc_type": "glossary",
+    "rrf_score": 0.029273504273504274
+   },
+   {
+    "id": "glossary:pay_conversion",
+    "doc_type": "glossary",
+    "rrf_score": 0.029236022193768675
+   },
+   {
+    "id": "schema:orders",
+    "doc_type": "schema",
+    "rrf_score": 0.029138513513513514
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.029083245521601686
+   },
+   {
+    "id": "schema:order_items",
+    "doc_type": "schema",
+    "rrf_score": 0.029030910609857977
+   },
+   {
+    "id": "schema:products",
+    "doc_type": "schema",
+    "rrf_score": 0.02889344262295082
+   },
+   {
+    "id": "qa_pair:qa_011",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.028790389395194696
+   }
+  ],
+  "rerank_order": [
+   {
+    "id": "qa_pair:qa_010",
+    "doc_type": "qa_pair",
+    "score": 0.9549105167388916
+   },
+   {
+    "id": "schema:refunds",
+    "doc_type": "schema",
+    "score": 0.6844380497932434
+   },
+   {
+    "id": "schema:orders",
+    "doc_type": "schema",
+    "score": 0.5599170327186584
+   },
+   {
+    "id": "qa_pair:qa_004",
+    "doc_type": "qa_pair",
+    "score": 0.05633070319890976
+   },
+   {
+    "id": "schema:order_items",
+    "doc_type": "schema",
+    "score": 0.05543595552444458
+   },
+   {
+    "id": "glossary:refund_rate",
+    "doc_type": "glossary",
+    "score": 0.05094584450125694
+   },
+   {
+    "id": "schema:products",
+    "doc_type": "schema",
+    "score": 0.046492818742990494
+   },
+   {
+    "id": "glossary:net_sales",
+    "doc_type": "glossary",
+    "score": 0.04543645307421684
+   },
+   {
+    "id": "qa_pair:qa_002",
+    "doc_type": "qa_pair",
+    "score": 0.026044048368930817
+   },
+   {
+    "id": "glossary:gmv",
+    "doc_type": "glossary",
+    "score": 0.010898281820118427
+   },
+   {
+    "id": "glossary:pay_conversion",
+    "doc_type": "glossary",
+    "score": 0.005976918153464794
+   },
+   {
+    "id": "glossary:avg_order_value",
+    "doc_type": "glossary",
+    "score": 0.00500108115375042
+   },
+   {
+    "id": "qa_pair:qa_005",
+    "doc_type": "qa_pair",
+    "score": 0.003834470408037305
+   },
+   {
+    "id": "qa_pair:qa_011",
+    "doc_type": "qa_pair",
+    "score": 0.003127547213807702
+   },
+   {
+    "id": "glossary:repurchase_rate",
+    "doc_type": "glossary",
+    "score": 0.0028975410386919975
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "score": 0.0026114401407539845
+   }
+  ]
+ },
+ "EV-036": {
+  "question": "2026 年 7 月各支付方式的退款金额与退款笔数是多少？",
+  "rrf_order": [
+   {
+    "id": "qa_pair:qa_004",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03278688524590164
+   },
+   {
+    "id": "glossary:refund_rate",
+    "doc_type": "glossary",
+    "rrf_score": 0.03200204813108039
+   },
+   {
+    "id": "glossary:net_sales",
+    "doc_type": "glossary",
+    "rrf_score": 0.03177805800756621
+   },
+   {
+    "id": "qa_pair:qa_010",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.031754032258064516
+   },
+   {
+    "id": "schema:refunds",
+    "doc_type": "schema",
+    "rrf_score": 0.031754032258064516
+   },
+   {
+    "id": "qa_pair:qa_011",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.030621785881252923
+   },
+   {
+    "id": "glossary:gmv",
+    "doc_type": "glossary",
+    "rrf_score": 0.03057889822595705
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.030536130536130537
+   },
+   {
+    "id": "qa_pair:qa_007",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.030158730158730156
+   },
+   {
+    "id": "schema:payments",
+    "doc_type": "schema",
+    "rrf_score": 0.029906956136464335
+   },
+   {
+    "id": "qa_pair:qa_003",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.029631255487269532
+   },
+   {
+    "id": "glossary:avg_order_value",
+    "doc_type": "glossary",
+    "rrf_score": 0.029273504273504274
+   },
+   {
+    "id": "qa_pair:qa_009",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.02900988017658188
+   },
+   {
+    "id": "qa_pair:qa_001",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.028484848484848488
+   },
+   {
+    "id": "glossary:pay_conversion",
+    "doc_type": "glossary",
+    "rrf_score": 0.028404512489927477
+   },
+   {
+    "id": "schema:orders",
+    "doc_type": "schema",
+    "rrf_score": 0.028371628371628373
+   }
+  ],
+  "rerank_order": [
+   {
+    "id": "schema:refunds",
+    "doc_type": "schema",
+    "score": 0.9861371517181396
+   },
+   {
+    "id": "schema:payments",
+    "doc_type": "schema",
+    "score": 0.9780712723731995
+   },
+   {
+    "id": "schema:orders",
+    "doc_type": "schema",
+    "score": 0.8599351644515991
+   },
+   {
+    "id": "qa_pair:qa_004",
+    "doc_type": "qa_pair",
+    "score": 0.40006810426712036
+   },
+   {
+    "id": "qa_pair:qa_009",
+    "doc_type": "qa_pair",
+    "score": 0.273041695356369
+   },
+   {
+    "id": "glossary:gmv",
+    "doc_type": "glossary",
+    "score": 0.22288955748081207
+   },
+   {
+    "id": "glossary:refund_rate",
+    "doc_type": "glossary",
+    "score": 0.16537073254585266
+   },
+   {
+    "id": "qa_pair:qa_007",
+    "doc_type": "qa_pair",
+    "score": 0.13049988448619843
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "score": 0.13037748634815216
+   },
+   {
+    "id": "glossary:net_sales",
+    "doc_type": "glossary",
+    "score": 0.11729692667722702
+   },
+   {
+    "id": "qa_pair:qa_003",
+    "doc_type": "qa_pair",
+    "score": 0.1052359864115715
+   },
+   {
+    "id": "qa_pair:qa_010",
+    "doc_type": "qa_pair",
+    "score": 0.033802445977926254
+   },
+   {
+    "id": "qa_pair:qa_011",
+    "doc_type": "qa_pair",
+    "score": 0.03281719237565994
+   },
+   {
+    "id": "glossary:avg_order_value",
+    "doc_type": "glossary",
+    "score": 0.00905274786055088
+   },
+   {
+    "id": "glossary:pay_conversion",
+    "doc_type": "glossary",
+    "score": 0.007607622537761927
+   },
+   {
+    "id": "qa_pair:qa_001",
+    "doc_type": "qa_pair",
+    "score": 0.007465151138603687
+   }
+  ]
+ },
+ "EV-037": {
+  "question": "用微信支付过且买过图书类目商品的用户有多少？",
+  "rrf_order": [
+   {
+    "id": "qa_pair:qa_005",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03278688524590164
+   },
+   {
+    "id": "qa_pair:qa_006",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03225806451612903
+   },
+   {
+    "id": "glossary:repurchase_rate",
+    "doc_type": "glossary",
+    "rrf_score": 0.031746031746031744
+   },
+   {
+    "id": "qa_pair:qa_002",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03149801587301587
+   },
+   {
+    "id": "schema:payments",
+    "doc_type": "schema",
+    "rrf_score": 0.03125763125763126
+   },
+   {
+    "id": "schema:users",
+    "doc_type": "schema",
+    "rrf_score": 0.030776515151515152
+   },
+   {
+    "id": "glossary:arpu",
+    "doc_type": "glossary",
+    "rrf_score": 0.0304147465437788
+   },
+   {
+    "id": "schema:products",
+    "doc_type": "schema",
+    "rrf_score": 0.029726775956284153
+   },
+   {
+    "id": "qa_pair:qa_003",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.02964426877470356
+   },
+   {
+    "id": "qa_pair:qa_007",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.02946912242686891
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.029411764705882353
+   },
+   {
+    "id": "schema:order_items",
+    "doc_type": "schema",
+    "rrf_score": 0.02928692699490662
+   },
+   {
+    "id": "qa_pair:qa_009",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.029211087420042643
+   },
+   {
+    "id": "qa_pair:qa_001",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.029138513513513514
+   },
+   {
+    "id": "qa_pair:qa_011",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.028814262023217248
+   },
+   {
+    "id": "schema:orders",
+    "doc_type": "schema",
+    "rrf_score": 0.028371628371628373
+   }
+  ],
+  "rerank_order": [
+   {
+    "id": "glossary:arpu",
+    "doc_type": "glossary",
+    "score": 0.1621115803718567
+   },
+   {
+    "id": "qa_pair:qa_005",
+    "doc_type": "qa_pair",
+    "score": 0.09146860986948013
+   },
+   {
+    "id": "schema:payments",
+    "doc_type": "schema",
+    "score": 0.044576358050107956
+   },
+   {
+    "id": "schema:users",
+    "doc_type": "schema",
+    "score": 0.029631931334733963
+   },
+   {
+    "id": "schema:products",
+    "doc_type": "schema",
+    "score": 0.0213546771556139
+   },
+   {
+    "id": "schema:order_items",
+    "doc_type": "schema",
+    "score": 0.011536015197634697
+   },
+   {
+    "id": "schema:orders",
+    "doc_type": "schema",
+    "score": 0.009599718265235424
+   },
+   {
+    "id": "glossary:repurchase_rate",
+    "doc_type": "glossary",
+    "score": 0.008191953413188457
+   },
+   {
+    "id": "qa_pair:qa_006",
+    "doc_type": "qa_pair",
+    "score": 0.0030473987571895123
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "score": 0.001303881872445345
+   },
+   {
+    "id": "qa_pair:qa_009",
+    "doc_type": "qa_pair",
+    "score": 0.0011970128398388624
+   },
+   {
+    "id": "qa_pair:qa_011",
+    "doc_type": "qa_pair",
+    "score": 0.0010288929333910346
+   },
+   {
+    "id": "qa_pair:qa_002",
+    "doc_type": "qa_pair",
+    "score": 0.0009862271836027503
+   },
+   {
+    "id": "qa_pair:qa_001",
+    "doc_type": "qa_pair",
+    "score": 0.0004280606808606535
+   },
+   {
+    "id": "qa_pair:qa_007",
+    "doc_type": "qa_pair",
+    "score": 0.00034925108775496483
+   },
+   {
+    "id": "qa_pair:qa_003",
+    "doc_type": "qa_pair",
+    "score": 0.00022050856205169111
+   }
+  ]
+ },
+ "EV-038": {
+  "question": "各城市平均每笔退款的金额是多少？",
+  "rrf_order": [
+   {
+    "id": "qa_pair:qa_004",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03278688524590164
+   },
+   {
+    "id": "glossary:net_sales",
+    "doc_type": "glossary",
+    "rrf_score": 0.032266458495966696
+   },
+   {
+    "id": "glossary:refund_rate",
+    "doc_type": "glossary",
+    "rrf_score": 0.03225806451612903
+   },
+   {
+    "id": "qa_pair:qa_010",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03149801587301587
+   },
+   {
+    "id": "qa_pair:qa_002",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03128054740957967
+   },
+   {
+    "id": "schema:refunds",
+    "doc_type": "schema",
+    "rrf_score": 0.031009615384615385
+   },
+   {
+    "id": "qa_pair:qa_011",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03055037313432836
+   },
+   {
+    "id": "glossary:avg_order_value",
+    "doc_type": "glossary",
+    "rrf_score": 0.030117753623188408
+   },
+   {
+    "id": "qa_pair:qa_007",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.030090497737556562
+   },
+   {
+    "id": "glossary:arpu",
+    "doc_type": "glossary",
+    "rrf_score": 0.029437229437229435
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.029236022193768675
+   },
+   {
+    "id": "glossary:gmv",
+    "doc_type": "glossary",
+    "rrf_score": 0.029083245521601686
+   },
+   {
+    "id": "schema:users",
+    "doc_type": "schema",
+    "rrf_score": 0.02889344262295082
+   },
+   {
+    "id": "schema:order_items",
+    "doc_type": "schema",
+    "rrf_score": 0.02878726010616578
+   },
+   {
+    "id": "schema:payments",
+    "doc_type": "schema",
+    "rrf_score": 0.028371628371628373
+   },
+   {
+    "id": "glossary:pay_conversion",
+    "doc_type": "glossary",
+    "rrf_score": 0.02817460317460317
+   }
+  ],
+  "rerank_order": [
+   {
+    "id": "schema:refunds",
+    "doc_type": "schema",
+    "score": 0.1325257271528244
+   },
+   {
+    "id": "schema:payments",
+    "doc_type": "schema",
+    "score": 0.055913686752319336
+   },
+   {
+    "id": "schema:users",
+    "doc_type": "schema",
+    "score": 0.044999752193689346
+   },
+   {
+    "id": "glossary:refund_rate",
+    "doc_type": "glossary",
+    "score": 0.021372564136981964
+   },
+   {
+    "id": "qa_pair:qa_004",
+    "doc_type": "qa_pair",
+    "score": 0.01976347714662552
+   },
+   {
+    "id": "qa_pair:qa_010",
+    "doc_type": "qa_pair",
+    "score": 0.01856096461415291
+   },
+   {
+    "id": "glossary:net_sales",
+    "doc_type": "glossary",
+    "score": 0.01819167658686638
+   },
+   {
+    "id": "schema:order_items",
+    "doc_type": "schema",
+    "score": 0.014034280553460121
+   },
+   {
+    "id": "qa_pair:qa_002",
+    "doc_type": "qa_pair",
+    "score": 0.007235500495880842
+   },
+   {
+    "id": "glossary:gmv",
+    "doc_type": "glossary",
+    "score": 0.005451479461044073
+   },
+   {
+    "id": "glossary:avg_order_value",
+    "doc_type": "glossary",
+    "score": 0.004550773184746504
+   },
+   {
+    "id": "glossary:arpu",
+    "doc_type": "glossary",
+    "score": 0.0020037966314703226
+   },
+   {
+    "id": "qa_pair:qa_007",
+    "doc_type": "qa_pair",
+    "score": 0.0013124669203534722
+   },
+   {
+    "id": "glossary:pay_conversion",
+    "doc_type": "glossary",
+    "score": 0.001277665956877172
+   },
+   {
+    "id": "qa_pair:qa_011",
+    "doc_type": "qa_pair",
+    "score": 0.0008841690141707659
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "score": 0.0005650785169564188
+   }
+  ]
+ },
+ "EV-039": {
+  "question": "2026 年 6 月美妆类目销售额占全站销售额的比例是多少？（全站=全部类目同期）",
+  "rrf_order": [
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.032266458495966696
+   },
+   {
+    "id": "schema:products",
+    "doc_type": "schema",
+    "rrf_score": 0.032266458495966696
+   },
+   {
+    "id": "qa_pair:qa_005",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03177805800756621
+   },
+   {
+    "id": "qa_pair:qa_009",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.031054405392392875
+   },
+   {
+    "id": "qa_pair:qa_002",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.030834914611005692
+   },
+   {
+    "id": "glossary:sell_through",
+    "doc_type": "glossary",
+    "rrf_score": 0.030776515151515152
+   },
+   {
+    "id": "glossary:gmv",
+    "doc_type": "glossary",
+    "rrf_score": 0.030679156908665108
+   },
+   {
+    "id": "qa_pair:qa_001",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.030309988518943745
+   },
+   {
+    "id": "glossary:net_sales",
+    "doc_type": "glossary",
+    "rrf_score": 0.03021353930031804
+   },
+   {
+    "id": "glossary:yoy_mom",
+    "doc_type": "glossary",
+    "rrf_score": 0.029877369007803793
+   },
+   {
+    "id": "qa_pair:qa_003",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.02964426877470356
+   },
+   {
+    "id": "qa_pair:qa_004",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.029138513513513514
+   },
+   {
+    "id": "qa_pair:qa_007",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.02904040404040404
+   },
+   {
+    "id": "glossary:new_customers",
+    "doc_type": "glossary",
+    "rrf_score": 0.029030910609857977
+   },
+   {
+    "id": "schema:users",
+    "doc_type": "schema",
+    "rrf_score": 0.028629032258064516
+   },
+   {
+    "id": "glossary:arpu",
+    "doc_type": "glossary",
+    "rrf_score": 0.02862400327131466
+   }
+  ],
+  "rerank_order": [
+   {
+    "id": "schema:products",
+    "doc_type": "schema",
+    "score": 0.4519577920436859
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "score": 0.08055488020181656
+   },
+   {
+    "id": "qa_pair:qa_009",
+    "doc_type": "qa_pair",
+    "score": 0.027186347171664238
+   },
+   {
+    "id": "schema:users",
+    "doc_type": "schema",
+    "score": 0.019809015095233917
+   },
+   {
+    "id": "qa_pair:qa_002",
+    "doc_type": "qa_pair",
+    "score": 0.012302130460739136
+   },
+   {
+    "id": "glossary:gmv",
+    "doc_type": "glossary",
+    "score": 0.006703313905745745
+   },
+   {
+    "id": "qa_pair:qa_001",
+    "doc_type": "qa_pair",
+    "score": 0.00441450159996748
+   },
+   {
+    "id": "glossary:new_customers",
+    "doc_type": "glossary",
+    "score": 0.0030664869118481874
+   },
+   {
+    "id": "glossary:sell_through",
+    "doc_type": "glossary",
+    "score": 0.0030297557823359966
+   },
+   {
+    "id": "qa_pair:qa_003",
+    "doc_type": "qa_pair",
+    "score": 0.002635260811075568
+   },
+   {
+    "id": "glossary:yoy_mom",
+    "doc_type": "glossary",
+    "score": 0.001974525861442089
+   },
+   {
+    "id": "qa_pair:qa_007",
+    "doc_type": "qa_pair",
+    "score": 0.001897321781143546
+   },
+   {
+    "id": "glossary:arpu",
+    "doc_type": "glossary",
+    "score": 0.0017915272619575262
+   },
+   {
+    "id": "qa_pair:qa_005",
+    "doc_type": "qa_pair",
+    "score": 0.0015715908957645297
+   },
+   {
+    "id": "glossary:net_sales",
+    "doc_type": "glossary",
+    "score": 0.0011615293333306909
+   },
+   {
+    "id": "qa_pair:qa_004",
+    "doc_type": "qa_pair",
+    "score": 0.0005103430594317615
+   }
+  ]
+ },
+ "EV-040": {
+  "question": "从未退过款的用户中，累计支付金额最高的 5 位是谁（用户 ID、姓名、金额）？",
+  "rrf_order": [
+   {
+    "id": "qa_pair:qa_002",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03252247488101534
+   },
+   {
+    "id": "qa_pair:qa_010",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03252247488101534
+   },
+   {
+    "id": "qa_pair:qa_004",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03149801587301587
+   },
+   {
+    "id": "qa_pair:qa_006",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03149801587301587
+   },
+   {
+    "id": "schema:refunds",
+    "doc_type": "schema",
+    "rrf_score": 0.030536130536130537
+   },
+   {
+    "id": "glossary:net_sales",
+    "doc_type": "glossary",
+    "rrf_score": 0.030309988518943745
+   },
+   {
+    "id": "glossary:arpu",
+    "doc_type": "glossary",
+    "rrf_score": 0.03028233151183971
+   },
+   {
+    "id": "schema:payments",
+    "doc_type": "schema",
+    "rrf_score": 0.030117753623188408
+   },
+   {
+    "id": "glossary:refund_rate",
+    "doc_type": "glossary",
+    "rrf_score": 0.03007688828584351
+   },
+   {
+    "id": "glossary:avg_order_value",
+    "doc_type": "glossary",
+    "rrf_score": 0.0293236301369863
+   },
+   {
+    "id": "glossary:gmv",
+    "doc_type": "glossary",
+    "rrf_score": 0.029236022193768675
+   },
+   {
+    "id": "schema:users",
+    "doc_type": "schema",
+    "rrf_score": 0.02921395544346364
+   },
+   {
+    "id": "glossary:pay_conversion",
+    "doc_type": "glossary",
+    "rrf_score": 0.029030910609857977
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.028991596638655463
+   },
+   {
+    "id": "schema:orders",
+    "doc_type": "schema",
+    "rrf_score": 0.02878726010616578
+   },
+   {
+    "id": "qa_pair:qa_011",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.028665028665028666
+   }
+  ],
+  "rerank_order": [
+   {
+    "id": "schema:orders",
+    "doc_type": "schema",
+    "score": 0.10492139309644699
+   },
+   {
+    "id": "schema:refunds",
+    "doc_type": "schema",
+    "score": 0.09552254527807236
+   },
+   {
+    "id": "qa_pair:qa_006",
+    "doc_type": "qa_pair",
+    "score": 0.07819811999797821
+   },
+   {
+    "id": "schema:users",
+    "doc_type": "schema",
+    "score": 0.06876103579998016
+   },
+   {
+    "id": "schema:payments",
+    "doc_type": "schema",
+    "score": 0.05541743338108063
+   },
+   {
+    "id": "qa_pair:qa_010",
+    "doc_type": "qa_pair",
+    "score": 0.0228523351252079
+   },
+   {
+    "id": "qa_pair:qa_002",
+    "doc_type": "qa_pair",
+    "score": 0.010479968972504139
+   },
+   {
+    "id": "glossary:arpu",
+    "doc_type": "glossary",
+    "score": 0.009119348600506783
+   },
+   {
+    "id": "glossary:refund_rate",
+    "doc_type": "glossary",
+    "score": 0.005709944758564234
+   },
+   {
+    "id": "qa_pair:qa_004",
+    "doc_type": "qa_pair",
+    "score": 0.005499281920492649
+   },
+   {
+    "id": "glossary:avg_order_value",
+    "doc_type": "glossary",
+    "score": 0.005208720453083515
+   },
+   {
+    "id": "glossary:gmv",
+    "doc_type": "glossary",
+    "score": 0.003779770340770483
+   },
+   {
+    "id": "glossary:net_sales",
+    "doc_type": "glossary",
+    "score": 0.0034228081349283457
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "score": 0.0033947934862226248
+   },
+   {
+    "id": "glossary:pay_conversion",
+    "doc_type": "glossary",
+    "score": 0.002502470277249813
+   },
+   {
+    "id": "qa_pair:qa_011",
+    "doc_type": "qa_pair",
+    "score": 0.0010984642431139946
+   }
+  ]
+ },
+ "EV-041": {
+  "question": "2026 年 3 月和 4 月的 ARPU 各是多少？",
+  "rrf_order": [
+   {
+    "id": "qa_pair:qa_001",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03252247488101534
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.032266458495966696
+   },
+   {
+    "id": "glossary:yoy_mom",
+    "doc_type": "glossary",
+    "rrf_score": 0.03177805800756621
+   },
+   {
+    "id": "glossary:gmv",
+    "doc_type": "glossary",
+    "rrf_score": 0.03128054740957967
+   },
+   {
+    "id": "qa_pair:qa_003",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03128054740957967
+   },
+   {
+    "id": "qa_pair:qa_009",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03125
+   },
+   {
+    "id": "schema:users",
+    "doc_type": "schema",
+    "rrf_score": 0.03055037313432836
+   },
+   {
+    "id": "glossary:arpu",
+    "doc_type": "glossary",
+    "rrf_score": 0.03036576949620428
+   },
+   {
+    "id": "schema:products",
+    "doc_type": "schema",
+    "rrf_score": 0.030158730158730156
+   },
+   {
+    "id": "qa_pair:qa_007",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.029631255487269532
+   },
+   {
+    "id": "qa_pair:qa_004",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.029206349206349208
+   },
+   {
+    "id": "qa_pair:qa_010",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.029083245521601686
+   },
+   {
+    "id": "glossary:repurchase_rate",
+    "doc_type": "glossary",
+    "rrf_score": 0.0288981288981289
+   },
+   {
+    "id": "glossary:avg_order_value",
+    "doc_type": "glossary",
+    "rrf_score": 0.028782894736842105
+   },
+   {
+    "id": "qa_pair:qa_011",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.028381642512077296
+   },
+   {
+    "id": "glossary:new_customers",
+    "doc_type": "glossary",
+    "rrf_score": 0.028370221327967807
+   }
+  ],
+  "rerank_order": [
+   {
+    "id": "schema:users",
+    "doc_type": "schema",
+    "score": 0.8094380497932434
+   },
+   {
+    "id": "qa_pair:qa_001",
+    "doc_type": "qa_pair",
+    "score": 0.25389888882637024
+   },
+   {
+    "id": "glossary:arpu",
+    "doc_type": "glossary",
+    "score": 0.23192867636680603
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "score": 0.17688269913196564
+   },
+   {
+    "id": "glossary:avg_order_value",
+    "doc_type": "glossary",
+    "score": 0.12095621973276138
+   },
+   {
+    "id": "qa_pair:qa_009",
+    "doc_type": "qa_pair",
+    "score": 0.015478812158107758
+   },
+   {
+    "id": "schema:products",
+    "doc_type": "schema",
+    "score": 0.008412611670792103
+   },
+   {
+    "id": "qa_pair:qa_007",
+    "doc_type": "qa_pair",
+    "score": 0.0056904214434325695
+   },
+   {
+    "id": "glossary:gmv",
+    "doc_type": "glossary",
+    "score": 0.0038314189296215773
+   },
+   {
+    "id": "qa_pair:qa_004",
+    "doc_type": "qa_pair",
+    "score": 0.0035347691737115383
+   },
+   {
+    "id": "qa_pair:qa_003",
+    "doc_type": "qa_pair",
+    "score": 0.0035244349855929613
+   },
+   {
+    "id": "glossary:yoy_mom",
+    "doc_type": "glossary",
+    "score": 0.002346158493310213
+   },
+   {
+    "id": "glossary:new_customers",
+    "doc_type": "glossary",
+    "score": 0.002343182684853673
+   },
+   {
+    "id": "glossary:repurchase_rate",
+    "doc_type": "glossary",
+    "score": 0.0008390668663196266
+   },
+   {
+    "id": "qa_pair:qa_011",
+    "doc_type": "qa_pair",
+    "score": 0.00022193060431163758
+   },
+   {
+    "id": "qa_pair:qa_010",
+    "doc_type": "qa_pair",
+    "score": 0.00017164548626169562
+   }
+  ]
+ },
+ "EV-042": {
+  "question": "各价格带的商品数是多少？（价格带记为 <50、50-200、>=200，按此顺序输出）",
+  "rrf_order": [
+   {
+    "id": "schema:products",
+    "doc_type": "schema",
+    "rrf_score": 0.03252247488101534
+   },
+   {
+    "id": "qa_pair:qa_011",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.032018442622950824
+   },
+   {
+    "id": "schema:order_items",
+    "doc_type": "schema",
+    "rrf_score": 0.031746031746031744
+   },
+   {
+    "id": "glossary:items_per_order",
+    "doc_type": "glossary",
+    "rrf_score": 0.031099324975891997
+   },
+   {
+    "id": "qa_pair:qa_005",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.031024531024531024
+   },
+   {
+    "id": "glossary:sell_through",
+    "doc_type": "glossary",
+    "rrf_score": 0.030798389007344232
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03076923076923077
+   },
+   {
+    "id": "qa_pair:qa_001",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03021353930031804
+   },
+   {
+    "id": "glossary:repurchase_rate",
+    "doc_type": "glossary",
+    "rrf_score": 0.029910714285714284
+   },
+   {
+    "id": "glossary:gmv",
+    "doc_type": "glossary",
+    "rrf_score": 0.029726775956284153
+   },
+   {
+    "id": "glossary:avg_order_value",
+    "doc_type": "glossary",
+    "rrf_score": 0.029631255487269532
+   },
+   {
+    "id": "glossary:pay_conversion",
+    "doc_type": "glossary",
+    "rrf_score": 0.029273504273504274
+   },
+   {
+    "id": "schema:payments",
+    "doc_type": "schema",
+    "rrf_score": 0.0288981288981289
+   },
+   {
+    "id": "qa_pair:qa_003",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.028850145288501453
+   },
+   {
+    "id": "glossary:arpu",
+    "doc_type": "glossary",
+    "rrf_score": 0.028577260665441927
+   },
+   {
+    "id": "glossary:yoy_mom",
+    "doc_type": "glossary",
+    "rrf_score": 0.028309409888357256
+   }
+  ],
+  "rerank_order": [
+   {
+    "id": "schema:products",
+    "doc_type": "schema",
+    "score": 0.8287346363067627
+   },
+   {
+    "id": "schema:order_items",
+    "doc_type": "schema",
+    "score": 0.03910721838474274
+   },
+   {
+    "id": "glossary:sell_through",
+    "doc_type": "glossary",
+    "score": 0.022451050579547882
+   },
+   {
+    "id": "glossary:items_per_order",
+    "doc_type": "glossary",
+    "score": 0.014124318957328796
+   },
+   {
+    "id": "qa_pair:qa_001",
+    "doc_type": "qa_pair",
+    "score": 0.005500549916177988
+   },
+   {
+    "id": "glossary:arpu",
+    "doc_type": "glossary",
+    "score": 0.004630210343748331
+   },
+   {
+    "id": "glossary:repurchase_rate",
+    "doc_type": "glossary",
+    "score": 0.004214182961732149
+   },
+   {
+    "id": "schema:payments",
+    "doc_type": "schema",
+    "score": 0.003885553916916251
+   },
+   {
+    "id": "qa_pair:qa_011",
+    "doc_type": "qa_pair",
+    "score": 0.0033248132094740868
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "score": 0.0031115245074033737
+   },
+   {
+    "id": "qa_pair:qa_005",
+    "doc_type": "qa_pair",
+    "score": 0.0023762034252285957
+   },
+   {
+    "id": "glossary:yoy_mom",
+    "doc_type": "glossary",
+    "score": 0.0019193289335817099
+   },
+   {
+    "id": "glossary:avg_order_value",
+    "doc_type": "glossary",
+    "score": 0.0017887564608827233
+   },
+   {
+    "id": "glossary:pay_conversion",
+    "doc_type": "glossary",
+    "score": 0.0014447873691096902
+   },
+   {
+    "id": "glossary:gmv",
+    "doc_type": "glossary",
+    "score": 0.0011683343909680843
+   },
+   {
+    "id": "qa_pair:qa_003",
+    "doc_type": "qa_pair",
+    "score": 0.0007716376567259431
+   }
+  ]
+ },
+ "EV-043": {
+  "question": "2026 年二季度每月的连带率是多少？",
+  "rrf_order": [
+   {
+    "id": "qa_pair:qa_001",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03252247488101534
+   },
+   {
+    "id": "glossary:items_per_order",
+    "doc_type": "glossary",
+    "rrf_score": 0.03200204813108039
+   },
+   {
+    "id": "qa_pair:qa_009",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03200204813108039
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03177805800756621
+   },
+   {
+    "id": "qa_pair:qa_003",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03125
+   },
+   {
+    "id": "qa_pair:qa_007",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.030309988518943745
+   },
+   {
+    "id": "glossary:gmv",
+    "doc_type": "glossary",
+    "rrf_score": 0.03028233151183971
+   },
+   {
+    "id": "schema:users",
+    "doc_type": "schema",
+    "rrf_score": 0.029910714285714284
+   },
+   {
+    "id": "qa_pair:qa_004",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.02964426877470356
+   },
+   {
+    "id": "glossary:repurchase_rate",
+    "doc_type": "glossary",
+    "rrf_score": 0.029631255487269532
+   },
+   {
+    "id": "glossary:arpu",
+    "doc_type": "glossary",
+    "rrf_score": 0.029236022193768675
+   },
+   {
+    "id": "glossary:yoy_mom",
+    "doc_type": "glossary",
+    "rrf_score": 0.029236022193768675
+   },
+   {
+    "id": "schema:order_items",
+    "doc_type": "schema",
+    "rrf_score": 0.02889344262295082
+   },
+   {
+    "id": "glossary:net_sales",
+    "doc_type": "glossary",
+    "rrf_score": 0.02886002886002886
+   },
+   {
+    "id": "schema:products",
+    "doc_type": "schema",
+    "rrf_score": 0.02871794871794872
+   },
+   {
+    "id": "glossary:sell_through",
+    "doc_type": "glossary",
+    "rrf_score": 0.028404512489927477
+   }
+  ],
+  "rerank_order": [
+   {
+    "id": "schema:order_items",
+    "doc_type": "schema",
+    "score": 0.33276355266571045
+   },
+   {
+    "id": "qa_pair:qa_009",
+    "doc_type": "qa_pair",
+    "score": 0.07526946812868118
+   },
+   {
+    "id": "schema:users",
+    "doc_type": "schema",
+    "score": 0.06944569945335388
+   },
+   {
+    "id": "schema:products",
+    "doc_type": "schema",
+    "score": 0.043274540454149246
+   },
+   {
+    "id": "qa_pair:qa_003",
+    "doc_type": "qa_pair",
+    "score": 0.030448049306869507
+   },
+   {
+    "id": "qa_pair:qa_004",
+    "doc_type": "qa_pair",
+    "score": 0.020005134865641594
+   },
+   {
+    "id": "glossary:items_per_order",
+    "doc_type": "glossary",
+    "score": 0.016525456681847572
+   },
+   {
+    "id": "glossary:yoy_mom",
+    "doc_type": "glossary",
+    "score": 0.0065969922579824924
+   },
+   {
+    "id": "glossary:sell_through",
+    "doc_type": "glossary",
+    "score": 0.005189848132431507
+   },
+   {
+    "id": "glossary:gmv",
+    "doc_type": "glossary",
+    "score": 0.004647339228540659
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "score": 0.003319287206977606
+   },
+   {
+    "id": "glossary:repurchase_rate",
+    "doc_type": "glossary",
+    "score": 0.002745809033513069
+   },
+   {
+    "id": "qa_pair:qa_001",
+    "doc_type": "qa_pair",
+    "score": 0.002328805858269334
+   },
+   {
+    "id": "qa_pair:qa_007",
+    "doc_type": "qa_pair",
+    "score": 0.0019780208822339773
+   },
+   {
+    "id": "glossary:arpu",
+    "doc_type": "glossary",
+    "score": 0.0015792534686625004
+   },
+   {
+    "id": "glossary:net_sales",
+    "doc_type": "glossary",
+    "score": 0.0006129450630396605
+   }
+  ]
+ },
+ "EV-044": {
+  "question": "每个类目销量最高的商品是哪些（类目、商品名、销量）？",
+  "rrf_order": [
+   {
+    "id": "qa_pair:qa_005",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03252247488101534
+   },
+   {
+    "id": "schema:products",
+    "doc_type": "schema",
+    "rrf_score": 0.032266458495966696
+   },
+   {
+    "id": "glossary:sell_through",
+    "doc_type": "glossary",
+    "rrf_score": 0.032018442622950824
+   },
+   {
+    "id": "qa_pair:qa_002",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.032018442622950824
+   },
+   {
+    "id": "qa_pair:qa_010",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.0315136476426799
+   },
+   {
+    "id": "schema:order_items",
+    "doc_type": "schema",
+    "rrf_score": 0.031054405392392875
+   },
+   {
+    "id": "qa_pair:qa_001",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.031024531024531024
+   },
+   {
+    "id": "glossary:net_sales",
+    "doc_type": "glossary",
+    "rrf_score": 0.030834914611005692
+   },
+   {
+    "id": "glossary:avg_order_value",
+    "doc_type": "glossary",
+    "rrf_score": 0.029571646010002173
+   },
+   {
+    "id": "glossary:items_per_order",
+    "doc_type": "glossary",
+    "rrf_score": 0.029513888888888888
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.029437229437229435
+   },
+   {
+    "id": "glossary:arpu",
+    "doc_type": "glossary",
+    "rrf_score": 0.02919863597612958
+   },
+   {
+    "id": "qa_pair:qa_011",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.02871794871794872
+   },
+   {
+    "id": "schema:orders",
+    "doc_type": "schema",
+    "rrf_score": 0.02854251012145749
+   },
+   {
+    "id": "schema:users",
+    "doc_type": "schema",
+    "rrf_score": 0.028531243721117136
+   },
+   {
+    "id": "glossary:new_customers",
+    "doc_type": "glossary",
+    "rrf_score": 0.028371628371628373
+   }
+  ],
+  "rerank_order": [
+   {
+    "id": "schema:products",
+    "doc_type": "schema",
+    "score": 0.6689275503158569
+   },
+   {
+    "id": "schema:order_items",
+    "doc_type": "schema",
+    "score": 0.5990208983421326
+   },
+   {
+    "id": "schema:orders",
+    "doc_type": "schema",
+    "score": 0.03246670961380005
+   },
+   {
+    "id": "schema:users",
+    "doc_type": "schema",
+    "score": 0.023882659152150154
+   },
+   {
+    "id": "qa_pair:qa_002",
+    "doc_type": "qa_pair",
+    "score": 0.023423030972480774
+   },
+   {
+    "id": "glossary:sell_through",
+    "doc_type": "glossary",
+    "score": 0.01008111797273159
+   },
+   {
+    "id": "qa_pair:qa_005",
+    "doc_type": "qa_pair",
+    "score": 0.008694336749613285
+   },
+   {
+    "id": "qa_pair:qa_001",
+    "doc_type": "qa_pair",
+    "score": 0.003918694797903299
+   },
+   {
+    "id": "glossary:items_per_order",
+    "doc_type": "glossary",
+    "score": 0.0033706866670399904
+   },
+   {
+    "id": "qa_pair:qa_010",
+    "doc_type": "qa_pair",
+    "score": 0.0028680339455604553
+   },
+   {
+    "id": "glossary:new_customers",
+    "doc_type": "glossary",
+    "score": 0.0023633476812392473
+   },
+   {
+    "id": "glossary:net_sales",
+    "doc_type": "glossary",
+    "score": 0.0019635248463600874
+   },
+   {
+    "id": "glossary:arpu",
+    "doc_type": "glossary",
+    "score": 0.0018339428352192044
+   },
+   {
+    "id": "glossary:avg_order_value",
+    "doc_type": "glossary",
+    "score": 0.0015798445092514157
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "score": 0.0012848146725445986
+   },
+   {
+    "id": "qa_pair:qa_011",
+    "doc_type": "qa_pair",
+    "score": 0.0010492816800251603
+   }
+  ]
+ },
+ "EV-045": {
+  "question": "2026 年二季度订单量比一季度增长了百分之多少？",
+  "rrf_order": [
+   {
+    "id": "qa_pair:qa_001",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03278688524590164
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.031754032258064516
+   },
+   {
+    "id": "qa_pair:qa_011",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.031754032258064516
+   },
+   {
+    "id": "glossary:gmv",
+    "doc_type": "glossary",
+    "rrf_score": 0.031544957774465976
+   },
+   {
+    "id": "schema:order_items",
+    "doc_type": "schema",
+    "rrf_score": 0.03131881575727918
+   },
+   {
+    "id": "qa_pair:qa_009",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03125763125763126
+   },
+   {
+    "id": "qa_pair:qa_003",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.030536130536130537
+   },
+   {
+    "id": "schema:orders",
+    "doc_type": "schema",
+    "rrf_score": 0.0304147465437788
+   },
+   {
+    "id": "glossary:repurchase_rate",
+    "doc_type": "glossary",
+    "rrf_score": 0.03036576949620428
+   },
+   {
+    "id": "glossary:yoy_mom",
+    "doc_type": "glossary",
+    "rrf_score": 0.0293236301369863
+   },
+   {
+    "id": "glossary:new_customers",
+    "doc_type": "glossary",
+    "rrf_score": 0.02928692699490662
+   },
+   {
+    "id": "qa_pair:qa_004",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.029206349206349208
+   },
+   {
+    "id": "qa_pair:qa_010",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.028991596638655463
+   },
+   {
+    "id": "glossary:avg_order_value",
+    "doc_type": "glossary",
+    "rrf_score": 0.028438886647841874
+   },
+   {
+    "id": "glossary:arpu",
+    "doc_type": "glossary",
+    "rrf_score": 0.028370221327967807
+   },
+   {
+    "id": "glossary:items_per_order",
+    "doc_type": "glossary",
+    "rrf_score": 0.02797339593114241
+   }
+  ],
+  "rerank_order": [
+   {
+    "id": "schema:orders",
+    "doc_type": "schema",
+    "score": 0.7308520078659058
+   },
+   {
+    "id": "schema:order_items",
+    "doc_type": "schema",
+    "score": 0.11975910514593124
+   },
+   {
+    "id": "qa_pair:qa_001",
+    "doc_type": "qa_pair",
+    "score": 0.031657394021749496
+   },
+   {
+    "id": "qa_pair:qa_009",
+    "doc_type": "qa_pair",
+    "score": 0.02707783691585064
+   },
+   {
+    "id": "glossary:gmv",
+    "doc_type": "glossary",
+    "score": 0.016628587618470192
+   },
+   {
+    "id": "glossary:new_customers",
+    "doc_type": "glossary",
+    "score": 0.013850635848939419
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "score": 0.009189233183860779
+   },
+   {
+    "id": "qa_pair:qa_004",
+    "doc_type": "qa_pair",
+    "score": 0.008396049030125141
+   },
+   {
+    "id": "glossary:yoy_mom",
+    "doc_type": "glossary",
+    "score": 0.007826438173651695
+   },
+   {
+    "id": "glossary:arpu",
+    "doc_type": "glossary",
+    "score": 0.0057016885839402676
+   },
+   {
+    "id": "qa_pair:qa_003",
+    "doc_type": "qa_pair",
+    "score": 0.005047092214226723
+   },
+   {
+    "id": "qa_pair:qa_011",
+    "doc_type": "qa_pair",
+    "score": 0.004894835874438286
+   },
+   {
+    "id": "glossary:repurchase_rate",
+    "doc_type": "glossary",
+    "score": 0.004588465206325054
+   },
+   {
+    "id": "glossary:items_per_order",
+    "doc_type": "glossary",
+    "score": 0.0025663673877716064
+   },
+   {
+    "id": "glossary:avg_order_value",
+    "doc_type": "glossary",
+    "score": 0.002528214128687978
+   },
+   {
+    "id": "qa_pair:qa_010",
+    "doc_type": "qa_pair",
+    "score": 0.0005377313354983926
+   }
+  ]
+ },
+ "EV-046": {
+  "question": "2026 年 8 月 25 日至 8 月 31 日（含）每天的支付金额是多少？",
+  "rrf_order": [
+   {
+    "id": "qa_pair:qa_007",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.032266458495966696
+   },
+   {
+    "id": "qa_pair:qa_001",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.032018442622950824
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03200204813108039
+   },
+   {
+    "id": "glossary:gmv",
+    "doc_type": "glossary",
+    "rrf_score": 0.0315136476426799
+   },
+   {
+    "id": "qa_pair:qa_003",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.031054405392392875
+   },
+   {
+    "id": "glossary:avg_order_value",
+    "doc_type": "glossary",
+    "rrf_score": 0.030798389007344232
+   },
+   {
+    "id": "qa_pair:qa_004",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.030776515151515152
+   },
+   {
+    "id": "schema:payments",
+    "doc_type": "schema",
+    "rrf_score": 0.030330882352941176
+   },
+   {
+    "id": "glossary:net_sales",
+    "doc_type": "glossary",
+    "rrf_score": 0.02967032967032967
+   },
+   {
+    "id": "glossary:pay_conversion",
+    "doc_type": "glossary",
+    "rrf_score": 0.0293236301369863
+   },
+   {
+    "id": "qa_pair:qa_009",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.029273504273504274
+   },
+   {
+    "id": "glossary:refund_rate",
+    "doc_type": "glossary",
+    "rrf_score": 0.029236022193768675
+   },
+   {
+    "id": "glossary:yoy_mom",
+    "doc_type": "glossary",
+    "rrf_score": 0.02921395544346364
+   },
+   {
+    "id": "schema:refunds",
+    "doc_type": "schema",
+    "rrf_score": 0.029030910609857977
+   },
+   {
+    "id": "qa_pair:qa_011",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.028985507246376812
+   },
+   {
+    "id": "qa_pair:qa_002",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.028484848484848488
+   }
+  ],
+  "rerank_order": [
+   {
+    "id": "schema:payments",
+    "doc_type": "schema",
+    "score": 0.9594787955284119
+   },
+   {
+    "id": "qa_pair:qa_007",
+    "doc_type": "qa_pair",
+    "score": 0.8184183239936829
+   },
+   {
+    "id": "schema:refunds",
+    "doc_type": "schema",
+    "score": 0.6293507814407349
+   },
+   {
+    "id": "qa_pair:qa_002",
+    "doc_type": "qa_pair",
+    "score": 0.17104294896125793
+   },
+   {
+    "id": "glossary:gmv",
+    "doc_type": "glossary",
+    "score": 0.15288206934928894
+   },
+   {
+    "id": "qa_pair:qa_003",
+    "doc_type": "qa_pair",
+    "score": 0.11694994568824768
+   },
+   {
+    "id": "qa_pair:qa_001",
+    "doc_type": "qa_pair",
+    "score": 0.07601839303970337
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "score": 0.07243569940328598
+   },
+   {
+    "id": "qa_pair:qa_004",
+    "doc_type": "qa_pair",
+    "score": 0.05802387371659279
+   },
+   {
+    "id": "glossary:avg_order_value",
+    "doc_type": "glossary",
+    "score": 0.04679417982697487
+   },
+   {
+    "id": "qa_pair:qa_009",
+    "doc_type": "qa_pair",
+    "score": 0.013284046202898026
+   },
+   {
+    "id": "qa_pair:qa_011",
+    "doc_type": "qa_pair",
+    "score": 0.013198045082390308
+   },
+   {
+    "id": "glossary:net_sales",
+    "doc_type": "glossary",
+    "score": 0.012625227682292461
+   },
+   {
+    "id": "glossary:refund_rate",
+    "doc_type": "glossary",
+    "score": 0.010182851925492287
+   },
+   {
+    "id": "glossary:pay_conversion",
+    "doc_type": "glossary",
+    "score": 0.007012990768998861
+   },
+   {
+    "id": "glossary:yoy_mom",
+    "doc_type": "glossary",
+    "score": 0.005611127242445946
+   }
+  ]
+ },
+ "EV-047": {
+  "question": "2025 年一季度至四季度，每个季度（标记为 2025Q1、2025Q2、2025Q3、2025Q4）的注册用户数与下单用户数分别是多少？",
+  "rrf_order": [
+   {
+    "id": "schema:users",
+    "doc_type": "schema",
+    "rrf_score": 0.03252247488101534
+   },
+   {
+    "id": "glossary:new_customers",
+    "doc_type": "glossary",
+    "rrf_score": 0.032266458495966696
+   },
+   {
+    "id": "glossary:arpu",
+    "doc_type": "glossary",
+    "rrf_score": 0.03177805800756621
+   },
+   {
+    "id": "qa_pair:qa_001",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.031754032258064516
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.031544957774465976
+   },
+   {
+    "id": "glossary:repurchase_rate",
+    "doc_type": "glossary",
+    "rrf_score": 0.031054405392392875
+   },
+   {
+    "id": "qa_pair:qa_009",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.031009615384615385
+   },
+   {
+    "id": "schema:orders",
+    "doc_type": "schema",
+    "rrf_score": 0.029877369007803793
+   },
+   {
+    "id": "qa_pair:qa_011",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.02976190476190476
+   },
+   {
+    "id": "qa_pair:qa_003",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.02919863597612958
+   },
+   {
+    "id": "glossary:avg_order_value",
+    "doc_type": "glossary",
+    "rrf_score": 0.028958333333333336
+   },
+   {
+    "id": "schema:products",
+    "doc_type": "schema",
+    "rrf_score": 0.028850145288501453
+   },
+   {
+    "id": "schema:refunds",
+    "doc_type": "schema",
+    "rrf_score": 0.028629032258064516
+   },
+   {
+    "id": "qa_pair:qa_005",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.02857142857142857
+   },
+   {
+    "id": "glossary:refund_rate",
+    "doc_type": "glossary",
+    "rrf_score": 0.028531243721117136
+   },
+   {
+    "id": "glossary:gmv",
+    "doc_type": "glossary",
+    "rrf_score": 0.02821939586645469
+   }
+  ],
+  "rerank_order": [
+   {
+    "id": "schema:users",
+    "doc_type": "schema",
+    "score": 0.9804691672325134
+   },
+   {
+    "id": "glossary:new_customers",
+    "doc_type": "glossary",
+    "score": 0.9264686107635498
+   },
+   {
+    "id": "schema:orders",
+    "doc_type": "schema",
+    "score": 0.8564912676811218
+   },
+   {
+    "id": "glossary:arpu",
+    "doc_type": "glossary",
+    "score": 0.6291860342025757
+   },
+   {
+    "id": "glossary:repurchase_rate",
+    "doc_type": "glossary",
+    "score": 0.3775278925895691
+   },
+   {
+    "id": "qa_pair:qa_009",
+    "doc_type": "qa_pair",
+    "score": 0.31288060545921326
+   },
+   {
+    "id": "schema:products",
+    "doc_type": "schema",
+    "score": 0.23624861240386963
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "score": 0.11220661550760269
+   },
+   {
+    "id": "qa_pair:qa_001",
+    "doc_type": "qa_pair",
+    "score": 0.09038183093070984
+   },
+   {
+    "id": "glossary:avg_order_value",
+    "doc_type": "glossary",
+    "score": 0.05707860738039017
+   },
+   {
+    "id": "schema:refunds",
+    "doc_type": "schema",
+    "score": 0.05331352725625038
+   },
+   {
+    "id": "qa_pair:qa_005",
+    "doc_type": "qa_pair",
+    "score": 0.021240148693323135
+   },
+   {
+    "id": "glossary:gmv",
+    "doc_type": "glossary",
+    "score": 0.013071129098534584
+   },
+   {
+    "id": "qa_pair:qa_011",
+    "doc_type": "qa_pair",
+    "score": 0.011753060854971409
+   },
+   {
+    "id": "qa_pair:qa_003",
+    "doc_type": "qa_pair",
+    "score": 0.0031320222187787294
+   },
+   {
+    "id": "glossary:refund_rate",
+    "doc_type": "glossary",
+    "score": 0.0027302317321300507
+   }
+  ]
+ },
+ "EV-048": {
+  "question": "2026 年 9 月的支付转化率是多少？",
+  "rrf_order": [
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.032266458495966696
+   },
+   {
+    "id": "glossary:pay_conversion",
+    "doc_type": "glossary",
+    "rrf_score": 0.03225806451612903
+   },
+   {
+    "id": "qa_pair:qa_004",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.032018442622950824
+   },
+   {
+    "id": "glossary:gmv",
+    "doc_type": "glossary",
+    "rrf_score": 0.03131881575727918
+   },
+   {
+    "id": "qa_pair:qa_003",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03125763125763126
+   },
+   {
+    "id": "qa_pair:qa_009",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.031009615384615385
+   },
+   {
+    "id": "qa_pair:qa_001",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.030834914611005692
+   },
+   {
+    "id": "schema:payments",
+    "doc_type": "schema",
+    "rrf_score": 0.0304147465437788
+   },
+   {
+    "id": "qa_pair:qa_007",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.030303030303030304
+   },
+   {
+    "id": "glossary:yoy_mom",
+    "doc_type": "glossary",
+    "rrf_score": 0.02976190476190476
+   },
+   {
+    "id": "qa_pair:qa_011",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.029418126757516764
+   },
+   {
+    "id": "glossary:avg_order_value",
+    "doc_type": "glossary",
+    "rrf_score": 0.0293236301369863
+   },
+   {
+    "id": "glossary:refund_rate",
+    "doc_type": "glossary",
+    "rrf_score": 0.029236022193768675
+   },
+   {
+    "id": "schema:order_items",
+    "doc_type": "schema",
+    "rrf_score": 0.028373015873015873
+   },
+   {
+    "id": "glossary:arpu",
+    "doc_type": "glossary",
+    "rrf_score": 0.028258706467661692
+   },
+   {
+    "id": "qa_pair:qa_010",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.02821939586645469
+   }
+  ],
+  "rerank_order": [
+   {
+    "id": "qa_pair:qa_004",
+    "doc_type": "qa_pair",
+    "score": 0.7662362456321716
+   },
+   {
+    "id": "qa_pair:qa_003",
+    "doc_type": "qa_pair",
+    "score": 0.7000612020492554
+   },
+   {
+    "id": "schema:payments",
+    "doc_type": "schema",
+    "score": 0.6940041780471802
+   },
+   {
+    "id": "qa_pair:qa_007",
+    "doc_type": "qa_pair",
+    "score": 0.3006352186203003
+   },
+   {
+    "id": "glossary:gmv",
+    "doc_type": "glossary",
+    "score": 0.18447327613830566
+   },
+   {
+    "id": "qa_pair:qa_009",
+    "doc_type": "qa_pair",
+    "score": 0.15098309516906738
+   },
+   {
+    "id": "glossary:pay_conversion",
+    "doc_type": "glossary",
+    "score": 0.061934735625982285
+   },
+   {
+    "id": "schema:order_items",
+    "doc_type": "schema",
+    "score": 0.0333317369222641
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "score": 0.026599032804369926
+   },
+   {
+    "id": "qa_pair:qa_011",
+    "doc_type": "qa_pair",
+    "score": 0.00774421775713563
+   },
+   {
+    "id": "glossary:yoy_mom",
+    "doc_type": "glossary",
+    "score": 0.0073609077371656895
+   },
+   {
+    "id": "qa_pair:qa_001",
+    "doc_type": "qa_pair",
+    "score": 0.00543509516865015
+   },
+   {
+    "id": "glossary:arpu",
+    "doc_type": "glossary",
+    "score": 0.004746150225400925
+   },
+   {
+    "id": "glossary:avg_order_value",
+    "doc_type": "glossary",
+    "score": 0.0037592798471450806
+   },
+   {
+    "id": "glossary:refund_rate",
+    "doc_type": "glossary",
+    "score": 0.0025836883578449488
+   },
+   {
+    "id": "qa_pair:qa_010",
+    "doc_type": "qa_pair",
+    "score": 0.0001740590378176421
+   }
+  ]
+ },
+ "EV-049": {
+  "question": "2026 年三季度的动销率是多少？",
+  "rrf_order": [
+   {
+    "id": "glossary:sell_through",
+    "doc_type": "glossary",
+    "rrf_score": 0.03252247488101534
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.032018442622950824
+   },
+   {
+    "id": "qa_pair:qa_001",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03200204813108039
+   },
+   {
+    "id": "qa_pair:qa_009",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03200204813108039
+   },
+   {
+    "id": "glossary:gmv",
+    "doc_type": "glossary",
+    "rrf_score": 0.031099324975891997
+   },
+   {
+    "id": "qa_pair:qa_003",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.031009615384615385
+   },
+   {
+    "id": "glossary:net_sales",
+    "doc_type": "glossary",
+    "rrf_score": 0.030798389007344232
+   },
+   {
+    "id": "schema:products",
+    "doc_type": "schema",
+    "rrf_score": 0.029906956136464335
+   },
+   {
+    "id": "qa_pair:qa_007",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.02967032967032967
+   },
+   {
+    "id": "qa_pair:qa_004",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.02964426877470356
+   },
+   {
+    "id": "qa_pair:qa_002",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.029437229437229435
+   },
+   {
+    "id": "schema:users",
+    "doc_type": "schema",
+    "rrf_score": 0.029083245521601686
+   },
+   {
+    "id": "glossary:repurchase_rate",
+    "doc_type": "glossary",
+    "rrf_score": 0.02900988017658188
+   },
+   {
+    "id": "glossary:refund_rate",
+    "doc_type": "glossary",
+    "rrf_score": 0.02871794871794872
+   },
+   {
+    "id": "schema:order_items",
+    "doc_type": "schema",
+    "rrf_score": 0.028629032258064516
+   },
+   {
+    "id": "qa_pair:qa_010",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.028594771241830064
+   }
+  ],
+  "rerank_order": [
+   {
+    "id": "schema:products",
+    "doc_type": "schema",
+    "score": 0.6161248683929443
+   },
+   {
+    "id": "schema:order_items",
+    "doc_type": "schema",
+    "score": 0.37598732113838196
+   },
+   {
+    "id": "qa_pair:qa_009",
+    "doc_type": "qa_pair",
+    "score": 0.08448854088783264
+   },
+   {
+    "id": "glossary:sell_through",
+    "doc_type": "glossary",
+    "score": 0.0837569609284401
+   },
+   {
+    "id": "qa_pair:qa_004",
+    "doc_type": "qa_pair",
+    "score": 0.0542127788066864
+   },
+   {
+    "id": "schema:users",
+    "doc_type": "schema",
+    "score": 0.032892435789108276
+   },
+   {
+    "id": "qa_pair:qa_001",
+    "doc_type": "qa_pair",
+    "score": 0.02111033909022808
+   },
+   {
+    "id": "qa_pair:qa_003",
+    "doc_type": "qa_pair",
+    "score": 0.010762836784124374
+   },
+   {
+    "id": "glossary:gmv",
+    "doc_type": "glossary",
+    "score": 0.007587970234453678
+   },
+   {
+    "id": "qa_pair:qa_002",
+    "doc_type": "qa_pair",
+    "score": 0.007008718326687813
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "score": 0.0032353359274566174
+   },
+   {
+    "id": "glossary:repurchase_rate",
+    "doc_type": "glossary",
+    "score": 0.0028975550085306168
+   },
+   {
+    "id": "glossary:refund_rate",
+    "doc_type": "glossary",
+    "score": 0.0021216128952801228
+   },
+   {
+    "id": "qa_pair:qa_007",
+    "doc_type": "qa_pair",
+    "score": 0.001659198198467493
+   },
+   {
+    "id": "glossary:net_sales",
+    "doc_type": "glossary",
+    "score": 0.0012882897863164544
+   },
+   {
+    "id": "qa_pair:qa_010",
+    "doc_type": "qa_pair",
+    "score": 0.00018954022380057722
+   }
+  ]
+ },
+ "EV-050": {
+  "question": "2026 年 9 月的新客占比是多少？",
+  "rrf_order": [
+   {
+    "id": "glossary:new_customers",
+    "doc_type": "glossary",
+    "rrf_score": 0.03252247488101534
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.032018442622950824
+   },
+   {
+    "id": "qa_pair:qa_001",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.031746031746031744
+   },
+   {
+    "id": "qa_pair:qa_004",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.031544957774465976
+   },
+   {
+    "id": "qa_pair:qa_011",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.031054405392392875
+   },
+   {
+    "id": "glossary:yoy_mom",
+    "doc_type": "glossary",
+    "rrf_score": 0.030834914611005692
+   },
+   {
+    "id": "qa_pair:qa_003",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.030776515151515152
+   },
+   {
+    "id": "qa_pair:qa_009",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.03076923076923077
+   },
+   {
+    "id": "glossary:gmv",
+    "doc_type": "glossary",
+    "rrf_score": 0.02976190476190476
+   },
+   {
+    "id": "glossary:avg_order_value",
+    "doc_type": "glossary",
+    "rrf_score": 0.02967032967032967
+   },
+   {
+    "id": "qa_pair:qa_007",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.029418126757516764
+   },
+   {
+    "id": "schema:users",
+    "doc_type": "schema",
+    "rrf_score": 0.02938045560996381
+   },
+   {
+    "id": "glossary:repurchase_rate",
+    "doc_type": "glossary",
+    "rrf_score": 0.028958333333333336
+   },
+   {
+    "id": "glossary:arpu",
+    "doc_type": "glossary",
+    "rrf_score": 0.028404512489927477
+   },
+   {
+    "id": "qa_pair:qa_002",
+    "doc_type": "qa_pair",
+    "rrf_score": 0.028370221327967807
+   },
+   {
+    "id": "schema:products",
+    "doc_type": "schema",
+    "rrf_score": 0.028205128205128206
+   }
+  ],
+  "rerank_order": [
+   {
+    "id": "schema:users",
+    "doc_type": "schema",
+    "score": 0.6412054896354675
+   },
+   {
+    "id": "glossary:new_customers",
+    "doc_type": "glossary",
+    "score": 0.38352566957473755
+   },
+   {
+    "id": "qa_pair:qa_004",
+    "doc_type": "qa_pair",
+    "score": 0.07953844964504242
+   },
+   {
+    "id": "schema:products",
+    "doc_type": "schema",
+    "score": 0.05482201278209686
+   },
+   {
+    "id": "qa_pair:qa_009",
+    "doc_type": "qa_pair",
+    "score": 0.050867147743701935
+   },
+   {
+    "id": "qa_pair:qa_003",
+    "doc_type": "qa_pair",
+    "score": 0.024700043722987175
+   },
+   {
+    "id": "qa_pair:qa_008",
+    "doc_type": "qa_pair",
+    "score": 0.011423684656620026
+   },
+   {
+    "id": "glossary:arpu",
+    "doc_type": "glossary",
+    "score": 0.008879860863089561
+   },
+   {
+    "id": "glossary:gmv",
+    "doc_type": "glossary",
+    "score": 0.005398853681981564
+   },
+   {
+    "id": "qa_pair:qa_007",
+    "doc_type": "qa_pair",
+    "score": 0.0050790030509233475
+   },
+   {
+    "id": "qa_pair:qa_002",
+    "doc_type": "qa_pair",
+    "score": 0.003793468000367284
+   },
+   {
+    "id": "qa_pair:qa_001",
+    "doc_type": "qa_pair",
+    "score": 0.002953866496682167
+   },
+   {
+    "id": "qa_pair:qa_011",
+    "doc_type": "qa_pair",
+    "score": 0.0029484464321285486
+   },
+   {
+    "id": "glossary:repurchase_rate",
+    "doc_type": "glossary",
+    "score": 0.002351977163925767
+   },
+   {
+    "id": "glossary:yoy_mom",
+    "doc_type": "glossary",
+    "score": 0.0012962025357410312
+   },
+   {
+    "id": "glossary:avg_order_value",
+    "doc_type": "glossary",
+    "score": 0.0010174467461183667
+   }
+  ]
+ }
+}
